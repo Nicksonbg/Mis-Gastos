@@ -771,8 +771,12 @@ async function lockEnable(){
 async function lockVerify(){
   const id=store.get(LOCK_KEY+curUid);if(!id)return true;
   await navigator.credentials.get({publicKey:{challenge:rnd(32),allowCredentials:[{type:'public-key',id:unb64(id),transports:['internal']}],userVerification:'required',timeout:60000}});return true}
-function showLock(on){$('#lock').classList.toggle('hidden',!on);$('#l-err').textContent=''}
-$('#l-unlock').onclick=async()=>{try{await lockVerify();showLock(false)}catch(e){$('#l-err').textContent=t('l_fail')}};
+let unlocking=false;
+async function tryUnlock(auto){if(unlocking)return;unlocking=true;
+  try{await lockVerify();showLock(false)}catch(e){if(!auto||!(e&&(e.name==='NotAllowedError'||e.name==='SecurityError')))$('#l-err').textContent=t('l_fail')}
+  unlocking=false}
+function showLock(on){$('#lock').classList.toggle('hidden',!on);$('#l-err').textContent='';if(on)setTimeout(()=>tryUnlock(true),350)}
+$('#l-unlock').onclick=()=>tryUnlock(false);
 $('#l-out').onclick=()=>{showLock(false);if(fb)fb.Au.signOut(fb.auth)};
 $('#p-lock').onchange=async e=>{
   try{if(e.target.checked){await lockEnable();profMsg('l_on')}else{try{localStorage.removeItem(LOCK_KEY+curUid)}catch(x){}profMsg('l_off')}}
