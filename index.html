@@ -147,14 +147,14 @@ header .avatar{margin-left:4px}
 </head>
 <body>
 <div id="lock" class="hidden"><div class="auth-card">
-  <img src="icon-180.png" width="72" height="72" alt="" style="border-radius:16px"><h1 style="margin:10px 0 18px;font-size:20px" data-i="l_locked"></h1>
+  <img src="icon-180.png" width="140" height="140" alt="" style="border-radius:32px;box-shadow:0 8px 24px rgba(0,0,0,.25)"><h1 style="margin:16px 0 22px;font-size:22px" data-i="l_locked"></h1>
   <button class="btn wide" id="l-unlock" data-i="l_unlock"></button>
   <div class="err" id="l-err" style="margin-top:10px"></div>
   <button class="linkbtn" id="l-out" data-i="p_signout"></button>
 </div></div>
 <div id="auth">
  <div class="auth-card">
-  <div style="text-align:center;margin-bottom:18px"><img src="icon-180.png" width="72" height="72" alt="" style="border-radius:16px"><h1 style="margin:10px 0 2px;font-size:22px">Personal Balance</h1><p class="muted small" data-i="a_intro"></p></div>
+  <div style="text-align:center;margin-bottom:18px"><img src="icon-180.png" width="140" height="140" alt="" style="border-radius:32px;box-shadow:0 8px 24px rgba(0,0,0,.25)"><h1 style="margin:14px 0 4px;font-size:24px">Personal Balance</h1><p class="muted small" data-i="a_intro"></p></div>
   <div id="auth-load" class="card" style="text-align:center"><span data-i="a_loading"></span></div>
   <div id="auth-off" class="card hidden" style="text-align:center"><p data-i="a_offline"></p><button class="btn" id="a-retry" data-i="a_retry"></button></div>
   <div id="auth-box" class="card hidden">
@@ -685,10 +685,15 @@ const REM_KEY='mis-gastos-remember',MAIL_KEY='mis-gastos-email';
 async function applyPersistence(){const rem=$('#a-remember').checked;store.set(REM_KEY,rem?'1':'0');
   try{await fb.Au.setPersistence(fb.auth,rem?fb.Au.browserLocalPersistence:fb.Au.browserSessionPersistence)}catch(e){}
   if(rem){const m=$('#a-email').value.trim();if(m)store.set(MAIL_KEY,m)}else{try{localStorage.removeItem(MAIL_KEY)}catch(e){}}}
+function offlineStart(){
+  const uid=store.get('mis-gastos-last-uid'),loc=uid&&lsGet(keyOf(uid));
+  if(!(loc&&Array.isArray(loc.gastos)&&Array.isArray(loc.prestamos))){setAuthView('off');return}
+  curUid=uid;P=Object.assign({nombre:'',foto:'',icono:'',email:'',verified:false},lsGet('mis-gastos-perfil-'+uid)||{});
+  S=loc;cloudMode=false;setAuthView('none');setSync('sync_fail');showTab('resumen');render();if(lockOn())showLock(true)}
 async function initAuth(){
   $('#a-remember').checked=store.get(REM_KEY)!=='0';$('#a-email').value=store.get(MAIL_KEY)||'';
   setAuthView('load');
-  try{await loadFb()}catch(e){setAuthView('off');return}
+  try{await Promise.race([loadFb(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),10000))])}catch(e){offlineStart();return}
   fb.Au.onAuthStateChanged(fb.auth,u=>{u?onLogin(u):onLogout()});
 }
 $('#auth-form').addEventListener('submit',async e=>{e.preventDefault();
@@ -716,12 +721,12 @@ $('#a-google').onclick=async()=>{const err=$('#auth-err');err.textContent='';if(
 
 async function onLogin(u){
   if(curUid===u.uid)return;
-  curUid=u.uid;setAuthView('none');if(lockOn())showLock(true);
+  curUid=u.uid;store.set('mis-gastos-last-uid',u.uid);setAuthView('none');if(lockOn())showLock(true);
   P=Object.assign({nombre:'',foto:'',icono:''},lsGet('mis-gastos-perfil-'+u.uid)||{});
   P.email=u.email||'';P.verified=!!u.emailVerified;
   if(pendingName){P.nombre=pendingName;pendingName=''}else if(!P.nombre)P.nombre=u.displayName||'';
   const loc=lsGet(keyOf(u.uid));const hasLocal=!!(loc&&Array.isArray(loc.gastos)&&Array.isArray(loc.prestamos));
-  S=hasLocal?loc:seed();cloudMode=true;setSync('sync_conn');showTab('resumen');render();
+  S=hasLocal?loc:seed();cloudMode=true;if(!hasLocal)store.set(keyOf(u.uid),JSON.stringify(S));setSync('sync_conn');showTab('resumen');render();
   try{await syncStart(u,hasLocal)}catch(e){setSync('sync_fail')}
   offerBio(u.uid);
 }
@@ -732,7 +737,7 @@ async function offerBio(uid){
   if(ok&&curUid===uid){try{await lockEnable();renderProfile()}catch(e){}}
 }
 function onLogout(){
-  showLock(false);curUid=null;if(unsub){unsub();unsub=null}clearTimeout(pushTimer);
+  showLock(false);curUid=null;try{localStorage.removeItem('mis-gastos-last-uid')}catch(e){}if(unsub){unsub();unsub=null}clearTimeout(pushTimer);
   S=seed();P={nombre:'',foto:'',icono:'',email:'',verified:false};cloudMode=false;setSync('');
   $('#a-pass').value='';setAuthMode('login');setAuthView('form');render();
 }
@@ -784,7 +789,7 @@ async function lockVerify(){
   await navigator.credentials.get({publicKey:{challenge:rnd(32),allowCredentials:[{type:'public-key',id:unb64(id),transports:['internal']}],userVerification:'required',timeout:60000}});return true}
 let unlocking=false;
 async function tryUnlock(auto){if(unlocking)return;unlocking=true;
-  try{await lockVerify();showLock(false)}catch(e){if(!auto||!(e&&(e.name==='NotAllowedError'||e.name==='SecurityError')))$('#l-err').textContent=t('l_fail')}
+  try{await Promise.race([lockVerify(),new Promise((_,r)=>setTimeout(()=>r(Object.assign(new Error('timeout'),{name:'Timeout'})),20000))]);showLock(false)}catch(e){if(!auto||!(e&&(e.name==='NotAllowedError'||e.name==='SecurityError')))$('#l-err').textContent=t('l_fail')}
   unlocking=false}
 function showLock(on){$('#lock').classList.toggle('hidden',!on);$('#l-err').textContent='';if(on)setTimeout(()=>tryUnlock(true),350)}
 $('#l-unlock').onclick=()=>tryUnlock(false);
