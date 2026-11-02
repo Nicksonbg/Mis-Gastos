@@ -139,8 +139,8 @@ header .avatar{margin-left:4px}
   header{flex-wrap:nowrap;gap:10px}header h1{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:17px}.sync{font-size:11px}
   .kpi .val{font-size:20px}th,td{padding:7px 4px}.hide-sm{display:none}
   .kpis{grid-template-columns:1fr 1fr;gap:10px}.kpi{padding:14px}
-  nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);gap:0;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
-  nav button{padding:10px 4px;font-size:13px}
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);gap:0;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+  nav button{padding:10px 2px;font-size:12px}
   main{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
 }
 </style>
@@ -181,6 +181,7 @@ header .avatar{margin-left:4px}
     <button data-tab="resumen" class="on" data-i="tab_resumen"></button>
     <button data-tab="gastos" data-i="tab_gastos"></button>
     <button data-tab="prestamos" data-i="tab_prestamos"></button>
+    <button data-tab="inversiones" data-i="tab_inv"></button>
     <button data-tab="datos" data-i="tab_datos"></button>
   </nav>
   <button class="avatar" id="avatar" data-it="tab_perfil"></button>
@@ -237,6 +238,28 @@ header .avatar{margin-left:4px}
     <div class="row" style="margin-bottom:14px"><span class="muted small" data-i="pres_nota"></span><span class="spacer"></span><button class="btn" id="add-loan" data-i="add_loan"></button></div>
     <div class="card" style="margin-bottom:16px" id="loans-total"></div>
     <div class="grid" id="loans"></div>
+  </section>
+
+  <!-- INVERSIONES -->
+  <section id="tab-inversiones" class="hidden">
+    <div class="row" style="margin-bottom:10px"><span class="muted small" data-i="inv_nota"></span><span class="spacer"></span><button class="btn" id="add-inv" data-i="add_inv"></button></div>
+    <p class="small" id="inv-status" style="margin:0 0 12px"></p>
+    <div class="card" style="margin-bottom:16px" id="inv-total"></div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="tbl-wrap"><table>
+        <thead><tr><th data-i="th_activo"></th><th class="n hide-sm" data-i="th_cant"></th><th class="n hide-sm" data-i="th_precio"></th><th class="n" data-i="th_valor"></th><th class="n" data-i="th_gp"></th><th class="n hide-sm" data-i="th_hoy"></th><th></th></tr></thead>
+        <tbody id="inv-body"></tbody>
+      </table></div>
+    </div>
+    <div class="grid two">
+      <div class="card" id="inv-brokers"></div>
+      <div class="card">
+        <h2 data-i="h_finnhub"></h2>
+        <p class="muted small" data-i="finnhub_txt"></p>
+        <div class="row"><input id="finnhub-key" data-ip="finnhub_ph" autocomplete="off" style="flex:1;min-width:0"><button class="btn" id="finnhub-save" data-i="save"></button></div>
+        <p class="muted small" style="margin-top:10px" data-i="inv_fx_nota"></p>
+      </div>
+    </div>
   </section>
 
   <!-- DATOS -->
@@ -320,6 +343,24 @@ header .avatar{margin-left:4px}
   <h3 id="dlg-ok-t"></h3><p id="dlg-ok-m" class="muted"></p>
   <div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn ghost" value="cancel" id="dlg-ok-no" data-i="cancel"></button><button class="btn" value="ok" id="dlg-ok-si"></button></div>
 </form></dialog>
+<dialog id="dlg-inv"><form method="dialog" id="f-inv">
+  <h3 id="dlg-inv-t"></h3>
+  <div class="fgrid">
+    <label class="f"><span data-i="f_tipo"></span><select name="tipo"><option value="cripto" data-i="tipo_cripto"></option><option value="accion" data-i="tipo_accion"></option><option value="divisa" data-i="tipo_divisa"></option></select></label>
+    <label class="f"><span data-i="f_simbolo"></span><input name="simbolo" required autocapitalize="characters" autocomplete="off"></label>
+  </div>
+  <div class="fgrid">
+    <label class="f"><span data-i="f_cant"></span><input name="cantidad" type="number" step="any" min="0" required></label>
+    <label class="f"><span data-i="f_pcompra"></span><input name="precioCompra" type="number" step="any" min="0"></label>
+  </div>
+  <label class="f"><span data-i="f_broker"></span><input name="broker" list="brokers"></label>
+  <datalist id="brokers"></datalist>
+  <div class="fgrid" id="inv-acc">
+    <label class="f"><span data-i="f_moneda"></span><select name="moneda"><option>USD</option><option>EUR</option></select></label>
+    <label class="f"><span data-i="f_pmanual"></span><input name="precioManual" type="number" step="any" min="0"></label>
+  </div>
+  <div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn ghost" value="cancel" formnovalidate data-i="cancel"></button><button class="btn" value="ok" data-i="save"></button></div>
+</form></dialog>
 <dialog id="dlg-gasto"><form method="dialog" id="f-gasto">
   <h3 id="dlg-gasto-t"></h3>
   <label class="f"><span data-i="f_concepto"></span><input name="concepto" required></label>
@@ -389,7 +430,7 @@ const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},se
 function addMonths(isoStr,k,day){const d=parse(isoStr);const t=new Date(d.getFullYear(),d.getMonth()+k,1);const last=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();t.setDate(Math.min(day??d.getDate(),last));return iso(t)}
 
 /* ---------- Datos iniciales ---------- */
-function seed(){return{version:1,gastos:[],prestamos:[]}}
+function seed(){return{version:1,gastos:[],prestamos:[],inversiones:[]}}
 
 let S=seed(),curUid=null,P={nombre:'',foto:'',icono:'',email:'',verified:false},mesOff=0;
 const keyOf=u=>KEY+'-'+u,tsKey=u=>KEY+'-ts-'+u;
@@ -412,7 +453,7 @@ const loanById=id=>S.prestamos.find(l=>l.id===id);
 
 /* ---------- Render ---------- */
 const $=s=>document.querySelector(s);
-function render(){renderResumen();renderGastos();renderLoans();renderAlerts();renderDatos();renderProfile()}
+function render(){renderInv();renderResumen();renderGastos();renderLoans();renderAlerts();renderDatos();renderProfile()}
 
 function renderAlerts(){
   const out=[];
@@ -575,9 +616,87 @@ function renderLoans(){
 
 function renderDatos(){const b=store.get(KEY_BACKUP);$('#last-backup').textContent=b?t('ultima_copia',{d:new Date(b).toLocaleString(LANGS[lang].loc)}):t('ninguna_copia');$('#donde').innerHTML=t(cloudMode?'donde_cloud':'donde_local')}
 
+
+/* ---------- Inversiones (solo lectura, precios en vivo) ---------- */
+Object.assign(TR,{"tab_inv": ["Inversiones", "Investments", "Инвестиции"], "inv_nota": ["Solo lectura: ves cómo van tus inversiones, no se compra ni vende nada.", "Read-only: see how your investments are doing; nothing is bought or sold.", "Само за преглед: виждаш как вървят инвестициите ти, нищо не се купува или продава."], "add_inv": ["Añadir posición", "Add position", "Добави позиция"], "inv_new": ["Nueva posición", "New position", "Нова позиция"], "inv_edit": ["Editar posición", "Edit position", "Редакция на позиция"], "th_activo": ["Activo", "Asset", "Актив"], "th_cant": ["Cantidad", "Amount", "Количество"], "th_precio": ["Precio", "Price", "Цена"], "th_valor": ["Valor", "Value", "Стойност"], "th_gp": ["Ganancia", "Gain/loss", "Печалба"], "th_hoy": ["Hoy", "Today", "Днес"], "tipo_cripto": ["Cripto", "Crypto", "Крипто"], "tipo_accion": ["Acción", "Stock", "Акция"], "tipo_divisa": ["Divisa", "Currency", "Валута"], "f_tipo": ["Tipo", "Type", "Тип"], "f_simbolo": ["Símbolo (BTC, AAPL, USD…)", "Symbol (BTC, AAPL, USD…)", "Символ (BTC, AAPL, USD…)"], "f_cant": ["Cantidad", "Amount", "Количество"], "f_pcompra": ["Precio de compra en € por unidad (opcional)", "Buy price in € per unit (optional)", "Цена на покупка в € за единица (по избор)"], "f_broker": ["Broker o cuenta (opcional)", "Broker or account (optional)", "Брокер или сметка (по избор)"], "f_moneda": ["Moneda de la cotización", "Quote currency", "Валута на котировката"], "f_pmanual": ["Precio actual manual (opcional)", "Manual current price (optional)", "Текуща цена ръчно (по избор)"], "inv_live": ["En vivo", "Live", "На живо"], "inv_upd": ["Actualizado a las {h}", "Updated at {h}", "Обновено в {h}"], "inv_off": ["Sin conexión con los precios: se muestran los últimos conocidos.", "No connection to prices: showing the latest known.", "Няма връзка с цените: показват се последните известни."], "inv_sin_precio": ["sin precio", "no price", "без цена"], "inv_vacio": ["Todavía no hay posiciones. Añade la primera con el botón de arriba.", "No positions yet. Add the first one with the button above.", "Още няма позиции. Добави първата с бутона отгоре."], "inv_valor": ["Valor total", "Total value", "Обща стойност"], "inv_invertido": ["Invertido", "Invested", "Инвестирано"], "inv_gp": ["Ganancia / pérdida", "Gain / loss", "Печалба / загуба"], "inv_hoy": ["Hoy", "Today", "Днес"], "h_broker": ["Por broker o cuenta", "By broker or account", "По брокер или сметка"], "sin_broker": ["Sin broker", "No broker", "Без брокер"], "h_finnhub": ["Precios de acciones", "Stock prices", "Цени на акции"], "finnhub_txt": ["Para ver las acciones en vivo, pega tu clave gratuita de finnhub.io. Se guarda solo en este dispositivo. Sin clave se usa el precio manual.", "To see stocks live, paste your free key from finnhub.io. It is stored only on this device. Without a key, the manual price is used.", "За акции на живо постави безплатния си ключ от finnhub.io. Съхранява се само на това устройство. Без ключ се ползва ръчната цена."], "finnhub_ph": ["Clave de Finnhub", "Finnhub key", "Ключ от Finnhub"], "inv_fx_nota": ["Las divisas usan el cambio diario del BCE, no es tiempo real. Cripto en vivo desde Binance.", "Currencies use the ECB daily rate, not real time. Crypto is live from Binance.", "Валутите ползват дневния курс на ЕЦБ, не е в реално време. Крипто е на живо от Binance."], "ask_borrar_inv": ["¿Borrar {n}?", "Delete {n}?", "Да изтрия ли {n}?"]});
+const KP='mis-gastos-precios',KFX='mis-gastos-fx',KFH='mis-gastos-finnhub';
+const lj=k=>{try{return JSON.parse(store.get(k))}catch(e){return null}};
+let PX=lj(KP)||{},FX=lj(KFX)||{},pxAt=null,pxErr=false,pxTimer=null,pxBusy=false;
+const pk=i=>i.tipo+':'+String(i.simbolo||'').toUpperCase();
+const jget=async u=>{const c=new AbortController(),to=setTimeout(()=>c.abort(),8000);try{const r=await fetch(u,{signal:c.signal});if(!r.ok)throw new Error('http');return await r.json()}finally{clearTimeout(to)}};
+async function getFx(){if(FX.t&&Date.now()-FX.t<36e5&&FX.r)return;const d=await jget('https://api.frankfurter.app/latest?from=EUR');FX={t:Date.now(),r:Object.assign({EUR:1},d.rates)};store.set(KFX,JSON.stringify(FX))}
+const toEur=(x,cur)=>cur==='EUR'?x:(FX.r&&FX.r[cur]?x/FX.r[cur]:null);
+async function pCripto(sy){
+  try{const d=await jget('https://api.binance.com/api/v3/ticker/24hr?symbol='+sy+'EUR');return{p:+d.lastPrice,ch:+d.priceChangePercent}}catch(e){}
+  const d=await jget('https://api.binance.com/api/v3/ticker/24hr?symbol='+sy+'USDT');await getFx();return{p:toEur(+d.lastPrice,'USD'),ch:+d.priceChangePercent}}
+async function pAccion(sy,cur){const key=store.get(KFH);if(!key)throw new Error('nokey');
+  const d=await jget('https://finnhub.io/api/v1/quote?symbol='+encodeURIComponent(sy)+'&token='+encodeURIComponent(key));
+  if(!d||!(d.c>0))throw new Error('noquote');if(cur!=='EUR')await getFx();return{p:toEur(d.c,cur),ch:typeof d.dp==='number'?d.dp:null}}
+async function refreshPx(){
+  const inv=S.inversiones||[];if(!inv.length||pxBusy)return;pxBusy=true;let bad=0;
+  try{if(inv.some(i=>i.tipo==='divisa'||(i.tipo==='accion'&&i.moneda!=='EUR')))await getFx()}catch(e){bad++}
+  const seen={};
+  await Promise.all(inv.map(async i=>{const k=pk(i);if(seen[k])return;seen[k]=1;const sy=String(i.simbolo).toUpperCase();
+    try{let r;
+      if(i.tipo==='cripto')r=await pCripto(sy);
+      else if(i.tipo==='accion'){if(!store.get(KFH))return;r=await pAccion(sy,i.moneda||'USD')}
+      else{await getFx();const x=FX.r&&FX.r[sy];if(!x)throw new Error('nofx');r={p:1/x,ch:null}}
+      if(r&&r.p>0)PX[k]={p:r.p,ch:r.ch,t:Date.now()};else bad++}catch(e){bad++}}));
+  pxAt=Date.now();pxErr=bad>0;store.set(KP,JSON.stringify(PX));pxBusy=false;renderInv()}
+function startPx(){stopPx();refreshPx();pxTimer=setInterval(()=>{if(!document.hidden)refreshPx()},15000)}
+function stopPx(){if(pxTimer){clearInterval(pxTimer);pxTimer=null}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&pxTimer)refreshPx()});
+function invCalc(i){const q=PX[pk(i)];let p=null,ch=null;
+  if(q&&q.p>0){p=q.p;ch=q.ch}
+  else if(i.tipo==='accion'&&i.precioManual>0)p=toEur(+i.precioManual,i.moneda||'USD');
+  const val=p!=null?p*i.cantidad:null,cost=i.precioCompra>0?i.precioCompra*i.cantidad:null;
+  const gp=val!=null&&cost!=null?val-cost:null,hoy=val!=null&&ch!=null?val-val/(1+ch/100):null;
+  return{p,ch,val,cost,gp,hoy,live:!!(q&&q.p>0)}}
+const sgn=(v,f)=>v==null?'<span class="muted">—</span>':`<span style="color:var(--${v>=0?'ok':'bad'})">${v>=0?'+':''}${f(v)}</span>`;
+const pctF=v=>new Intl.NumberFormat(LANGS[lang].loc,{maximumFractionDigits:2}).format(v)+' %';
+function renderInv(){
+  const inv=S.inversiones||[],el=$('#inv-body');if(!el)return;
+  const qty=new Intl.NumberFormat(LANGS[lang].loc,{maximumFractionDigits:8});
+  let V=0,C=0,GPc=0,H=0,hasH=false,byB={};
+  el.innerHTML=inv.map(i=>{const c=invCalc(i);
+    if(c.val!=null){V+=c.val;const b=i.broker||t('sin_broker');byB[b]=(byB[b]||0)+c.val;if(c.cost!=null){C+=c.cost;GPc+=c.gp}if(c.hoy!=null){H+=c.hoy;hasH=true}}
+    const pct=c.gp!=null&&c.cost>0?c.gp/c.cost*100:null;
+    return`<tr><td><b>${esc(String(i.simbolo).toUpperCase())}</b> <span class="pill mute">${t('tipo_'+i.tipo)}</span>${c.live?' <span class="pill ok">●</span>':''}<div class="muted small">${esc(i.broker||'')}</div></td>
+    <td class="n hide-sm">${qty.format(i.cantidad)}</td><td class="n hide-sm">${c.p!=null?money(c.p):'<span class="muted">'+t('inv_sin_precio')+'</span>'}</td>
+    <td class="n">${c.val!=null?money(c.val):'<span class="muted">—</span>'}</td>
+    <td class="n">${sgn(c.gp,money)}${pct!=null?'<div class="small">'+sgn(pct,pctF)+'</div>':''}</td>
+    <td class="n hide-sm">${c.ch!=null?sgn(c.ch,pctF):'<span class="muted">—</span>'}</td>
+    <td class="n" style="white-space:nowrap"><button class="icon" data-ei="${i.id}" title="${t('editar')}">✏️</button><button class="icon" data-di="${i.id}" title="${t('borrar')}">🗑️</button></td></tr>`}).join('')||`<tr><td colspan="7" class="muted" style="text-align:center;padding:18px">${t('inv_vacio')}</td></tr>`;
+  const gpp=C>0?GPc/C*100:null;
+  $('#inv-total').innerHTML=`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
+    <div><div class="muted small">${t('inv_valor')}</div><div style="font-size:26px;font-weight:700">${money(V)}</div></div>
+    <div><div class="muted small">${t('inv_invertido')}</div><div style="font-size:20px;font-weight:600">${C>0?money(C):'—'}</div></div>
+    <div><div class="muted small">${t('inv_gp')}</div><div style="font-size:20px;font-weight:600">${C>0?sgn(GPc,money):'—'}</div>${gpp!=null?'<div class="small">'+sgn(gpp,pctF)+'</div>':''}</div>
+    <div><div class="muted small">${t('inv_hoy')}</div><div style="font-size:20px;font-weight:600">${hasH?sgn(H,money):'—'}</div></div></div>`;
+  const bs=Object.entries(byB).sort((a,b)=>b[1]-a[1]);
+  $('#inv-brokers').innerHTML=`<h2>${t('h_broker')}</h2>`+(bs.map(([b,v])=>`<div class="row" style="margin:6px 0"><span>${esc(b)}</span><span class="spacer"></span><b>${money(v)}</b><span class="muted small" style="width:52px;text-align:right">${V>0?Math.round(v/V*100):0} %</span></div>`).join('')||'<p class="muted small">—</p>');
+  $('#brokers').innerHTML=[...new Set(inv.map(i=>i.broker).filter(Boolean))].map(b=>`<option value="${esc(b)}">`).join('');
+  const st=$('#inv-status');if(inv.length){const h=pxAt?new Date(pxAt).toLocaleTimeString(LANGS[lang].loc):'';
+    st.innerHTML=pxErr?`<span style="color:var(--bad)">${t('inv_off')}</span>`:(pxAt?`<span class="pill ok">● ${t('inv_live')}</span> <span class="muted">${t('inv_upd',{h})}</span>`:'');if(pxErr&&pxAt)st.innerHTML+=` <span class="muted">${t('inv_upd',{h})}</span>`}else st.innerHTML=''}
+const dI=$('#dlg-inv'),fI=$('#f-inv');let editI=null;
+function invTipoUi(){const tp=fI.tipo.value;$('#inv-acc').classList.toggle('hidden',tp!=='accion');fI.simbolo.placeholder=tp==='cripto'?'BTC, ETH':tp==='accion'?'AAPL, MSFT':'USD, BGN'}
+fI.tipo.onchange=invTipoUi;
+function openInv(g){editI=g||null;$('#dlg-inv-t').textContent=g?t('inv_edit'):t('inv_new');
+  fI.tipo.value=g?.tipo||'cripto';fI.simbolo.value=g?.simbolo||'';fI.cantidad.value=g?.cantidad??'';fI.precioCompra.value=g?.precioCompra??'';fI.broker.value=g?.broker||'';fI.moneda.value=g?.moneda||'USD';fI.precioManual.value=g?.precioManual??'';invTipoUi();dI.showModal()}
+$('#add-inv').onclick=()=>openInv();
+dI.addEventListener('close',()=>{if(dI.returnValue!=='ok')return;
+  const v={tipo:fI.tipo.value,simbolo:fI.simbolo.value.trim().toUpperCase(),cantidad:+fI.cantidad.value||0,precioCompra:fI.precioCompra.value?+fI.precioCompra.value:null,broker:fI.broker.value.trim(),moneda:fI.moneda.value,precioManual:fI.precioManual.value?+fI.precioManual.value:null};
+  if(v.tipo!=='accion'){v.moneda='EUR';v.precioManual=null}
+  S.inversiones=S.inversiones||[];if(editI)Object.assign(editI,v);else S.inversiones.push({id:uid(),...v});save();if(pxTimer)refreshPx()});
+$('#inv-body').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.ei)openInv((S.inversiones||[]).find(x=>x.id===b.dataset.ei));
+  if(b.dataset.di){const g=S.inversiones.find(x=>x.id===b.dataset.di);ask(t('ask_borrar_inv',{n:g.simbolo}),'',t('borrar'),false,true).then(ok=>{if(ok){S.inversiones=S.inversiones.filter(x=>x!==g);save()}})}});
+$('#finnhub-key').value=store.get(KFH)||'';
+$('#finnhub-save').onclick=()=>{const v=$('#finnhub-key').value.trim();if(v)store.set(KFH,v);else try{localStorage.removeItem(KFH)}catch(e){}refreshPx()};
+
 /* ---------- Eventos ---------- */
 function showTab(n){document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('on',x.dataset.tab===n));
-  document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hidden',s.id!=='tab-'+n));window.scrollTo(0,0);if(n==='perfil')refreshVerified()}
+  document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hidden',s.id!=='tab-'+n));window.scrollTo(0,0);if(n==='perfil')refreshVerified();if(n==='inversiones')startPx();else stopPx()}
 $('#nav').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;showTab(b.dataset.tab)});
 $('#avatar').onclick=()=>showTab('perfil');
 
