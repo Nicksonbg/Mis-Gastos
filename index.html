@@ -57,8 +57,8 @@ tr.paid td{color:var(--muted)}
 tr.next td{background:var(--accent-soft)}
 tfoot td{font-weight:650;border-bottom:0}
 .btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
-:root[data-theme="dark"] .btn{color:#10201b}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn{color:#10201b}}
+:root[data-theme="dark"] .btn:not(.ghost):not(.danger){color:#10201b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn:not(.ghost):not(.danger){color:#10201b}}
 .btn.ghost{background:none;color:var(--text);border:1px solid var(--line)}
 .btn.danger{background:none;color:var(--bad);border:1px solid var(--line)}
 .btn.sm{padding:4px 9px;font-size:13px}
