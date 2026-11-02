@@ -195,8 +195,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:po
         <p id="donde">Todo se guarda automáticamente <b>en este iPhone</b>. No se envía nada a internet.</p>
         <p class="muted small">Si borras los datos de navegación o cambias de navegador, se perderían. Por eso conviene descargar una copia de seguridad de vez en cuando.</p>
         <p class="small" id="last-backup"></p>
-        <div class="row"><button class="btn" id="exp">Descargar copia (.json)</button>
-        <label class="btn ghost" style="cursor:pointer">Cargar copia…<input type="file" id="imp" accept=".json,application/json" hidden></label></div>
+        <div class="row"><button class="btn" id="pegar">Pegar datos…</button>
+        <label class="btn ghost" style="cursor:pointer">Cargar copia desde archivo…<input type="file" id="imp" accept=".json,application/json" hidden></label>
+        <button class="btn ghost" id="exp">Guardar copia de seguridad</button></div>
       </div>
       <div class="card">
         <h2>Ajustes</h2>
@@ -211,6 +212,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:po
 </main>
 
 <!-- Dialogs -->
+<dialog id="dlg-pegar"><form method="dialog">
+  <h3>Pegar datos</h3>
+  <p class="muted small">Pega aquí el texto de tus datos (empieza por <b>{</b>) y pulsa Cargar.</p>
+  <label class="f">Datos<textarea id="pegar-txt" rows="8" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label>
+  <div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn ghost" value="cancel" formnovalidate>Cancelar</button><button class="btn" value="ok">Cargar</button></div>
+</form></dialog>
 <dialog id="dlg-ok"><form method="dialog">
   <h3 id="dlg-ok-t">¿Seguro?</h3><p id="dlg-ok-m" class="muted"></p>
   <div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn ghost" value="cancel" id="dlg-ok-no">Cancelar</button><button class="btn" value="ok" id="dlg-ok-si">Aceptar</button></div>
@@ -512,8 +519,14 @@ $('#exp').onclick=async()=>{const json=JSON.stringify(S,null,2),name='mis-gastos
   if(dl){try{await dl.save({filename:name,data:json})}catch(e){return}}
   else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([json],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
   store.set(KEY_BACKUP,new Date().toISOString());renderDatos()};
-$('#imp').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);
-  if(!Array.isArray(d.gastos)||!Array.isArray(d.prestamos))throw 0;ask('¿Cargar esta copia?','Sustituirá tus datos actuales por los de la copia.','Cargar').then(ok=>{if(ok){S=d;save()}})}catch(x){ask('No se pudo cargar','El archivo no es una copia válida de Mis Gastos.','Entendido',true)}e.target.value=''};rd.readAsText(f)};
+function importar(txt,origen){let d;try{d=JSON.parse(String(txt).trim());if(!Array.isArray(d.gastos)||!Array.isArray(d.prestamos))throw 0}
+  catch(x){ask('No se pudo cargar',origen+' no contiene datos válidos de Mis Gastos.','Entendido',true);return}
+  d.gastos.forEach(g=>{g.id=g.id||uid()});d.prestamos.forEach(l=>{l.id=l.id||uid();l.cuotas.forEach(c=>{c.id=c.id||uid()})});
+  const n=d.gastos.length,m=d.prestamos.length;
+  ask('¿Cargar estos datos?',`${n} gastos y ${m} préstamos. Sustituirán a los datos actuales.`,'Cargar').then(ok=>{if(ok){S=d;save();$('#nav button[data-tab=resumen]').click()}})}
+$('#imp').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{importar(rd.result,'El archivo');e.target.value=''};rd.readAsText(f)};
+const dP=$('#dlg-pegar');$('#pegar').onclick=()=>{$('#pegar-txt').value='';dP.showModal()};
+dP.addEventListener('close',()=>{if(dP.returnValue==='ok')setTimeout(()=>importar($('#pegar-txt').value,'El texto'),0)});
 $('#reset').onclick=()=>ask('¿Borrar todos los datos?','Se perderán todos tus cambios.','Restaurar').then(ok=>{if(ok){S=seed();save()}});
 const applyTheme=v=>{if(v)document.documentElement.dataset.theme=v;else delete document.documentElement.dataset.theme};
 $('#theme').value=store.get(KEY_THEME)||'';applyTheme($('#theme').value);
@@ -552,7 +565,7 @@ async function initSync(){
 window.__state=()=>S;
 save();
 initSync();
-if(!S.gastos.length&&!S.prestamos.length)$('#alerts').innerHTML='<div class="alert info">👋 <div>Para empezar, ve a <b>Datos → Cargar copia…</b> y elige tu copia de seguridad (.json). También puedes añadir gastos a mano.</div></div>'+$('#alerts').innerHTML;
+if(!S.gastos.length&&!S.prestamos.length)$('#alerts').innerHTML='<div class="alert info">👋 <div>Para empezar, ve a <b>Datos → Pegar datos…</b> y pega el texto de tus datos. También puedes añadir gastos a mano.</div></div>'+$('#alerts').innerHTML;
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
 </script>
