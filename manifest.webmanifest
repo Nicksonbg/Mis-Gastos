@@ -1,6 +1,6 @@
 {
-  "name": "Mis Gastos",
-  "short_name": "Mis Gastos",
+  "name": "Personal Balance",
+  "short_name": "Personal Balance",
   "lang": "es",
   "start_url": "./",
   "scope": "./",
