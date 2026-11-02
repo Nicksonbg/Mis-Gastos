@@ -251,6 +251,17 @@ header .avatar{margin-left:4px}
         <tbody id="inv-body"></tbody>
       </table></div>
     </div>
+    <div class="card" id="ibkr-card" style="margin-bottom:16px">
+      <h2 data-i="h_ibkr"></h2>
+      <p class="muted small" data-ih="ibkr_txt"></p>
+      <div id="ibkr-form">
+        <div class="fgrid"><label class="f"><span data-i="ibkr_token"></span><input id="ibkr-token" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+        <label class="f"><span data-i="ibkr_query"></span><input id="ibkr-query" inputmode="numeric" autocomplete="off"></label></div>
+        <button class="btn" id="ibkr-connect" data-i="ibkr_connect"></button>
+      </div>
+      <div id="ibkr-on" class="hidden"><div class="row"><button class="btn" id="ibkr-sync" data-i="ibkr_sync"></button><button class="btn ghost" id="ibkr-off" data-i="ibkr_off"></button></div></div>
+      <p class="small" id="ibkr-msg" style="margin:10px 0 0"></p>
+    </div>
     <div class="grid two">
       <div class="card" id="inv-brokers"></div>
       <div class="card">
@@ -691,12 +702,30 @@ dI.addEventListener('close',()=>{if(dI.returnValue!=='ok')return;
 $('#inv-body').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.ei)openInv((S.inversiones||[]).find(x=>x.id===b.dataset.ei));
   if(b.dataset.di){const g=S.inversiones.find(x=>x.id===b.dataset.di);ask(t('ask_borrar_inv',{n:g.simbolo}),'',t('borrar'),false,true).then(ok=>{if(ok){S.inversiones=S.inversiones.filter(x=>x!==g);save()}})}});
+
+Object.assign(TR,{"h_ibkr": ["Conectar Interactive Brokers", "Connect Interactive Brokers", "Свържи Interactive Brokers"], "ibkr_txt": ["Solo lectura. En IBKR: <b>Rendimiento e informes → Consultas Flex</b>, crea una consulta de actividad con la sección <b>Posiciones abiertas</b> (campos: Símbolo, Clase de activo, Divisa, Cantidad, Precio de mercado, Precio base de coste y nivel de detalle), formato XML. Luego, en <b>Servicio web Flex</b>, genera un token. Pega aquí el token y el número de la consulta. Las cantidades se leen del último cierre; los precios van en vivo.", "Read-only. In IBKR: <b>Performance &amp; Reports → Flex Queries</b>, create an Activity Flex Query with the <b>Open Positions</b> section (fields: Symbol, Asset Class, Currency, Quantity, Mark Price, Cost Basis Price and Level of Detail), XML format. Then, under <b>Flex Web Service</b>, generate a token. Paste the token and the query number here. Quantities come from the last close; prices are live.", "Само за четене. В IBKR: <b>Performance &amp; Reports → Flex Queries</b>, създай Activity Flex Query със секция <b>Open Positions</b> (полета: Symbol, Asset Class, Currency, Quantity, Mark Price, Cost Basis Price и Level of Detail), формат XML. После в <b>Flex Web Service</b> генерирай токен. Постави тук токена и номера на заявката. Количествата са от последното затваряне; цените са на живо."], "ibkr_token": ["Token Flex", "Flex token", "Flex токен"], "ibkr_query": ["Número de consulta", "Query number", "Номер на заявката"], "ibkr_connect": ["Conectar y traer posiciones", "Connect and fetch positions", "Свържи и вземи позициите"], "ibkr_sync": ["Actualizar posiciones", "Update positions", "Обнови позициите"], "ibkr_off": ["Desconectar", "Disconnect", "Прекъсни"], "ibkr_ok": ["Listo: {n} posiciones traídas de Interactive Brokers.", "Done: {n} positions fetched from Interactive Brokers.", "Готово: {n} позиции от Interactive Brokers."], "ibkr_skip": [" ({k} omitidas: solo se leen acciones y cripto).", " ({k} skipped: only stocks and crypto are read).", " ({k} пропуснати: четат се само акции и крипто)."], "ibkr_err": ["No se pudo: {m}", "Failed: {m}", "Неуспешно: {m}"], "ibkr_need": ["Necesitas haber iniciado sesión con conexión a internet.", "You need to be signed in and online.", "Трябва да си влязъл и с интернет."], "ibkr_bye": ["Desconectado. Tus posiciones siguen en la lista.", "Disconnected. Your positions stay in the list.", "Прекъснато. Позициите остават в списъка."]});
+const ibkrKey=()=>'mis-gastos-ibkr-'+curUid;
+async function fnCall(name,data){if(!fb||!curUid||!cloudMode)throw new Error(t('ibkr_need'));
+  if(!fb.Fn){fb.Fn=await import(FB_BASE+'firebase-functions.js');fb.fns=fb.Fn.getFunctions(fb.app,'europe-west1')}
+  return (await fb.Fn.httpsCallable(fb.fns,name)(data||{})).data}
+function ibkrUi(){const on=curUid&&store.get(ibkrKey())==='1';$('#ibkr-form').classList.toggle('hidden',!!on);$('#ibkr-on').classList.toggle('hidden',!on)}
+const ibkrMsg=(m,bad)=>{const e=$('#ibkr-msg');e.textContent=m||'';e.style.color=bad?'var(--bad)':''};
+async function ibkrPull(){
+  const d=await fnCall('ibkrSync');await getFx().catch(()=>{});
+  const keep=(S.inversiones||[]).filter(i=>i.fuente!=='ibkr');
+  const nuevas=d.positions.map(p=>({id:uid(),tipo:p.tipo,simbolo:p.symbol,cantidad:p.qty,precioCompra:p.cost!=null?(toEur(p.cost,p.currency)!=null?Math.round(toEur(p.cost,p.currency)*100)/100:null):null,broker:'Interactive Brokers',moneda:p.tipo==='accion'?p.currency:'EUR',precioManual:p.tipo==='accion'?p.mark:null,fuente:'ibkr'}));
+  S.inversiones=keep.concat(nuevas);save();if(pxTimer)refreshPx();
+  ibkrMsg(t('ibkr_ok',{n:nuevas.length})+(d.skipped?t('ibkr_skip',{k:d.skipped}).replace('..','.'):''))}
+const ibkrRun=async f=>{ibkrMsg('…');try{await f()}catch(e){ibkrMsg(t('ibkr_err',{m:(e&&e.message)||String(e)}),true)}};
+$('#ibkr-connect').onclick=()=>ibkrRun(async()=>{await fnCall('ibkrSave',{token:$('#ibkr-token').value,queryId:$('#ibkr-query').value});$('#ibkr-token').value='';store.set(ibkrKey(),'1');ibkrUi();await ibkrPull()});
+$('#ibkr-sync').onclick=()=>ibkrRun(ibkrPull);
+$('#ibkr-off').onclick=()=>ibkrRun(async()=>{await fnCall('ibkrDelete');try{localStorage.removeItem(ibkrKey())}catch(e){}ibkrUi();ibkrMsg(t('ibkr_bye'))});
 $('#finnhub-key').value=store.get(KFH)||'';
 $('#finnhub-save').onclick=()=>{const v=$('#finnhub-key').value.trim();if(v)store.set(KFH,v);else try{localStorage.removeItem(KFH)}catch(e){}refreshPx()};
 
 /* ---------- Eventos ---------- */
 function showTab(n){document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('on',x.dataset.tab===n));
-  document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hidden',s.id!=='tab-'+n));window.scrollTo(0,0);if(n==='perfil')refreshVerified();if(n==='inversiones')startPx();else stopPx()}
+  document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hidden',s.id!=='tab-'+n));window.scrollTo(0,0);if(n==='perfil')refreshVerified();if(n==='inversiones'){startPx();ibkrUi()}else stopPx()}
 $('#nav').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;showTab(b.dataset.tab)});
 $('#avatar').onclick=()=>showTab('perfil');
 
@@ -798,7 +827,7 @@ $('#a-retry').onclick=()=>location.reload();
 
 async function loadFb(){
   const[A,Au,Fs]=await Promise.all([import(FB_BASE+'firebase-app.js'),import(FB_BASE+'firebase-auth.js'),import(FB_BASE+'firebase-firestore.js')]);
-  const app=A.initializeApp(FB_CFG);fb={A,Au,Fs,auth:Au.getAuth(app),db:Fs.getFirestore(app)};
+  const app=A.initializeApp(FB_CFG);fb={A,Au,Fs,app,auth:Au.getAuth(app),db:Fs.getFirestore(app)};
 }
 const REM_KEY='mis-gastos-remember',MAIL_KEY='mis-gastos-email';
 async function applyPersistence(){const rem=$('#a-remember').checked;store.set(REM_KEY,rem?'1':'0');
