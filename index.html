@@ -38,6 +38,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 header h1{font-size:19px;margin:0;margin-right:auto}
 nav{display:flex;gap:4px;flex-wrap:wrap}
 nav button{background:none;border:0;padding:8px 14px;border-radius:8px;color:var(--muted);font:inherit;cursor:pointer}
+nav button svg{display:none}
 nav button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
 main{max-width:1100px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .sync{font-size:12px;color:var(--muted)}
@@ -125,6 +126,10 @@ header .avatar{margin-left:4px}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--bg);padding:4px;border-radius:10px;margin-bottom:14px}
 .ai{display:inline-flex;position:relative;width:26px;height:26px;flex:0 0 26px;border-radius:50%;background:var(--bg);align-items:center;justify-content:center;font-size:12px;font-weight:700;vertical-align:middle;margin-right:8px;overflow:hidden;color:var(--muted)}
 .ai img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#fff}
+.utabs{display:flex;gap:24px;overflow-x:auto;border-bottom:1px solid var(--line);margin:0 0 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.utabs::-webkit-scrollbar{display:none}
+.utabs button{flex:0 0 auto;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;padding:10px 0;font:inherit;font-size:16px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.utabs button.on{color:var(--text);font-weight:700;border-bottom-color:var(--accent)}
 .seg3{grid-template-columns:repeat(3,1fr)}
 .seg button{border:0;background:none;padding:8px;border-radius:8px;font:inherit;color:var(--muted);cursor:pointer}
 .seg button.on{background:var(--card);color:var(--text);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.18)}
@@ -144,9 +149,11 @@ header .avatar{margin-left:4px}
   header{flex-wrap:nowrap;gap:10px}header h1{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:17px}.sync{font-size:11px}
   .kpi .val{font-size:20px}th,td{padding:7px 4px}.hide-sm{display:none}
   .kpis{grid-template-columns:1fr 1fr;gap:10px}.kpi{padding:14px}
-  nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);gap:0;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
-  nav button{padding:10px 2px;font-size:12px}
-  main{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+  nav{position:fixed;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:6;background:color-mix(in srgb,var(--card) 88%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:28px;box-shadow:0 8px 28px rgba(0,0,0,.28);display:grid;grid-template-columns:repeat(5,1fr);gap:2px;padding:6px}
+  nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 2px;font-size:11px;line-height:1.1;border-radius:22px}
+  nav button svg{display:block}
+  nav button span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  main{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
 }
 </style>
 </head>
@@ -183,11 +190,11 @@ header .avatar{margin-left:4px}
 <header>
   <h1>💶 Personal Balance <span class="sync" id="sync"></span></h1>
   <nav id="nav">
-    <button data-tab="resumen" class="on" data-i="tab_resumen"></button>
-    <button data-tab="gastos" data-i="tab_gastos"></button>
-    <button data-tab="prestamos" data-i="tab_prestamos"></button>
-    <button data-tab="inversiones" data-i="tab_inv"></button>
-    <button data-tab="datos" data-i="tab_datos"></button>
+    <button data-tab="resumen" class="on"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span data-i="tab_resumen"></span></button>
+    <button data-tab="gastos"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2"/><circle cx="16.5" cy="14.5" r="1"/></svg><span data-i="tab_gastos"></span></button>
+    <button data-tab="prestamos"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg><span data-i="tab_prestamos"></span></button>
+    <button data-tab="inversiones"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span data-i="tab_inv"></span></button>
+    <button data-tab="datos"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg><span data-i="tab_datos"></span></button>
   </nav>
   <button class="avatar" id="avatar" data-it="tab_perfil"></button>
 </header>
@@ -248,7 +255,7 @@ header .avatar{margin-left:4px}
   <!-- INVERSIONES -->
   <section id="tab-inversiones" class="hidden">
     <div class="row" style="margin-bottom:10px"><span class="muted small" data-i="inv_nota"></span><span class="spacer"></span><button class="btn" id="add-inv" data-i="add_inv"></button></div>
-    <div class="seg seg3" id="inv-seg"><button type="button" class="on" data-ip-tab="cartera" data-i="inv_t_cartera"></button><button type="button" data-ip-tab="watch" data-i="inv_t_watch"></button><button type="button" data-ip-tab="conectar" data-i="inv_t_conectar"></button></div>
+    <div class="utabs" id="inv-seg"><button type="button" class="on" data-ip-tab="cartera" data-i="inv_t_cartera"></button><button type="button" data-ip-tab="watch" data-i="inv_t_watch"></button><button type="button" data-ip-tab="conectar" data-i="inv_t_conectar"></button></div>
     <div id="invp-cartera">
     <p class="small" id="inv-status" style="margin:0 0 12px"></p>
     <div class="card" style="margin-bottom:16px" id="inv-total"></div>
@@ -263,6 +270,7 @@ header .avatar{margin-left:4px}
     <div id="invp-watch" class="hidden">
     <div class="card" id="watch-card" style="margin-bottom:16px">
       <div class="row"><h2 style="margin:0" data-i="h_watch"></h2><span class="spacer"></span><span class="muted small" id="watch-n"></span></div>
+      <div class="utabs" id="watch-filter" style="margin-top:10px"><button type="button" class="on" data-wf="all" data-i="wf_all"></button><button type="button" data-wf="cripto" data-i="wf_cripto"></button><button type="button" data-wf="accion" data-i="wf_accion"></button><button type="button" data-wf="divisa" data-i="wf_divisa"></button><button type="button" data-wf="indice" data-i="wf_indice"></button></div>
       <form id="f-watch" class="row" style="margin:10px 0;gap:8px;flex-wrap:wrap">
         <select name="tipo" style="flex:0 0 auto"><option value="auto" data-i="tipo_auto"></option><option value="cripto" data-i="tipo_cripto"></option><option value="accion" data-i="tipo_accion"></option><option value="divisa" data-i="tipo_divisa"></option><option value="indice" data-i="tipo_indice"></option></select>
         <input name="simbolo" required autocapitalize="characters" autocomplete="off" spellcheck="false" style="flex:1 1 110px;min-width:0" data-ip="watch_ph">
@@ -718,7 +726,7 @@ function renderInv(){
   $('#brokers').innerHTML=[...new Set(inv.map(i=>i.broker).filter(Boolean))].map(b=>`<option value="${esc(b)}">`).join('');
   const st=$('#inv-status');if(inv.length){const h=pxAt?new Date(pxAt).toLocaleTimeString(LANGS[lang].loc):'';
     st.innerHTML=pxErr?`<span style="color:var(--bad)">${t('inv_off')}</span>`:(pxAt?`<span class="pill ok">● ${t('inv_live')}</span> <span class="muted">${t('inv_upd',{h})}</span>`:'');if(pxErr&&pxAt)st.innerHTML+=` <span class="muted">${t('inv_upd',{h})}</span>`}else st.innerHTML='';renderWatch()}
-Object.assign(TR,{"inv_t_cartera":["Cartera","Portfolio","Портфейл"],"inv_t_watch":["Seguimiento","Watchlist","Следене"],"inv_t_conectar":["Conectar","Connect","Свързване"],"fh_saved":["✓ Clave guardada en tu cuenta (no se pierde al cambiar de móvil).","✓ Key saved in your account (not lost if you change phone).","✓ Ключът е запазен в профила ти (не се губи при смяна на телефона)."],"watch_sug":["¿Quisiste decir…?","Did you mean…?","Имаше ли предвид…?"],"watch_nokey2":["(Con tu clave de Finnhub las reconoceré solas.)","(With your Finnhub key I will recognise them automatically.)","(С твоя Finnhub ключ ще ги разпозная сам.)"],"tipo_indice":["Índice","Index","Индекс"],"watch_ask":["No reconozco «{s}». ¿Qué tipo es?","I don't recognise “{s}”. What type is it?","Не разпознавам „{s}“. Какъв тип е?"],"tipo_auto":["Automático","Automatic","Автоматично"],"h_watch":["Lista de seguimiento","Watchlist","Списък за следене"],"watch_ph":["Símbolo (BTC, AAPL, USD…)","Symbol (BTC, AAPL, USD…)","Символ (BTC, AAPL, USD…)"],"watch_add":["Añadir","Add","Добави"],"watch_full":["Máximo 20 símbolos.","Maximum 20 symbols.","Най-много 20 символа."],"watch_dup":["Ya está en la lista.","Already in the list.","Вече е в списъка."],"watch_empty":["Añade los símbolos que quieres vigilar (hasta 20).","Add the symbols you want to follow (up to 20).","Добави символите, които искаш да следиш (до 20)."],"watch_nokey":["Para precios de acciones añade tu clave de Finnhub (más abajo).","For stock prices add your Finnhub key (below).","За цени на акции добави своя Finnhub ключ (по-долу)."]});
+Object.assign(TR,{"wf_all":["Todo","All","Всички"],"wf_cripto":["Cripto","Crypto","Крипто"],"wf_accion":["Acciones","Stocks","Акции"],"wf_divisa":["Forex","Forex","Форекс"],"wf_indice":["Índices","Indices","Индекси"],"inv_t_cartera":["Cartera","Portfolio","Портфейл"],"inv_t_watch":["Seguimiento","Watchlist","Следене"],"inv_t_conectar":["Conectar","Connect","Свързване"],"fh_saved":["✓ Clave guardada en tu cuenta (no se pierde al cambiar de móvil).","✓ Key saved in your account (not lost if you change phone).","✓ Ключът е запазен в профила ти (не се губи при смяна на телефона)."],"watch_sug":["¿Quisiste decir…?","Did you mean…?","Имаше ли предвид…?"],"watch_nokey2":["(Con tu clave de Finnhub las reconoceré solas.)","(With your Finnhub key I will recognise them automatically.)","(С твоя Finnhub ключ ще ги разпозная сам.)"],"tipo_indice":["Índice","Index","Индекс"],"watch_ask":["No reconozco «{s}». ¿Qué tipo es?","I don't recognise “{s}”. What type is it?","Не разпознавам „{s}“. Какъв тип е?"],"tipo_auto":["Automático","Automatic","Автоматично"],"h_watch":["Lista de seguimiento","Watchlist","Списък за следене"],"watch_ph":["Símbolo (BTC, AAPL, USD…)","Symbol (BTC, AAPL, USD…)","Символ (BTC, AAPL, USD…)"],"watch_add":["Añadir","Add","Добави"],"watch_full":["Máximo 20 símbolos.","Maximum 20 symbols.","Най-много 20 символа."],"watch_dup":["Ya está en la lista.","Already in the list.","Вече е в списъка."],"watch_empty":["Añade los símbolos que quieres vigilar (hasta 20).","Add the symbols you want to follow (up to 20).","Добави символите, които искаш да следиш (до 20)."],"watch_nokey":["Para precios de acciones añade tu clave de Finnhub (más abajo).","For stock prices add your Finnhub key (below).","За цени на акции добави своя Finnhub ключ (по-долу)."]});
 const CC={USD:'US',EUR:'EU',GBP:'GB',CHF:'CH',JPY:'JP',BGN:'BG',CAD:'CA',AUD:'AU',NZD:'NZ',SEK:'SE',NOK:'NO',DKK:'DK',PLN:'PL',CZK:'CZ',HUF:'HU',RON:'RO',TRY:'TR',CNY:'CN',INR:'IN',BRL:'BR',MXN:'MX'};
 function aIcon(tipo,sy){sy=String(sy||'').toUpperCase();const ini=esc(sy.replace(/[^A-Z0-9]/g,'').slice(0,2)||'?');
   if(tipo==='divisa'){const c=CC[sy];return`<span class="ai" style="font-size:16px">${c?String.fromCodePoint(...[...c].map(x=>127397+x.charCodeAt(0))):ini}</span>`}
@@ -738,12 +746,13 @@ function candle(k,ch){const q=PX[k];if(!q)return'';const c=q.k,up=(q.ch!=null?q.
   if(!c||c.length<4||!(c[1]>c[2]))return pc;
   const [o,h,l,cl]=c,H=26,y=v=>(2+(h-v)/(h-l)*(H-4)).toFixed(1),top=Math.min(y(o),y(cl)),bh=Math.max(Math.abs(y(o)-y(cl)),1.5);
   return`<svg width="14" height="${H}" viewBox="0 0 14 ${H}" style="vertical-align:middle;margin-left:6px" aria-hidden="true"><line x1="7" x2="7" y1="${y(h)}" y2="${y(l)}" stroke="${col}" stroke-width="1.5"/><rect x="3" width="8" y="${top}" height="${bh}" rx="1" fill="${col}"/></svg>${pc}`}
+let wFil='all';
 function renderWatch(){
   const w=S.watch||[],el=$('#watch-body');if(!el)return;
   $('#watch-n').textContent=w.length+' / 20';
   const hasKey=!!fhKey();
   $('#watch-msg').textContent=w.some(x=>x.tipo==='accion')&&!hasKey?t('watch_nokey'):'';
-  el.innerHTML=w.map(x=>{const q=PX[pk(x)],p=q&&q.p>0?q.p:null,ch=q&&q.ch!=null?q.ch:null;
+  el.innerHTML=w.filter(x=>wFil==='all'||x.tipo===wFil).map(x=>{const q=PX[pk(x)],p=q&&q.p>0?q.p:null,ch=q&&q.ch!=null?q.ch:null;
     return`<div class="row" style="padding:9px 0;border-top:1px solid var(--line,#2a2a30);gap:8px;flex-wrap:nowrap"><div style="min-width:0">${aIcon(x.tipo,x.proxy||x.simbolo)}<b>${esc(x.simbolo)}</b> <span class="pill mute">${t('tipo_'+x.tipo)}</span>${candle(pk(x))}</div><span class="spacer"></span><div class="n" style="text-align:right">${(()=>{const n=natPx(x);return n?fmtC(n.v,n.c):p!=null?money(p):'<span class="muted">—</span>'})()}${natPx(x)&&p!=null?'<div class="muted small">'+money(p)+'</div>':''}</div><button class="icon" data-dw="${x.id}" title="${t('borrar')}">🗑️</button></div>`}).join('')||`<p class="muted small" style="margin:6px 0">${t('watch_empty')}</p>`}
 const POP=[['Apple','AAPL'],['Microsoft','MSFT'],['Alphabet Google','GOOGL'],['Amazon','AMZN'],['Nvidia','NVDA'],['Meta Facebook','META'],['Tesla','TSLA'],['Netflix','NFLX'],['Coca-Cola','KO'],['PepsiCo','PEP'],['McDonalds','MCD'],['Nike','NKE'],['Disney','DIS'],['Visa','V'],['Mastercard','MA'],['PayPal','PYPL'],['JPMorgan','JPM'],['Berkshire Hathaway','BRK.B'],['Johnson & Johnson','JNJ'],['Pfizer','PFE'],['Exxon Mobil','XOM'],['Chevron','CVX'],['Walmart','WMT'],['Costco','COST'],['Intel','INTC'],['AMD','AMD'],['Qualcomm','QCOM'],['Broadcom','AVGO'],['Oracle','ORCL'],['Adobe','ADBE'],['Salesforce','CRM'],['Uber','UBER'],['Airbnb','ABNB'],['Spotify','SPOT'],['Palantir','PLTR'],['Coinbase','COIN'],['MicroStrategy','MSTR'],['Starbucks','SBUX'],['Boeing','BA'],['Ford','F'],['General Motors','GM'],['Ferrari','RACE'],['ASML','ASML'],['SAP','SAP'],['Toyota','TM'],['Alibaba','BABA'],['Sony','SONY'],['Shopify','SHOP'],['Zoom','ZM'],['Snowflake','SNOW'],['Bitcoin','BTC','cripto'],['Ethereum','ETH','cripto'],['Solana','SOL','cripto'],['Ripple XRP','XRP','cripto'],['Dogecoin','DOGE','cripto'],['Cardano','ADA','cripto'],['Binance Coin','BNB','cripto'],['Litecoin','LTC','cripto'],['Chainlink','LINK','cripto'],['Polkadot','DOT','cripto'],['Avalanche','AVAX','cripto'],['Shiba Inu','SHIB','cripto'],['Dollar USD','USD','divisa'],['Pound GBP','GBP','divisa'],['Franc CHF','CHF','divisa'],['Yen JPY','JPY','divisa'],['Lev BGN','BGN','divisa'],['S&P 500','SPY','indice'],['Nasdaq 100','QQQ','indice'],['Dow Jones','DIA','indice'],['Russell 2000','IWM','indice'],['DAX','EWG','indice'],['IBEX 35','EWP','indice'],['FTSE 100','EWU','indice'],['Nikkei 225','EWJ','indice']];
 const norm=x=>String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,'');
@@ -793,6 +802,7 @@ $('#f-watch').simbolo.addEventListener('input',e=>{const q=e.target.value;clearT
 $('#watch-ask').addEventListener('click',e=>{const b=e.target.closest('button[data-ws]');if(!b)return;const a=$('#watch-ask'),x=a._l[+b.dataset.ws];a.innerHTML='';
   if(x.tp==='indice')watchAdd('indice',x.n,{proxy:x.sy});else watchAdd(x.tp,x.sy)});
 $('#watch-ask').addEventListener('click',e=>{const b=e.target.closest('button[data-wt]');if(!b)return;const a=$('#watch-ask'),sy=a.dataset.sy,tp=b.dataset.wt;a.innerHTML='';watchAdd(tp,sy,tp==='indice'?{proxy:sy}:null)});
+$('#watch-filter').addEventListener('click',e=>{const b=e.target.closest('button[data-wf]');if(!b)return;wFil=b.dataset.wf;document.querySelectorAll('#watch-filter button').forEach(x=>x.classList.toggle('on',x===b));renderWatch()});
 $('#watch-body').addEventListener('click',e=>{const b=e.target.closest('button[data-dw]');if(!b)return;S.watch=(S.watch||[]).filter(x=>x.id!==b.dataset.dw);save()});
 function invPane(n){['cartera','watch','conectar'].forEach(k=>$('#invp-'+k).classList.toggle('hidden',k!==n));document.querySelectorAll('#inv-seg button').forEach(b=>b.classList.toggle('on',b.dataset.ipTab===n));$('#add-inv').classList.toggle('hidden',n!=='cartera');store.set('mis-gastos-invtab',n)}
 $('#inv-seg').addEventListener('click',e=>{const b=e.target.closest('button');if(b)invPane(b.dataset.ipTab)});
