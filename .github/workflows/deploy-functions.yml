@@ -17,5 +17,5 @@ jobs:
           if [ -z "$GOOGLE_APPLICATION_CREDENTIALS_JSON" ]; then echo "Falta el secreto FIREBASE_SERVICE_ACCOUNT"; exit 1; fi
           printf '%s' "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
-          npx --yes firebase-tools@latest deploy --only functions --project personal-balance-dccca --non-interactive
+          npx --yes firebase-tools@latest deploy --only functions --project personal-balance-dccca --non-interactive --force
           rm -f "$RUNNER_TEMP/sa.json"
