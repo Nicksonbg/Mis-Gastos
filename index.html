@@ -669,7 +669,7 @@ async function pCripto(sy){
   const d=await jget('https://api.binance.com/api/v3/ticker/24hr?symbol='+sy+'USDT');await getFx();return{p:toEur(+d.lastPrice,'USD'),ch:+d.priceChangePercent}}
 async function pAccion(sy,cur){const key=fhKey();if(!key)throw new Error('nokey');
   const d=await jget('https://finnhub.io/api/v1/quote?symbol='+encodeURIComponent(sy)+'&token='+encodeURIComponent(key));
-  if(!d||!(d.c>0))throw new Error('noquote');if(cur!=='EUR')await getFx();return{p:toEur(d.c,cur),ch:typeof d.dp==='number'?d.dp:null}}
+  if(!d||!(d.c>0))throw new Error('noquote');if(cur!=='EUR')await getFx();return{p:toEur(d.c,cur),ch:typeof d.dp==='number'?d.dp:null,o:cur!=='EUR'?d.c:null,cur}}
 async function refreshPx(){
   try{fhSync()}catch(e){}
   const inv=(S.inversiones||[]).concat((S.watch||[]).map(w=>({...w,moneda:'USD'})));if(!inv.length||pxBusy)return;pxBusy=true;let bad=0;
@@ -680,7 +680,7 @@ async function refreshPx(){
       if(i.tipo==='cripto')r=await pCripto(sy);
       else if(i.tipo==='accion'||i.tipo==='indice'){if(!fhKey())return;r=await pAccion(i.proxy||sy,i.moneda||'USD')}
       else{await getFx();const x=FX.r&&FX.r[sy];if(!x)throw new Error('nofx');r={p:1/x,ch:null}}
-      if(r&&r.p>0)PX[k]={p:r.p,ch:r.ch,t:Date.now()};else bad++}catch(e){bad++}}));
+      if(r&&r.p>0)PX[k]={p:r.p,ch:r.ch,t:Date.now(),o:r.o||null,cur:r.cur||null};else bad++}catch(e){bad++}}));
   pxAt=Date.now();pxErr=bad>0;store.set(KP,JSON.stringify(PX));pxBusy=false;renderInv()}
 function startPx(){stopPx();refreshPx();pxTimer=setInterval(()=>{if(!document.hidden)refreshPx()},15000)}
 function stopPx(){if(pxTimer){clearInterval(pxTimer);pxTimer=null}}
@@ -701,7 +701,7 @@ function renderInv(){
   el.innerHTML=inv.map(i=>{const c=invCalc(i);
     if(c.val!=null){V+=c.val;const b=i.broker||t('sin_broker');byB[b]=(byB[b]||0)+c.val;if(c.cost!=null){C+=c.cost;GPc+=c.gp}if(c.hoy!=null){H+=c.hoy;hasH=true}}
     const pct=c.gp!=null&&c.cost>0?c.gp/c.cost*100:null;
-    return`<tr><td>${aIcon(i.tipo,i.simbolo)}<b>${esc(String(i.simbolo).toUpperCase())}</b> <span class="pill mute">${t('tipo_'+i.tipo)}</span>${c.live?' <span class="pill ok">●</span>':''}<div class="muted small">${esc(i.broker||'')}</div></td>
+    return`<tr><td>${aIcon(i.tipo,i.simbolo)}<b>${esc(String(i.simbolo).toUpperCase())}</b> <span class="pill mute">${t('tipo_'+i.tipo)}</span>${c.live?' <span class="pill ok">●</span>':''}<div class="muted small">${esc(i.broker||'')}</div>${origPx(pk(i))}</td>
     <td class="n hide-sm">${qty.format(i.cantidad)}</td><td class="n hide-sm">${c.p!=null?money(c.p):'<span class="muted">'+t('inv_sin_precio')+'</span>'}</td>
     <td class="n">${c.val!=null?money(c.val):'<span class="muted">—</span>'}</td>
     <td class="n">${sgn(c.gp,money)}${pct!=null?'<div class="small">'+sgn(pct,pctF)+'</div>':''}</td>
@@ -725,13 +725,14 @@ function aIcon(tipo,sy){sy=String(sy||'').toUpperCase();const ini=esc(sy.replace
   if(tipo==='indice')return'<span class="ai" style="font-size:15px">📈</span>';
   const u=tipo==='cripto'?'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/'+encodeURIComponent(sy.toLowerCase())+'.png':'https://financialmodelingprep.com/image-stock/'+encodeURIComponent(sy)+'.png';
   return`<span class="ai">${ini}<img src="${u}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"></span>`}
+const origPx=k=>{const q=PX[k];return q&&q.o>0?`<div class="muted small">${new Intl.NumberFormat(LANGS[lang].loc,{minimumFractionDigits:2,maximumFractionDigits:2}).format(q.o)} ${q.cur||''}</div>`:''};
 function renderWatch(){
   const w=S.watch||[],el=$('#watch-body');if(!el)return;
   $('#watch-n').textContent=w.length+' / 20';
   const hasKey=!!fhKey();
   $('#watch-msg').textContent=w.some(x=>x.tipo==='accion')&&!hasKey?t('watch_nokey'):'';
   el.innerHTML=w.map(x=>{const q=PX[pk(x)],p=q&&q.p>0?q.p:null,ch=q&&q.ch!=null?q.ch:null;
-    return`<div class="row" style="padding:9px 0;border-top:1px solid var(--line,#2a2a30);gap:8px"><div style="min-width:0">${aIcon(x.tipo,x.proxy||x.simbolo)}<b>${esc(x.simbolo)}</b> <span class="pill mute">${t('tipo_'+x.tipo)}</span></div><span class="spacer"></span><div class="n" style="text-align:right">${p!=null?money(p):'<span class="muted">—</span>'}${ch!=null?'<div class="small">'+sgn(ch,pctF)+'</div>':''}</div><button class="icon" data-dw="${x.id}" title="${t('borrar')}">🗑️</button></div>`}).join('')||`<p class="muted small" style="margin:6px 0">${t('watch_empty')}</p>`}
+    return`<div class="row" style="padding:9px 0;border-top:1px solid var(--line,#2a2a30);gap:8px"><div style="min-width:0">${aIcon(x.tipo,x.proxy||x.simbolo)}<b>${esc(x.simbolo)}</b> <span class="pill mute">${t('tipo_'+x.tipo)}</span></div><span class="spacer"></span><div class="n" style="text-align:right">${p!=null?money(p):'<span class="muted">—</span>'}${origPx(pk(x))}${ch!=null?'<div class="small">'+sgn(ch,pctF)+'</div>':''}</div><button class="icon" data-dw="${x.id}" title="${t('borrar')}">🗑️</button></div>`}).join('')||`<p class="muted small" style="margin:6px 0">${t('watch_empty')}</p>`}
 const POP=[['Apple','AAPL'],['Microsoft','MSFT'],['Alphabet Google','GOOGL'],['Amazon','AMZN'],['Nvidia','NVDA'],['Meta Facebook','META'],['Tesla','TSLA'],['Netflix','NFLX'],['Coca-Cola','KO'],['PepsiCo','PEP'],['McDonalds','MCD'],['Nike','NKE'],['Disney','DIS'],['Visa','V'],['Mastercard','MA'],['PayPal','PYPL'],['JPMorgan','JPM'],['Berkshire Hathaway','BRK.B'],['Johnson & Johnson','JNJ'],['Pfizer','PFE'],['Exxon Mobil','XOM'],['Chevron','CVX'],['Walmart','WMT'],['Costco','COST'],['Intel','INTC'],['AMD','AMD'],['Qualcomm','QCOM'],['Broadcom','AVGO'],['Oracle','ORCL'],['Adobe','ADBE'],['Salesforce','CRM'],['Uber','UBER'],['Airbnb','ABNB'],['Spotify','SPOT'],['Palantir','PLTR'],['Coinbase','COIN'],['MicroStrategy','MSTR'],['Starbucks','SBUX'],['Boeing','BA'],['Ford','F'],['General Motors','GM'],['Ferrari','RACE'],['ASML','ASML'],['SAP','SAP'],['Toyota','TM'],['Alibaba','BABA'],['Sony','SONY'],['Shopify','SHOP'],['Zoom','ZM'],['Snowflake','SNOW'],['Bitcoin','BTC','cripto'],['Ethereum','ETH','cripto'],['Solana','SOL','cripto'],['Ripple XRP','XRP','cripto'],['Dogecoin','DOGE','cripto'],['Cardano','ADA','cripto'],['Binance Coin','BNB','cripto'],['Litecoin','LTC','cripto'],['Chainlink','LINK','cripto'],['Polkadot','DOT','cripto'],['Avalanche','AVAX','cripto'],['Shiba Inu','SHIB','cripto'],['Dollar USD','USD','divisa'],['Pound GBP','GBP','divisa'],['Franc CHF','CHF','divisa'],['Yen JPY','JPY','divisa'],['Lev BGN','BGN','divisa'],['S&P 500','SPY','indice'],['Nasdaq 100','QQQ','indice'],['Dow Jones','DIA','indice'],['Russell 2000','IWM','indice'],['DAX','EWG','indice'],['IBEX 35','EWP','indice'],['FTSE 100','EWU','indice'],['Nikkei 225','EWJ','indice']];
 const norm=x=>String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,'');
 const edist=(a,b)=>{const d=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const t2=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t2}}return d[b.length]};
