@@ -262,6 +262,16 @@ header .avatar{margin-left:4px}
       <div id="ibkr-on" class="hidden"><div class="row"><button class="btn" id="ibkr-sync" data-i="ibkr_sync"></button><button class="btn ghost" id="ibkr-off" data-i="ibkr_off"></button></div></div>
       <p class="small" id="ibkr-msg" style="margin:10px 0 0"></p>
     </div>
+    <div class="card" id="watch-card" style="margin-bottom:16px">
+      <div class="row"><h2 style="margin:0" data-i="h_watch"></h2><span class="spacer"></span><span class="muted small" id="watch-n"></span></div>
+      <form id="f-watch" class="row" style="margin:10px 0;gap:8px;flex-wrap:wrap">
+        <select name="tipo" style="flex:0 0 auto"><option value="cripto" data-i="tipo_cripto"></option><option value="accion" data-i="tipo_accion"></option><option value="divisa" data-i="tipo_divisa"></option></select>
+        <input name="simbolo" required autocapitalize="characters" autocomplete="off" spellcheck="false" style="flex:1 1 110px;min-width:0" data-ip="watch_ph">
+        <button class="btn" data-i="watch_add"></button>
+      </form>
+      <p class="small" id="watch-msg" style="margin:0 0 8px"></p>
+      <div id="watch-body"></div>
+    </div>
     <div class="grid two">
       <div class="card" id="inv-brokers"></div>
       <div class="card">
@@ -441,7 +451,7 @@ const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},se
 function addMonths(isoStr,k,day){const d=parse(isoStr);const t=new Date(d.getFullYear(),d.getMonth()+k,1);const last=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();t.setDate(Math.min(day??d.getDate(),last));return iso(t)}
 
 /* ---------- Datos iniciales ---------- */
-function seed(){return{version:1,gastos:[],prestamos:[],inversiones:[]}}
+function seed(){return{version:1,gastos:[],prestamos:[],inversiones:[],watch:[]}}
 
 let S=seed(),curUid=null,P={nombre:'',foto:'',icono:'',email:'',verified:false},mesOff=0;
 const keyOf=u=>KEY+'-'+u,tsKey=u=>KEY+'-ts-'+u;
@@ -648,7 +658,7 @@ async function pAccion(sy,cur){const key=store.get(KFH);if(!key)throw new Error(
   const d=await jget('https://finnhub.io/api/v1/quote?symbol='+encodeURIComponent(sy)+'&token='+encodeURIComponent(key));
   if(!d||!(d.c>0))throw new Error('noquote');if(cur!=='EUR')await getFx();return{p:toEur(d.c,cur),ch:typeof d.dp==='number'?d.dp:null}}
 async function refreshPx(){
-  const inv=S.inversiones||[];if(!inv.length||pxBusy)return;pxBusy=true;let bad=0;
+  const inv=(S.inversiones||[]).concat((S.watch||[]).map(w=>({...w,moneda:'USD'})));if(!inv.length||pxBusy)return;pxBusy=true;let bad=0;
   try{if(inv.some(i=>i.tipo==='divisa'||(i.tipo==='accion'&&i.moneda!=='EUR')))await getFx()}catch(e){bad++}
   const seen={};
   await Promise.all(inv.map(async i=>{const k=pk(i);if(seen[k])return;seen[k]=1;const sy=String(i.simbolo).toUpperCase();
@@ -692,7 +702,21 @@ function renderInv(){
   $('#inv-brokers').innerHTML=`<h2>${t('h_broker')}</h2>`+(bs.map(([b,v])=>`<div class="row" style="margin:6px 0"><span>${esc(b)}</span><span class="spacer"></span><b>${money(v)}</b><span class="muted small" style="width:52px;text-align:right">${V>0?Math.round(v/V*100):0} %</span></div>`).join('')||'<p class="muted small">—</p>');
   $('#brokers').innerHTML=[...new Set(inv.map(i=>i.broker).filter(Boolean))].map(b=>`<option value="${esc(b)}">`).join('');
   const st=$('#inv-status');if(inv.length){const h=pxAt?new Date(pxAt).toLocaleTimeString(LANGS[lang].loc):'';
-    st.innerHTML=pxErr?`<span style="color:var(--bad)">${t('inv_off')}</span>`:(pxAt?`<span class="pill ok">● ${t('inv_live')}</span> <span class="muted">${t('inv_upd',{h})}</span>`:'');if(pxErr&&pxAt)st.innerHTML+=` <span class="muted">${t('inv_upd',{h})}</span>`}else st.innerHTML=''}
+    st.innerHTML=pxErr?`<span style="color:var(--bad)">${t('inv_off')}</span>`:(pxAt?`<span class="pill ok">● ${t('inv_live')}</span> <span class="muted">${t('inv_upd',{h})}</span>`:'');if(pxErr&&pxAt)st.innerHTML+=` <span class="muted">${t('inv_upd',{h})}</span>`}else st.innerHTML='';renderWatch()}
+Object.assign(TR,{"h_watch":["Lista de seguimiento","Watchlist","Списък за следене"],"watch_ph":["Símbolo (BTC, AAPL, USD…)","Symbol (BTC, AAPL, USD…)","Символ (BTC, AAPL, USD…)"],"watch_add":["Añadir","Add","Добави"],"watch_full":["Máximo 20 símbolos.","Maximum 20 symbols.","Най-много 20 символа."],"watch_dup":["Ya está en la lista.","Already in the list.","Вече е в списъка."],"watch_empty":["Añade los símbolos que quieres vigilar (hasta 20).","Add the symbols you want to follow (up to 20).","Добави символите, които искаш да следиш (до 20)."],"watch_nokey":["Para precios de acciones añade tu clave de Finnhub (más abajo).","For stock prices add your Finnhub key (below).","За цени на акции добави своя Finnhub ключ (по-долу)."]});
+function renderWatch(){
+  const w=S.watch||[],el=$('#watch-body');if(!el)return;
+  $('#watch-n').textContent=w.length+' / 20';
+  const hasKey=!!store.get(KFH);
+  $('#watch-msg').textContent=w.some(x=>x.tipo==='accion')&&!hasKey?t('watch_nokey'):'';
+  el.innerHTML=w.map(x=>{const q=PX[pk(x)],p=q&&q.p>0?q.p:null,ch=q&&q.ch!=null?q.ch:null;
+    return`<div class="row" style="padding:9px 0;border-top:1px solid var(--line,#2a2a30);gap:8px"><div style="min-width:0"><b>${esc(x.simbolo)}</b> <span class="pill mute">${t('tipo_'+x.tipo)}</span></div><span class="spacer"></span><div class="n" style="text-align:right">${p!=null?money(p):'<span class="muted">—</span>'}${ch!=null?'<div class="small">'+sgn(ch,pctF)+'</div>':''}</div><button class="icon" data-dw="${x.id}" title="${t('borrar')}">🗑️</button></div>`}).join('')||`<p class="muted small" style="margin:6px 0">${t('watch_empty')}</p>`}
+$('#f-watch').addEventListener('submit',e=>{e.preventDefault();const f=e.target,sy=f.simbolo.value.trim().toUpperCase().replace(/[^A-Z0-9.\-]/g,''),tp=f.tipo.value,msg=$('#watch-msg');
+  S.watch=S.watch||[];if(!sy)return;
+  if(S.watch.length>=20){msg.textContent=t('watch_full');return}
+  if(S.watch.some(x=>x.tipo===tp&&x.simbolo===sy)){msg.textContent=t('watch_dup');return}
+  S.watch.push({id:uid(),tipo:tp,simbolo:sy});f.simbolo.value='';save();if(pxTimer)refreshPx()});
+$('#watch-body').addEventListener('click',e=>{const b=e.target.closest('button[data-dw]');if(!b)return;S.watch=(S.watch||[]).filter(x=>x.id!==b.dataset.dw);save()});
 const dI=$('#dlg-inv'),fI=$('#f-inv');let editI=null;
 function invTipoUi(){const tp=fI.tipo.value;$('#inv-acc').classList.toggle('hidden',tp!=='accion');fI.simbolo.placeholder=tp==='cripto'?'BTC, ETH':tp==='accion'?'AAPL, MSFT':'USD, BGN'}
 fI.tipo.onchange=invTipoUi;
