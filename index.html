@@ -149,7 +149,7 @@ header .avatar{margin-left:4px}
   header{flex-wrap:nowrap;gap:10px}header h1{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:17px}.sync{font-size:11px}
   .kpi .val{font-size:20px}th,td{padding:7px 4px}.hide-sm{display:none}
   .kpis{grid-template-columns:1fr 1fr;gap:10px}.kpi{padding:14px}
-  nav{position:fixed;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:6;background:linear-gradient(180deg,color-mix(in srgb,var(--card) 38%,transparent),color-mix(in srgb,var(--card) 22%,transparent));-webkit-backdrop-filter:blur(26px) saturate(2);backdrop-filter:blur(26px) saturate(2);border:1px solid rgba(255,255,255,.45);border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(255,255,255,.08);display:grid;grid-template-columns:repeat(5,1fr);gap:2px;padding:6px}
+  nav{position:fixed;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:6;background:linear-gradient(180deg,color-mix(in srgb,var(--card) 34%,transparent),color-mix(in srgb,var(--card) 18%,transparent));-webkit-backdrop-filter:blur(26px) saturate(2);backdrop-filter:blur(26px) saturate(2);border:1px solid rgba(255,255,255,.45);border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(255,255,255,.08);display:grid;grid-template-columns:repeat(5,1fr);gap:2px;padding:6px}
   nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 2px;font-size:11px;line-height:1.1;border-radius:22px}
   nav button svg{display:block}
   nav button.on{background:color-mix(in srgb,var(--accent) 20%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
@@ -809,7 +809,10 @@ $('#watch-body').addEventListener('click',e=>{const b=e.target.closest('button[d
 function invPane(n){['cartera','watch','conectar'].forEach(k=>$('#invp-'+k).classList.toggle('hidden',k!==n));document.querySelectorAll('#inv-seg button').forEach(b=>b.classList.toggle('on',b.dataset.ipTab===n));$('#add-inv').classList.toggle('hidden',n!=='cartera');store.set('mis-gastos-invtab',n)}
 $('#inv-seg').addEventListener('click',e=>{const b=e.target.closest('button');if(b)invPane(b.dataset.ipTab)});
 invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?store.get('mis-gastos-invtab'):'cartera');
-const APP_V='37';$('#ver').textContent='v'+APP_V;
+(function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
+  const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.insertBefore(nav,av)};
+  place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
+const APP_V='38';$('#ver').textContent='v'+APP_V;
 $('#upd-app').onclick=async()=>{try{if(window.caches)for(const k of await caches.keys())await caches.delete(k);if(navigator.serviceWorker)for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister()}catch(e){}location.reload()};
 const dI=$('#dlg-inv'),fI=$('#f-inv');let editI=null;
 function invTipoUi(){const tp=fI.tipo.value;$('#inv-acc').classList.toggle('hidden',tp!=='accion');fI.simbolo.placeholder=tp==='cripto'?'BTC, ETH':tp==='accion'?'AAPL, MSFT':'USD, BGN'}
