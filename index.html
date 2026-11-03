@@ -732,6 +732,8 @@ $('#f-watch').addEventListener('submit',async e=>{e.preventDefault();const f=e.t
   const raw=f.simbolo.value.trim().toUpperCase();let sy=raw.replace(/[^A-Z0-9.\-]/g,''),tp=f.tipo.value;if(!sy)return;
   const key=raw.replace(/[^A-Z0-9]/g,'');
   if(WIX[key]&&(tp==='auto'||tp==='indice')){return watchAdd('indice',WIX[key][0],{proxy:WIX[key][1]})}
+  const ed=(a,b)=>{const d=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const t2=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t2}}return d[b.length]};
+  if(!WAL[sy]&&sy.length>=4&&tp==='auto'){const c=Object.keys(WAL).filter(k=>Math.abs(k.length-sy.length)<=2&&ed(k,sy)<=(sy.length>=6?2:1));if(c.length===1)sy=c[0]}
   sy=WAL[sy]||sy;
   if(tp==='auto'){tp=WCR.includes(sy)?'cripto':WFI.includes(sy)?'divisa':null;
     if(!tp){msg.textContent='…';const g=await watchGuess(sy,raw);msg.textContent='';if(g){tp=g.tp;sy=g.sy}}
