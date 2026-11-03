@@ -7,6 +7,8 @@ const db = admin.firestore();
 
 const BASE = 'https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService';
 const opts = { region: 'europe-west1', maxInstances: 5, timeoutSeconds: 90, memory: '256MiB' };
+const UA = { 'User-Agent': 'PersonalBalance/1.0' };
+const get = async u => { try { return await (await fetch(u, { headers: UA })).text(); } catch (e) { throw new HttpsError('unavailable', 'No se pudo contactar con IBKR: ' + (e && e.message || e)); } };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const tag = (x, n) => { const m = x.match(new RegExp('<' + n + '>([^<]*)</' + n + '>')); return m ? m[1] : ''; };
 const uidOf = r => { if (!r.auth) throw new HttpsError('unauthenticated', 'Inicia sesión.'); return r.auth.uid; };
@@ -18,7 +20,8 @@ exports.ibkrSave = onCall(opts, async r => {
   if (!/^[A-Za-z0-9]{8,80}$/.test(token) || !/^\d{3,12}$/.test(queryId)) {
     throw new HttpsError('invalid-argument', 'Token o número de consulta no válidos.');
   }
-  await db.doc('ibkr_secrets/' + uid).set({ token, queryId, saved: Date.now(), last: 0 });
+  try { await db.doc('ibkr_secrets/' + uid).set({ token, queryId, saved: Date.now(), last: 0 }); }
+  catch (e) { console.error('ibkrSave', e); throw new HttpsError('failed-precondition', 'No se pudo guardar: ' + (e && e.message || e)); }
   return { ok: true };
 });
 
@@ -28,7 +31,7 @@ exports.ibkrDelete = onCall(opts, async r => {
 });
 
 async function flex(token, q) {
-  const a = await (await fetch(`${BASE}/SendRequest?t=${encodeURIComponent(token)}&q=${encodeURIComponent(q)}&v=3`)).text();
+  const a = await get(`${BASE}/SendRequest?t=${encodeURIComponent(token)}&q=${encodeURIComponent(q)}&v=3`);
   if (tag(a, 'Status') !== 'Success') {
     throw new HttpsError('failed-precondition', 'IBKR respondió: ' + (tag(a, 'ErrorMessage') || 'error desconocido'), { code: tag(a, 'ErrorCode') });
   }
@@ -36,7 +39,7 @@ async function flex(token, q) {
   const url = tag(a, 'Url') || `${BASE}/GetStatement`;
   for (let i = 0; i < 8; i++) {
     await sleep(i ? 4000 : 1500);
-    const b = await (await fetch(`${url}?t=${encodeURIComponent(token)}&q=${encodeURIComponent(ref)}&v=3`)).text();
+    const b = await get(`${url}?t=${encodeURIComponent(token)}&q=${encodeURIComponent(ref)}&v=3`);
     if (b.includes('<FlexQueryResponse')) return b;
     const code = tag(b, 'ErrorCode');
     if (code && code !== '1019') {
@@ -78,7 +81,7 @@ function parse(xml) {
 exports.ibkrSync = onCall(opts, async r => {
   const uid = uidOf(r);
   const ref = db.doc('ibkr_secrets/' + uid);
-  const s = await ref.get();
+  let s; try { s = await ref.get(); } catch (e) { console.error('ibkrSync', e); throw new HttpsError('failed-precondition', 'No se pudo leer: ' + (e && e.message || e)); }
   if (!s.exists) throw new HttpsError('not-found', 'Todavía no has conectado Interactive Brokers.');
   const { token, queryId, last } = s.data();
   if (Date.now() - (last || 0) < 20000) throw new HttpsError('resource-exhausted', 'Espera unos segundos antes de actualizar otra vez.');
