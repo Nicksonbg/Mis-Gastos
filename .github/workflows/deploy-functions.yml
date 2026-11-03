@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with: { node-version: 22 }
       - name: Instalar dependencias
         run: npm install --prefix functions
       - name: Desplegar
@@ -17,5 +17,5 @@ jobs:
           if [ -z "$GOOGLE_APPLICATION_CREDENTIALS_JSON" ]; then echo "Falta el secreto FIREBASE_SERVICE_ACCOUNT"; exit 1; fi
           printf '%s' "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
-          npx --yes firebase-tools@13 deploy --only functions --project personal-balance-dccca --non-interactive
+          npx --yes firebase-tools@latest deploy --only functions --project personal-balance-dccca --non-interactive
           rm -f "$RUNNER_TEMP/sa.json"
