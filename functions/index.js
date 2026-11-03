@@ -6,7 +6,7 @@ admin.initializeApp();
 const db = admin.firestore();
 
 const BASE = 'https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService';
-const opts = { region: 'europe-west1', maxInstances: 5, timeoutSeconds: 90, memory: '256MiB' };
+const opts = { region: 'europe-west1', invoker: 'public', maxInstances: 5, timeoutSeconds: 90, memory: '256MiB' };
 const UA = { 'User-Agent': 'PersonalBalance/1.0' };
 const get = async u => { try { return await (await fetch(u, { headers: UA })).text(); } catch (e) { throw new HttpsError('unavailable', 'No se pudo contactar con IBKR: ' + (e && e.message || e)); } };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
