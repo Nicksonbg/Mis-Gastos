@@ -635,7 +635,11 @@ const lj=k=>{try{return JSON.parse(store.get(k))}catch(e){return null}};
 let PX=lj(KP)||{},FX=lj(KFX)||{},pxAt=null,pxErr=false,pxTimer=null,pxBusy=false;
 const pk=i=>i.tipo+':'+String(i.simbolo||'').toUpperCase();
 const jget=async u=>{const c=new AbortController(),to=setTimeout(()=>c.abort(),8000);try{const r=await fetch(u,{signal:c.signal});if(!r.ok)throw new Error('http');return await r.json()}finally{clearTimeout(to)}};
-async function getFx(){if(FX.t&&Date.now()-FX.t<36e5&&FX.r)return;const d=await jget('https://api.frankfurter.app/latest?from=EUR');FX={t:Date.now(),r:Object.assign({EUR:1},d.rates)};store.set(KFX,JSON.stringify(FX))}
+async function getFx(){if(FX.t&&Date.now()-FX.t<36e5&&FX.r)return;let rates=null;
+  const srcs=[['https://api.frankfurter.dev/v1/latest?base=EUR',d=>d.rates],['https://api.frankfurter.app/latest?from=EUR',d=>d.rates],['https://open.er-api.com/v6/latest/EUR',d=>d.rates],['https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.json',d=>{const o={};for(const k in d.eur)o[k.toUpperCase()]=d.eur[k];return o}]];
+  for(const [u,f] of srcs){try{const r=f(await jget(u));if(r&&r.USD>0){rates=r;break}}catch(e){}}
+  if(!rates)throw new Error('fx');
+  FX={t:Date.now(),r:Object.assign({EUR:1},rates)};store.set(KFX,JSON.stringify(FX))}
 const toEur=(x,cur)=>cur==='EUR'?x:(FX.r&&FX.r[cur]?x/FX.r[cur]:null);
 async function pCripto(sy){
   try{const d=await jget('https://api.binance.com/api/v3/ticker/24hr?symbol='+sy+'EUR');return{p:+d.lastPrice,ch:+d.priceChangePercent}}catch(e){}
