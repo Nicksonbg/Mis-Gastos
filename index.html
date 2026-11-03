@@ -265,7 +265,7 @@ header .avatar{margin-left:4px}
     <div class="card" id="watch-card" style="margin-bottom:16px">
       <div class="row"><h2 style="margin:0" data-i="h_watch"></h2><span class="spacer"></span><span class="muted small" id="watch-n"></span></div>
       <form id="f-watch" class="row" style="margin:10px 0;gap:8px;flex-wrap:wrap">
-        <select name="tipo" style="flex:0 0 auto"><option value="cripto" data-i="tipo_cripto"></option><option value="accion" data-i="tipo_accion"></option><option value="divisa" data-i="tipo_divisa"></option></select>
+        <select name="tipo" style="flex:0 0 auto"><option value="auto" data-i="tipo_auto"></option><option value="cripto" data-i="tipo_cripto"></option><option value="accion" data-i="tipo_accion"></option><option value="divisa" data-i="tipo_divisa"></option></select>
         <input name="simbolo" required autocapitalize="characters" autocomplete="off" spellcheck="false" style="flex:1 1 110px;min-width:0" data-ip="watch_ph">
         <button class="btn" data-i="watch_add"></button>
       </form>
@@ -703,7 +703,7 @@ function renderInv(){
   $('#brokers').innerHTML=[...new Set(inv.map(i=>i.broker).filter(Boolean))].map(b=>`<option value="${esc(b)}">`).join('');
   const st=$('#inv-status');if(inv.length){const h=pxAt?new Date(pxAt).toLocaleTimeString(LANGS[lang].loc):'';
     st.innerHTML=pxErr?`<span style="color:var(--bad)">${t('inv_off')}</span>`:(pxAt?`<span class="pill ok">● ${t('inv_live')}</span> <span class="muted">${t('inv_upd',{h})}</span>`:'');if(pxErr&&pxAt)st.innerHTML+=` <span class="muted">${t('inv_upd',{h})}</span>`}else st.innerHTML='';renderWatch()}
-Object.assign(TR,{"h_watch":["Lista de seguimiento","Watchlist","Списък за следене"],"watch_ph":["Símbolo (BTC, AAPL, USD…)","Symbol (BTC, AAPL, USD…)","Символ (BTC, AAPL, USD…)"],"watch_add":["Añadir","Add","Добави"],"watch_full":["Máximo 20 símbolos.","Maximum 20 symbols.","Най-много 20 символа."],"watch_dup":["Ya está en la lista.","Already in the list.","Вече е в списъка."],"watch_empty":["Añade los símbolos que quieres vigilar (hasta 20).","Add the symbols you want to follow (up to 20).","Добави символите, които искаш да следиш (до 20)."],"watch_nokey":["Para precios de acciones añade tu clave de Finnhub (más abajo).","For stock prices add your Finnhub key (below).","За цени на акции добави своя Finnhub ключ (по-долу)."]});
+Object.assign(TR,{"tipo_auto":["Automático","Automatic","Автоматично"],"h_watch":["Lista de seguimiento","Watchlist","Списък за следене"],"watch_ph":["Símbolo (BTC, AAPL, USD…)","Symbol (BTC, AAPL, USD…)","Символ (BTC, AAPL, USD…)"],"watch_add":["Añadir","Add","Добави"],"watch_full":["Máximo 20 símbolos.","Maximum 20 symbols.","Най-много 20 символа."],"watch_dup":["Ya está en la lista.","Already in the list.","Вече е в списъка."],"watch_empty":["Añade los símbolos que quieres vigilar (hasta 20).","Add the symbols you want to follow (up to 20).","Добави символите, които искаш да следиш (до 20)."],"watch_nokey":["Para precios de acciones añade tu clave de Finnhub (más abajo).","For stock prices add your Finnhub key (below).","За цени на акции добави своя Finnhub ключ (по-долу)."]});
 function renderWatch(){
   const w=S.watch||[],el=$('#watch-body');if(!el)return;
   $('#watch-n').textContent=w.length+' / 20';
@@ -711,7 +711,10 @@ function renderWatch(){
   $('#watch-msg').textContent=w.some(x=>x.tipo==='accion')&&!hasKey?t('watch_nokey'):'';
   el.innerHTML=w.map(x=>{const q=PX[pk(x)],p=q&&q.p>0?q.p:null,ch=q&&q.ch!=null?q.ch:null;
     return`<div class="row" style="padding:9px 0;border-top:1px solid var(--line,#2a2a30);gap:8px"><div style="min-width:0"><b>${esc(x.simbolo)}</b> <span class="pill mute">${t('tipo_'+x.tipo)}</span></div><span class="spacer"></span><div class="n" style="text-align:right">${p!=null?money(p):'<span class="muted">—</span>'}${ch!=null?'<div class="small">'+sgn(ch,pctF)+'</div>':''}</div><button class="icon" data-dw="${x.id}" title="${t('borrar')}">🗑️</button></div>`}).join('')||`<p class="muted small" style="margin:6px 0">${t('watch_empty')}</p>`}
-$('#f-watch').addEventListener('submit',e=>{e.preventDefault();const f=e.target,sy=f.simbolo.value.trim().toUpperCase().replace(/[^A-Z0-9.\-]/g,''),tp=f.tipo.value,msg=$('#watch-msg');
+$('#f-watch').addEventListener('submit',e=>{e.preventDefault();const f=e.target,msg=$('#watch-msg');let sy=f.simbolo.value.trim().toUpperCase().replace(/[^A-Z0-9.\-]/g,''),tp=f.tipo.value;
+  const AL={GOOGLE:'GOOGL',ALPHABET:'GOOGL',APPLE:'AAPL',TESLA:'TSLA',AMAZON:'AMZN',MICROSOFT:'MSFT',NVIDIA:'NVDA',NETFLIX:'NFLX',COCACOLA:'KO',FACEBOOK:'META',BITCOIN:'BTC',ETHEREUM:'ETH',SOLANA:'SOL',RIPPLE:'XRP',DOGECOIN:'DOGE',CARDANO:'ADA'};
+  sy=AL[sy]||sy;
+  if(tp==='auto'){const CR='BTC ETH BNB SOL XRP ADA DOGE DOT LTC LINK AVAX MATIC TRX SHIB UNI ATOM XLM BCH NEAR USDT USDC PEPE TON SUI APT ARB OP'.split(' '),FI='USD GBP CHF JPY BGN CAD AUD NZD SEK NOK DKK PLN CZK HUF RON TRY CNY INR BRL MXN'.split(' ');tp=CR.includes(sy)?'cripto':FI.includes(sy)?'divisa':'accion'}
   S.watch=S.watch||[];if(!sy)return;
   if(S.watch.length>=20){msg.textContent=t('watch_full');return}
   if(S.watch.some(x=>x.tipo===tp&&x.simbolo===sy)){msg.textContent=t('watch_dup');return}
