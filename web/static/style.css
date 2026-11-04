@@ -166,3 +166,4 @@ dialog form{margin:0}
 }
 #nav{display:none}
 @media (max-width:600px){#nav{display:grid}#nav-top{display:none!important}}
+.pw{position:relative;margin-top:4px}.pw input{margin-top:0!important;padding-right:44px!important}.pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--muted);padding:6px;border-radius:6px;cursor:pointer;display:grid;place-items:center}.pw-eye:hover{color:var(--text)}.pw-eye .eye-off{display:none}.pw-eye.on .eye-on{display:none}.pw-eye.on .eye-off{display:block}

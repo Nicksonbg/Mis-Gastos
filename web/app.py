@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-2"
+APP_VERSION = "web-3"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -52,6 +52,8 @@ TR.update({
     "w_type_delete": ["Escribe ELIMINAR para confirmar", "Type DELETE to confirm", "Напиши ИЗТРИЙ за потвърждение"],
     "w_confirm_word": ["ELIMINAR", "DELETE", "ИЗТРИЙ"],
     "e_domain": ["Esta dirección aún no está autorizada para entrar con Google. Prueba con correo y contraseña.", "This address is not yet authorised for Google sign-in. Try email and password.", "Този адрес още не е разрешен за вход с Google. Опитай с имейл и парола."],
+    "show_pass": ["Mostrar contraseña", "Show password", "Покажи паролата"],
+    "hide_pass": ["Ocultar contraseña", "Hide password", "Скрий паролата"],
     "w_upd": ["Actualizar", "Refresh", "Обнови"],
 })
 LANGS = {"es": {"i": 0, "dec": ",", "grp": ".", "sep": "/", "cur": "suf"},

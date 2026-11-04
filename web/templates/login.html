@@ -11,7 +11,7 @@
     <form id="auth-form" novalidate>
       <label class="f hidden" id="a-name-wrap"><span>{{ t('a_name') }}</span><input id="a-name" autocomplete="name"></label>
       <label class="f"><span>{{ t('a_email') }}</span><input id="a-email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off"></label>
-      <label class="f"><span>{{ t('a_pass') }}</span><input id="a-pass" type="password" autocomplete="current-password"></label>
+      <label class="f"><span>{{ t('a_pass') }}</span><div class="pw"><input id="a-pass" type="password" autocomplete="current-password"><button type="button" class="pw-eye" id="a-pass-eye" title="{{ t('show_pass') }}" aria-label="{{ t('show_pass') }}" data-show="{{ t('show_pass') }}" data-hide="{{ t('hide_pass') }}"><svg class="eye-on" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.4-.5 4.8-1.3"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button></div></label>
       <label class="small" style="display:flex;gap:8px;align-items:center;margin:2px 0 10px;cursor:pointer"><input type="checkbox" id="a-remember" checked><span>{{ t('a_remember') }}</span></label>
       <p class="muted small hidden" id="a-hint" style="margin:-4px 0 8px">{{ t('a_pass_hint') }}</p>
       <div class="err" id="auth-err"></div>
@@ -30,5 +30,6 @@
   </form>
  </div>
 </div>
+<script>document.getElementById('a-pass-eye')?.addEventListener('click',e=>{const i=document.getElementById('a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.title=b.ariaLabel=on?b.dataset.hide:b.dataset.show;i.focus()})</script>
 {% include "_i18n.html" %}
 </body></html>
