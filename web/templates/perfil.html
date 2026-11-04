@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block main %}
+<section>
+  <div class="grid two">
+    <div class="card">
+      <h2>{{ t('p_title') }}</h2>
+      <div class="row" style="gap:16px;margin-bottom:12px">
+        <div class="avatar big">{% if avatar.img %}<img alt="" src="{{ avatar.img }}">{% else %}{{ avatar.txt }}{% endif %}</div>
+        <div>
+          <form method="post" action="{{ url_for('perfil_foto') }}" enctype="multipart/form-data" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}">
+            <label class="btn ghost sm" style="cursor:pointer;display:inline-block"><span>{{ t('p_change_photo') }}</span><input type="file" name="foto" accept="image/*" hidden onchange="this.form.requestSubmit()"></label></form>
+          {% if photo %}<form method="post" action="{{ url_for('perfil_foto_delete') }}" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost sm">{{ t('p_remove_photo') }}</button></form>{% endif %}
+        </div>
+      </div>
+      <form method="post" action="{{ url_for('perfil_save') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="small muted">{{ t('p_icon') }}</div>
+        <div class="icon-pick">{% for ic in icons %}<label><input type="radio" name="icono" value="{{ ic }}" {{ 'checked' if P.icono==ic and not photo }} onchange="this.form.requestSubmit()"><span>{{ ic }}</span></label>{% endfor %}</div>
+        <p class="muted small" style="margin-top:-8px">{{ t('p_icon_note') }}</p>
+        <label class="f"><span>{{ t('a_name') }}</span><input name="nombre" value="{{ P.nombre or user.get('name','') }}" autocomplete="name" onchange="this.form.requestSubmit()"></label>
+      </form>
+      <div class="small"><span class="muted">{{ t('p_email') }}</span>: <b>{{ user.get('email','') }}</b></div>
+      <div class="small" style="margin:4px 0 8px">{% if user.get('email_verified') %}<span style="color:var(--ok)">{{ t('p_verified') }}</span>{% else %}<span class="muted">{{ t('p_unverified') }}</span> <button class="linkbtn small" id="p-resend" type="button">{{ t('p_resend') }}</button>{% endif %}</div>
+      <div class="okm" id="p-msg"></div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <h2>{{ t('h_ajustes') }}</h2>
+        <form method="post" action="{{ url_for('ajustes') }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <label class="f"><span>{{ t('lbl_tema') }}</span>
+          <select name="theme" onchange="this.form.requestSubmit()">{% for v,k in [('', 'tema_auto'),('light','tema_claro'),('dark','tema_oscuro')] %}<option value="{{ v }}" {{ 'selected' if theme==v }}>{{ t(k) }}</option>{% endfor %}</select></label>
+        <label class="f"><span>{{ t('lbl_idioma') }}</span>
+          <select name="lang" onchange="this.form.requestSubmit()">{% for k,n in [('es','Español'),('en','English'),('bg','Български')] %}<option value="{{ k }}" {{ 'selected' if lang==k }}>{{ n }}</option>{% endfor %}</select></label>
+        </form>
+      </div>
+      <div class="card">
+        <h2>{{ t('h_cuenta') }}</h2>
+        <p class="muted small">{{ t('p_pass_note') }}</p>
+        <div class="row"><button class="btn ghost" id="p-pass" type="button">{{ t('p_pass') }}</button><a class="btn ghost" href="{{ url_for('salir') }}" style="text-decoration:none">{{ t('p_signout') }}</a></div>
+        <details style="margin-top:14px"><summary style="color:var(--bad)">{{ t('p_delete') }}</summary>
+          <p class="muted small">{{ t('p_delete_m') }}</p>
+          <form method="post" action="{{ url_for('cuenta_eliminar') }}" class="row"><input type="hidden" name="csrf" value="{{ csrf }}">
+            <input name="confirm" placeholder="{{ t('w_type_delete') }}" autocomplete="off" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)">
+            <button class="btn danger">{{ t('p_delete') }}</button></form>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

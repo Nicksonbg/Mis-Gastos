@@ -1,0 +1,39 @@
+name: Desplegar web Python (Cloud Run)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['web/**', '.github/workflows/deploy-web.yml']
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT: personal-balance-dccca
+      REGION: europe-west1
+      SERVICE: personal-balance-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Activar servicios necesarios
+        run: gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project $PROJECT
+      - name: Desplegar en Cloud Run
+        run: |
+          gcloud run deploy $SERVICE --source web --region $REGION --project $PROJECT \
+            --allow-unauthenticated --memory 512Mi --min-instances 0 --max-instances 2 --quiet
+          URL=$(gcloud run services describe $SERVICE --region $REGION --project $PROJECT --format='value(status.url)')
+          echo "URL=$URL" >> $GITHUB_ENV
+          echo "### Web publicada: $URL" >> $GITHUB_STEP_SUMMARY
+      - name: Autorizar el dominio en Firebase Auth (para entrar con Google)
+        continue-on-error: true
+        run: |
+          HOST=${URL#https://}
+          TOKEN=$(gcloud auth print-access-token)
+          API=https://identitytoolkit.googleapis.com/admin/v2/projects/$PROJECT/config
+          CUR=$(curl -sf -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJECT" $API | jq -c '.authorizedDomains // []')
+          if echo "$CUR" | jq -e --arg h "$HOST" 'index($h)' >/dev/null; then echo "Ya autorizado: $HOST"; exit 0; fi
+          NEW=$(echo "$CUR" | jq -c --arg h "$HOST" '. + [$h]')
+          curl -sf -X PATCH -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJECT" -H "Content-Type: application/json" \
+            "$API?updateMask=authorizedDomains" -d "{\"authorizedDomains\":$NEW}" >/dev/null && echo "Dominio autorizado: $HOST"

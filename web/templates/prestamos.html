@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block main %}
+<section>
+  <div class="row" style="margin-bottom:14px"><span class="muted small">{{ t('pres_nota') }}</span><span class="spacer"></span><button class="btn" type="button" onclick="document.getElementById('dlg-loan').showModal()">{{ t('add_loan') }}</button></div>
+  <div class="card" style="margin-bottom:16px"><div class="row" style="gap:28px">
+    <div><div class="muted small">{{ t('tot_prest') }}</div><b>{{ money(tot) }}</b></div>
+    <div><div class="muted small">{{ t('l_pagado') }}</div><b>{{ money(pag) }}</b></div>
+    <div><div class="muted small">{{ t('l_pendiente') }}</div><b>{{ money(pen) }}</b></div>
+    <div><div class="muted small">{{ t('ult_pago') }}</div><b>{{ fmt_d(fin) if fin else '—' }}</b></div>
+  </div></div>
+  <div class="grid">
+  {% for x in loans %}{% set l=x.l %}{% set s=x.s %}
+    <div class="card" id="l-{{ l.id }}">
+      <div class="row"><h2 style="margin:0">{{ l.nombre }}</h2><span class="pill {{ x.status[0] }}">{{ x.status[1] }}</span><span class="spacer"></span>
+        <button class="btn ghost sm" type="button" onclick="openCuota('{{ l.id }}')">{{ t('add_cuota') }}</button>
+        <form class="inline" method="post" action="{{ url_for('loan_delete') }}" data-confirm="{{ t('ask_borrar_loan', n=l.nombre) }}" data-confirm-msg="{{ t('ask_borrar_loan_m') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ l.id }}"><button class="btn danger sm">{{ t('borrar') }}</button></form></div>
+      <div class="muted small" style="margin:4px 0 10px">{{ l.entidad or '' }}</div>
+      <div class="bar"><i style="width:{{ '%.1f'|format(x.pct) }}%"></i></div>
+      <div class="small muted" style="margin-top:4px">{{ dec1(x.pct) }} {{ t('pct_pagado') }}</div>
+      <div class="loan-stats">
+        <div><div class="lbl">{{ t('l_pagadas') }}</div><div class="v">{{ t('l_de', a=s.nPaid, b=s.n) }}</div></div>
+        <div><div class="lbl">{{ t('l_pend') }}</div><div class="v">{{ s.nPend }}</div></div>
+        <div><div class="lbl">{{ t('l_pagado') }}</div><div class="v">{{ money(s.pagado) }}</div></div>
+        <div><div class="lbl">{{ t('l_pend_pagar') }}</div><div class="v">{{ money(s.pendiente) }}</div></div>
+        <div><div class="lbl">{{ t('l_capital') }}</div><div class="v">{{ money(s.capital) }}</div></div>
+        <div><div class="lbl">{{ t('l_inter') }}</div><div class="v">{{ money(s.intereses) }} / {{ money(s.intPend) }}</div></div>
+        <div><div class="lbl">{{ t('l_prox') }}</div><div class="v">{{ (fmt_d(s.next.fecha) ~ ' · ' ~ money(s.next.cuota)) if s.next else '—' }}</div></div>
+        <div><div class="lbl">{{ t('l_fin') }}</div><div class="v">{{ fmt_d(s.fin) if s.fin else '—' }}</div></div>
+      </div>
+      <details><summary>{{ t('ver_cuadro', n=s.n) }}</summary>
+      <div class="tbl-wrap"><table style="margin-top:10px"><thead><tr><th>{{ t('th_pagada') }}</th><th>{{ t('f_fecha') }}</th><th class="n">{{ t('th_cuota') }}</th><th class="n hide-sm">{{ t('th_amort') }}</th><th class="n hide-sm">{{ t('th_inter') }}</th><th class="n">{{ t('th_cap_antes') }}</th><th class="hide-sm">{{ t('th_nota') }}</th><th></th></tr></thead><tbody>
+      {% for c in x.rows %}
+        <tr class="{{ 'paid' if c.paid }}{{ ' next' if c.next }}"><td><form class="chk-form" method="post" action="{{ url_for('cuota_toggle') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="lid" value="{{ l.id }}"><input type="hidden" name="cid" value="{{ c.id }}"><input type="hidden" name="on" value=""><input type="checkbox" data-autosubmit {{ 'checked' if c.paid }} title="{{ t('marcado_mano') if c.manual else t('auto_fecha') }}"></form>{% if c.manual %} <span class="small muted" title="{{ t('marcado_mano') }}">✋</span>{% endif %}</td>
+          <td>{{ fmt_d(c.fecha) }}</td><td class="n">{{ money(c.cuota) }}</td><td class="n hide-sm">{{ money(c.amortizacion) }}</td><td class="n hide-sm">{{ money(c.intereses) }}</td><td class="n">{{ money(c.capitalAntes) }}</td><td class="hide-sm small muted">{{ c.nota or '' }}</td>
+          <td><button class="icon" type="button" onclick="openCuota('{{ l.id }}','{{ c.id }}')" title="{{ t('editar') }}">✏️</button></td></tr>
+      {% endfor %}
+      </tbody><tfoot><tr><td></td><td>{{ t('tot') }}</td><td class="n">{{ money(s.total) }}</td><td class="n hide-sm">{{ money(s.amortTotal) }}</td><td class="n hide-sm">{{ money(s.intereses) }}</td><td></td><td class="hide-sm"></td><td></td></tr></tfoot></table></div>
+      </details>
+    </div>
+  {% else %}<div class="card muted">{{ t('no_prestamos') }}</div>{% endfor %}
+  </div>
+</section>
+{% endblock %}
+{% block dialogs %}
+<dialog id="dlg-cuota"><form method="post" action="{{ url_for('cuota_save') }}" id="f-cuota">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="lid"><input type="hidden" name="cid">
+  <h3>{{ t('cuota_t') }}</h3>
+  <div class="fgrid">
+    <label class="f"><span>{{ t('f_fecha') }}</span><input name="fecha" type="date" required></label>
+    <label class="f"><span>{{ t('f_cuota') }}</span><input name="cuota" type="number" step="0.01" min="0" required></label>
+    <label class="f"><span>{{ t('f_amort') }}</span><input name="amortizacion" type="number" step="0.01" min="0"></label>
+    <label class="f"><span>{{ t('f_inter') }}</span><input name="intereses" type="number" step="0.01" min="0"></label>
+  </div>
+  <label class="f"><span>{{ t('f_cap_antes') }}</span><input name="capitalAntes" type="number" step="0.01" min="0"></label>
+  <label class="f"><span>{{ t('f_nota') }}</span><input name="nota"></label>
+  <div class="row" style="margin-top:8px"><button class="btn danger" type="submit" formaction="{{ url_for('cuota_delete') }}" formnovalidate id="cuota-del">{{ t('del_cuota') }}</button><span class="spacer"></span><button class="btn ghost" type="button" onclick="this.closest('dialog').close()">{{ t('cancel') }}</button><button class="btn">{{ t('save') }}</button></div>
+</form></dialog>
+<dialog id="dlg-loan"><form method="post" action="{{ url_for('loan_new') }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h3>{{ t('loan_t') }}</h3>
+  <label class="f"><span>{{ t('f_nombre') }}</span><input name="nombre" required placeholder="{{ t('ph_nombre') }}"></label>
+  <label class="f"><span>{{ t('f_entidad') }}</span><input name="entidad"></label>
+  <div class="fgrid">
+    <label class="f"><span>{{ t('f_importe_prest') }}</span><input name="importe" type="number" step="0.01" min="0" required></label>
+    <label class="f"><span>{{ t('f_tin') }}</span><input name="tin" type="number" step="0.01" min="0" value="0"></label>
+    <label class="f"><span>{{ t('f_ncuotas') }}</span><input name="n" type="number" min="1" required></label>
+    <label class="f"><span>{{ t('f_inicio') }}</span><input name="inicio" type="date" required value="{{ today }}"></label>
+  </div>
+  <label class="f"><input type="checkbox" name="addGasto" value="1" checked style="display:inline;width:auto;margin-right:6px"><span>{{ t('f_add_gasto') }}</span></label>
+  <p class="muted small">{{ t('loan_nota') }}</p>
+  <div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn ghost" type="button" onclick="this.closest('dialog').close()">{{ t('cancel') }}</button><button class="btn">{{ t('create') }}</button></div>
+</form></dialog>
+<script>
+const LOANS={{ loans|map(attribute='l')|list|tojson }};
+function openCuota(lid,cid){const l=LOANS.find(x=>x.id===lid),c=cid?l.cuotas.find(x=>x.id===cid):null,f=document.getElementById('f-cuota');
+  f.lid.value=lid;f.cid.value=cid||'';['fecha','cuota','amortizacion','intereses','capitalAntes','nota'].forEach(k=>f[k].value=c?.[k]??'');
+  document.getElementById('cuota-del').classList.toggle('hidden',!c);document.getElementById('dlg-cuota').showModal()}
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% include "_head.html" %}
+{% set NAV = [
+ ('resumen','tab_resumen','<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'),
+ ('gastos','tab_gastos','<path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2"/><circle cx="16.5" cy="14.5" r="1"/>'),
+ ('prestamos','tab_prestamos','<path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>'),
+ ('inversiones','tab_inv','<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>'),
+ ('datos','tab_datos','<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>')] %}
+{% macro navlinks() %}{% for k,lbl,ic in NAV %}<a href="{{ url_for(k) }}" class="{{ 'on' if tab==k }}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ ic|safe }}</svg><span>{{ t(lbl) }}</span></a>{% endfor %}{% endmacro %}
+<body data-page="app" data-dev="{{ '1' if dev else '0' }}" data-fb='{{ fb_cfg }}'>
+<header>
+  <a class="avatar" href="{{ url_for('perfil') }}" title="{{ t('tab_perfil') }}">{% if avatar.img %}<img alt="" src="{{ avatar.img }}">{% else %}{{ avatar.txt }}{% endif %}</a>
+  <h1>💶 Personal Balance <span class="sync">{{ 'web' }}</span></h1>
+  <nav id="nav-top">{{ navlinks() }}</nav>
+</header>
+<nav id="nav">{{ navlinks() }}</nav>
+<main>
+  {% if msg %}<div class="flash">{{ t(msg) }}</div>{% endif %}
+  {% if err %}<div class="flash bad">{{ t(err) }}</div>{% endif %}
+  {% block main %}{% endblock %}
+</main>
+{% block dialogs %}{% endblock %}
+<script>
+// Mantener la posición al volver tras guardar
+addEventListener('beforeunload',()=>{try{sessionStorage.setItem('pb-y:'+location.pathname,scrollY)}catch(e){}});
+addEventListener('DOMContentLoaded',()=>{try{const y=sessionStorage.getItem('pb-y:'+location.pathname);if(y&&!location.hash)scrollTo(0,+y)}catch(e){}
+  // Las casillas envían su formulario al cambiar
+  document.querySelectorAll('input[data-autosubmit]').forEach(c=>c.addEventListener('change',()=>{const f=c.form;f.querySelector('[name=on]').value=c.checked?'1':'0';f.requestSubmit()}));
+  // Botones que piden confirmación
+  document.querySelectorAll('form[data-confirm]').forEach(f=>f.addEventListener('submit',e=>{if(f.dataset.ok)return;e.preventDefault();e.stopImmediatePropagation();const d=document.getElementById('dlg-ok');document.getElementById('dlg-ok-t').textContent=f.dataset.confirm;document.getElementById('dlg-ok-m').textContent=f.dataset.confirmMsg||'';d.returnValue='';d.addEventListener('close',()=>{if(d.returnValue==='ok'){f.dataset.ok='1';f.requestSubmit()}},{once:true});d.showModal()},true));
+  if(location.hash.startsWith('#l-')){const c=document.getElementById(location.hash.slice(1));const d=c&&c.querySelector('details');if(d)d.open=true;if(c)c.scrollIntoView()}
+  if(history.replaceState&&/[?&](ok|err)=/.test(location.search)){const u=new URL(location);u.searchParams.delete('ok');u.searchParams.delete('err');history.replaceState(null,'',u)}
+});
+</script>
+<dialog id="dlg-ok"><form method="dialog">
+  <h3 id="dlg-ok-t"></h3><p id="dlg-ok-m" class="muted"></p>
+  <div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn ghost" value="cancel">{{ t('cancel') }}</button><button class="btn danger" value="ok">{{ t('accept') }}</button></div>
+</form></dialog>
+{% include "_i18n.html" %}
+</body>
+</html>

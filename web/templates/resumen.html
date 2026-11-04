@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block main %}
+<div id="alerts">{% for cls,ic,txt in alerts %}<div class="alert {{ cls }}">{{ ic }} <div>{{ txt|safe }}</div></div>{% endfor %}</div>
+<section>
+  <div class="grid kpis">
+    <div class="card kpi"><div class="lbl">{{ t('k_mes') }}</div><div class="val">{{ money(tm) }}</div><div class="sub">{{ t('gastos_n', n=n_gastos) }}</div></div>
+    <div class="card kpi"><div class="lbl">{{ t('k_anio') }}</div><div class="val">{{ money(tm*12) }}</div><div class="sub">{{ t('k_anio_sub') }}</div></div>
+    <div class="card kpi"><div class="lbl">{{ t('k_deuda') }}</div><div class="val">{{ money(pend) }}</div><div class="sub">{{ t('ya_pagado', paid=money(paid), cap=money(cap)) }}</div></div>
+    <div class="card kpi"><div class="lbl">{{ t('k_fin') }}</div><div class="val">{{ fmt_d(fin) if fin else '—' }}</div><div class="sub">{{ fin_sub }}</div></div>
+  </div>
+  <div class="grid two" style="margin-top:16px">
+    <div class="card"><h2>{{ t('h_donut') }}</h2>
+      <div class="donut-wrap">{{ donut|safe }}<ul class="legend">{% for i in legend %}<li><span class="sw" style="background:{{ i.color }}"></span>{{ i.concepto }}<span class="amt">{{ money(i.importe) }} <span class="muted small">{{ dec1(i.pct) }} %</span></span></li>{% endfor %}</ul></div>
+    </div>
+    <div class="card"><h2>{{ t('h_pend') }}</h2>
+      <ul class="upc">
+      {% for u in up %}
+        <li><div class="d"><b>{{ u.dia }}</b><span>{{ u.mes }}</span></div><div>{{ u.concepto }}<div><span class="pill {{ u.pill[0] }}">{{ u.pill[1] }}</span></div></div><span class="amt">{{ money(u.importe) }}</span></li>
+      {% endfor %}
+      {% if up %}<li><b>{{ t('total_pend') }}</b><span class="amt">{{ money(up_total) }}</span></li>{% else %}<li class="muted">{{ t('all_done') }}</li>{% endif %}
+      </ul>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px" id="mes">
+    <div class="row" style="margin-bottom:10px"><h2 style="margin:0">{{ t('h_mes') }}</h2>
+      <a class="icon" href="{{ url_for('resumen', m=off-1) }}#mes" title="{{ t('mes_prev') }}">◀</a><b style="min-width:120px;text-align:center">{{ mes_lbl }}</b><a class="icon" href="{{ url_for('resumen', m=off+1) }}#mes" title="{{ t('mes_next') }}">▶</a>
+      <span class="spacer"></span><span class="small"><span class="pill ok">{{ t('pill_pagado', x=money(mes_pag)) }}</span> <span class="pill warn">{{ t('pill_queda', x=money(mes_tot-mes_pag)) }}</span></span></div>
+    <div class="bar" style="margin-bottom:10px"><i style="width:{{ '%.1f'|format(mes_pag/mes_tot*100 if mes_tot else 0) }}%"></i></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th style="width:60px">{{ t('th_pagado') }}</th><th>{{ t('th_concepto') }}</th><th>{{ t('th_dia_pago') }}</th><th class="n">{{ t('th_importe') }}</th><th class="hide-sm">{{ t('th_estado') }}</th></tr></thead>
+      <tbody>
+      {% for i in items %}
+        <tr class="{{ 'paid' if i.pagado }}"><td><form class="chk-form" method="post" action="{{ url_for('mes_toggle') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="ref" value="{{ i.tipo }}|{{ i.ref }}"><input type="hidden" name="m" value="{{ off }}"><input type="hidden" name="on" value=""><input type="checkbox" data-autosubmit {{ 'checked' if i.pagado }}></form>{% if i.manual %} <span class="small muted" title="{{ t('marcado_mano') }}">✋</span>{% endif %}</td>
+          <td>{{ i.concepto }}</td><td>{{ fmt_d(i.fecha) if i.fecha else '—' }}</td><td class="n">{{ money(i.importe) }}</td><td class="hide-sm"><span class="pill {{ i.st[0] }}">{{ i.st[1] }}</span></td></tr>
+      {% else %}<tr><td colspan="5" class="muted">{{ t('no_gastos_mes') }}</td></tr>{% endfor %}
+      </tbody>
+      <tfoot><tr><td></td><td>{{ t('total_mes') }}</td><td></td><td class="n">{{ money(mes_tot) }}</td><td class="hide-sm"></td></tr></tfoot>
+    </table></div>
+    <p class="muted small">{{ t('mes_nota') }}</p>
+  </div>
+  <div class="card chart" style="margin-top:16px">
+    <h2>{{ t('h_deuda') }}</h2>
+    {% if debt %}{{ debt.svg|safe }}
+      <ul class="legend row" style="display:flex;gap:16px">{% for l in debt.legend %}<li><span class="sw" style="background:{{ l.color }}"></span>{{ l.nombre }}</li>{% endfor %}</ul>
+      <p class="muted small">{{ t('deuda_nota') }}</p>
+    {% else %}<p class="muted">{{ t('sin_prestamos') }}</p>{% endif %}
+  </div>
+</section>
+{% endblock %}

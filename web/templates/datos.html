@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block main %}
+<section>
+  <div class="grid two">
+    <div class="card">
+      <h2>{{ t('h_donde') }}</h2>
+      <p>{{ t('donde_cloud')|safe }}</p>
+      <p class="muted small">{{ t('w_web_note') }}</p>
+      <div class="row"><a class="btn" href="{{ url_for('datos_export') }}" style="text-decoration:none">{{ t('btn_exp') }}</a></div>
+      <form method="post" action="{{ url_for('datos_import') }}" enctype="multipart/form-data" style="margin-top:16px" data-confirm="{{ t('ask_cargar') }}" data-confirm-msg="{{ t('ask_cargar_m', n='…', m='…') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label class="f"><span>{{ t('btn_cargar') }}</span><input type="file" name="file" accept=".json,application/json"></label>
+        <details><summary>{{ t('btn_pegar') }}</summary><label class="f" style="margin-top:8px"><textarea name="text" rows="6" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></label></details>
+        <button class="btn ghost" style="margin-top:8px">{{ t('load') }}</button>
+      </form>
+      <p class="muted small" style="margin-top:16px">{{ t('reset_nota') }}</p>
+      <div class="row" style="margin:0 0 12px"><span class="muted small">{{ version }}</span></div>
+      <form method="post" action="{{ url_for('datos_reset') }}" data-confirm="{{ t('ask_reset') }}" data-confirm-msg="{{ t('ask_reset_m') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn danger">{{ t('btn_reset') }}</button></form>
+    </div>
+  </div>
+</section>
+{% endblock %}
