@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-27"
+APP_VERSION = "web-28"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -64,6 +64,27 @@ TR.update({
     "w_demo_t": ["Cuenta de pruebas", "Test account", "Тестов профил"],
     "w_demo_txt": ["Esta es una cuenta de pruebas: puedes llenarla con datos de ejemplo (gastos, préstamos, presupuestos, tickets e inversiones). Sustituye los datos de esta cuenta.", "This is a test account: you can fill it with sample data. It replaces this account's data.", "Това е тестов профил: можеш да го напълниш с примерни данни. Заменя данните на този профил."],
     "w_demo_ok": ["Datos de ejemplo cargados", "Sample data loaded", "Примерните данни са заредени"],
+    "op_btn": ["💬 Danos tu opinión", "💬 Give us feedback", "💬 Дай ни мнение"],
+    "op_t": ["Tu opinión", "Your feedback", "Твоето мнение"],
+    "op_intro": ["¿Algo no funciona, echas algo de menos o tienes una idea? Cuéntanoslo: lo leemos todo.", "Something not working, missing something or have an idea? Tell us: we read everything.", "Нещо не работи, липсва ти нещо или имаш идея? Кажи ни: четем всичко."],
+    "op_tipo": ["Tipo", "Type", "Вид"],
+    "op_idea": ["💡 Idea", "💡 Idea", "💡 Идея"],
+    "op_fallo": ["🐞 Algo falla", "🐞 Something is broken", "🐞 Нещо не работи"],
+    "op_gusta": ["❤️ Me gusta", "❤️ I like it", "❤️ Харесва ми"],
+    "op_otro": ["💬 Otro", "💬 Other", "💬 Друго"],
+    "op_nota": ["¿Qué te parece la app?", "How do you rate the app?", "Как оценяваш приложението?"],
+    "op_texto": ["Escribe aquí…", "Write here…", "Пиши тук…"],
+    "op_send": ["Enviar", "Send", "Изпрати"],
+    "op_ok": ["¡Gracias! Hemos recibido tu opinión.", "Thank you! We got your feedback.", "Благодарим! Получихме мнението ти."],
+    "op_limit": ["Ya has enviado muchas opiniones hoy. Prueba mañana.", "You have sent a lot of feedback today. Try tomorrow.", "Изпрати много мнения днес. Опитай утре."],
+    "op_vacio": ["Escribe algo antes de enviar.", "Write something before sending.", "Напиши нещо преди да изпратиш."],
+    "op_admin": ["Opiniones recibidas", "Feedback received", "Получени мнения"],
+    "op_nuevas": ["{n} sin leer", "{n} unread", "{n} непрочетени"],
+    "op_leida": ["Marcar como leída", "Mark as read", "Маркирай като прочетено"],
+    "op_noleida": ["Marcar sin leer", "Mark as unread", "Маркирай като непрочетено"],
+    "op_borrar": ["Borrar", "Delete", "Изтрий"],
+    "op_ninguna": ["Todavía no hay opiniones.", "No feedback yet.", "Още няма мнения."],
+    "op_todas": ["Todas", "All", "Всички"],
     "sum_n": ["{n} gastos", "{n} expenses", "{n} разхода"],
     "sum_t": ["Resumen de {m}", "{m} summary", "Резюме за {m}"],
     "sum_total": ["Gastado en total", "Total spent", "Общо похарчено"],
@@ -633,7 +654,10 @@ def datos_reset():
 @login_required
 def perfil():
     load()
-    return render_template("perfil.html", **ctx("perfil", P=g.P, icons=ICONS, photo=valid_photo(g.P.get("foto"))))
+    adm = is_admin(g.user)
+    nuevas = sum(1 for o in store.list_opiniones() if not o.get("leida")) if adm else 0
+    return render_template("perfil.html", **ctx("perfil", P=g.P, icons=ICONS, photo=valid_photo(g.P.get("foto")),
+                                                admin=adm, op_nuevas=nuevas))
 
 
 @app.post("/perfil")
@@ -1142,6 +1166,97 @@ def cron_resumen():
                 print("resumen send:", repr(e), flush=True)
     print(f"resumen mensual: enviados={sent}", flush=True)
     return {"sent": sent, "users": len(by_uid)}
+
+
+# ---------- Opiniones ----------
+# Solo el administrador puede leerlas. Se compara la huella sha256 del correo,
+# así el correo no queda escrito en el código.
+ADMIN_HASHES = {"eded3749028b56140a97b33c73f700e9dc6fdab29c5f2498da788406783348df"} | {h for h in os.environ.get("PB_ADMIN_HASHES", "").split(",") if h}
+OP_TIPOS = ("idea", "fallo", "gusta", "otro")
+
+
+def is_admin(user):
+    import hashlib
+    e = ((user or {}).get("email") or "").strip().lower()
+    if DEV and e == "dev@example.com":
+        return True
+    return bool((user or {}).get("email_verified")) and hashlib.sha256(e.encode()).hexdigest() in ADMIN_HASHES
+
+
+def _save_opinion(user, data, origen):
+    from store import now_iso
+    texto = str(data.get("texto") or "").strip()[:3000]
+    if not texto:
+        return "op_vacio"
+    tipo = data.get("tipo") if data.get("tipo") in OP_TIPOS else "otro"
+    try:
+        nota = max(0, min(5, int(data.get("nota") or 0)))
+    except (TypeError, ValueError):
+        nota = 0
+    doc = {"uid": user["uid"], "email": user.get("email", ""), "nombre": user.get("name", ""), "texto": texto,
+           "tipo": tipo, "nota": nota, "origen": origen, "version": str(data.get("version") or APP_VERSION)[:20],
+           "idioma": str(data.get("lang") or cur_lang())[:5], "fecha": now_iso(), "leida": False}
+    return None if store.add_opinion(user["uid"], doc) else "op_limit"
+
+
+@app.get("/opinion")
+@login_required
+def opinion():
+    load()
+    return render_template("opinion.html", **ctx("perfil"))
+
+
+@app.post("/opinion")
+@login_required
+def opinion_send():
+    load()
+    err = _save_opinion(g.user, request.form, "web")
+    if err:
+        return redirect(url_for("opinion", err=err))
+    return redirect(url_for("perfil", ok="op_ok"))
+
+
+@app.route("/api/opinion", methods=["POST", "OPTIONS"])
+def api_opinion():
+    if request.method == "OPTIONS":
+        return "", 204
+    user = _api_user()
+    if not user:
+        return {"error": "auth"}, 401
+    d = request.get_json(silent=True) or {}
+    err = _save_opinion(user, d, "app")
+    if err:
+        return {"error": err, "msg": TR[err][{"es": 0, "en": 1, "bg": 2}.get(d.get("lang"), 0)]}, 429 if err == "op_limit" else 400
+    return {"ok": True}
+
+
+@app.get("/opiniones")
+@login_required
+def opiniones():
+    if not is_admin(g.user):
+        abort(404)
+    load()
+    f = request.args.get("f", "")
+    ops = store.list_opiniones()
+    nuevas = sum(1 for o in ops if not o.get("leida"))
+    if f in OP_TIPOS:
+        ops = [o for o in ops if o.get("tipo") == f]
+    elif f == "nuevas":
+        ops = [o for o in ops if not o.get("leida")]
+    return render_template("opiniones.html", **ctx("perfil", ops=ops, nuevas=nuevas, f=f, tipos=OP_TIPOS))
+
+
+@app.post("/opiniones/marcar")
+@login_required
+def opiniones_marcar():
+    if not is_admin(g.user):
+        abort(404)
+    oid = request.form.get("id", "")
+    if request.form.get("accion") == "borrar":
+        store.delete_opinion(oid)
+    else:
+        store.set_opinion(oid, leida=request.form.get("leida") == "1")
+    return redirect(url_for("opiniones", f=request.form.get("f", "")))
 
 
 @app.get("/healthz")

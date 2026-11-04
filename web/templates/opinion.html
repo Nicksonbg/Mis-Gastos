@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block main %}
+<section>
+  <div class="card" style="max-width:640px;margin:0 auto">
+    <h2>{{ t('op_t') }}</h2>
+    <p class="muted">{{ t('op_intro') }}</p>
+    <form method="post" action="{{ url_for('opinion_send') }}" class="op-form">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="small muted">{{ t('op_tipo') }}</div>
+      <div class="op-chips">{% for k in ['idea','fallo','gusta','otro'] %}<label><input type="radio" name="tipo" value="{{ k }}" {{ 'checked' if loop.first }}><span>{{ t('op_' ~ k) }}</span></label>{% endfor %}</div>
+      <div class="small muted" style="margin-top:12px">{{ t('op_nota') }}</div>
+      <div class="op-stars">{% for n in [5,4,3,2,1] %}<input type="radio" name="nota" value="{{ n }}" id="st{{ n }}"><label for="st{{ n }}" title="{{ n }}">★</label>{% endfor %}</div>
+      <textarea name="texto" rows="6" maxlength="3000" required placeholder="{{ t('op_texto') }}" style="width:100%;margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text);font:inherit;resize:vertical"></textarea>
+      <div class="row" style="margin-top:12px"><span class="spacer"></span><a class="btn ghost" href="{{ url_for('perfil') }}" style="text-decoration:none">{{ t('cancel') }}</a><button class="btn">{{ t('op_send') }}</button></div>
+    </form>
+  </div>
+</section>
+<style>
+.op-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.op-chips input{display:none}
+.op-chips span{display:inline-block;padding:8px 12px;border:1px solid var(--line);border-radius:999px;cursor:pointer}
+.op-chips input:checked+span{background:var(--accent);color:var(--accent-ink,#000);border-color:var(--accent)}
+.op-stars{display:inline-flex;flex-direction:row-reverse;gap:4px;font-size:30px;margin-top:2px}.op-stars input{display:none}
+.op-stars label{cursor:pointer;color:var(--line)}.op-stars input:checked~label,.op-stars label:hover,.op-stars label:hover~label{color:#f5b301}
+</style>
+{% endblock %}

@@ -123,6 +123,30 @@ class FirestoreStore:
     def set_alert_state(self, uid, data):
         self.db.collection("budget_alerts").document(uid).set(data)
 
+    # ---- Opiniones de los usuarios (colección solo del servidor) ----
+    def add_opinion(self, uid, data, limit=10):
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        ref = self.db.collection("opinion_uso").document(uid)
+        snap = ref.get()
+        d = snap.to_dict() if snap.exists else {}
+        n = d.get("n", 0) if d.get("fecha") == today else 0
+        if n >= limit:
+            return False
+        ref.set({"fecha": today, "n": n + 1})
+        self.db.collection("opiniones").add(data)
+        return True
+
+    def list_opiniones(self, limit=300):
+        from google.cloud import firestore as gfs
+        q = self.db.collection("opiniones").order_by("fecha", direction=gfs.Query.DESCENDING).limit(limit)
+        return [d.to_dict() | {"_id": d.id} for d in q.stream()]
+
+    def set_opinion(self, oid, **fields):
+        self.db.collection("opiniones").document(oid).update(fields)
+
+    def delete_opinion(self, oid):
+        self.db.collection("opiniones").document(oid).delete()
+
 
 class LocalStore:
     """Solo para desarrollo: guarda en un archivo JSON."""
@@ -192,6 +216,29 @@ class LocalStore:
 
     def set_alert_state(self, uid, data):
         self._alerts[uid] = data
+
+    _ops = {}
+    _ops_n = {}
+
+    def add_opinion(self, uid, data, limit=10):
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        f, n = self._ops_n.get(uid, (today, 0))
+        n = n if f == today else 0
+        if n >= limit:
+            return False
+        self._ops_n[uid] = (today, n + 1)
+        self._ops[str(len(self._ops) + 1)] = dict(data)
+        return True
+
+    def list_opiniones(self, limit=300):
+        return sorted([v | {"_id": k} for k, v in self._ops.items()], key=lambda x: x.get("fecha", ""), reverse=True)[:limit]
+
+    def set_opinion(self, oid, **fields):
+        if oid in self._ops:
+            self._ops[oid].update(fields)
+
+    def delete_opinion(self, oid):
+        self._ops.pop(oid, None)
 
     def ia_quota(self, uid, limit):
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
