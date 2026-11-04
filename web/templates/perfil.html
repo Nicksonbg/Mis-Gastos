@@ -28,7 +28,7 @@
         <h2>{{ t('h_ajustes') }}</h2>
         <form method="post" action="{{ url_for('ajustes') }}"><input type="hidden" name="csrf" value="{{ csrf }}">
         <label class="f"><span>{{ t('lbl_tema') }}</span>
-          <select name="theme" onchange="this.form.requestSubmit()">{% for v,k in [('', 'tema_auto'),('light','tema_claro'),('dark','tema_oscuro')] %}<option value="{{ v }}" {{ 'selected' if theme==v }}>{{ t(k) }}</option>{% endfor %}</select></label>
+          <select name="theme" onchange="this.form.requestSubmit()">{% for v,k in [('', 'tema_oscuro'),('light','tema_claro')] %}<option value="{{ v }}" {{ 'selected' if theme==v }}>{{ t(k) }}</option>{% endfor %}</select></label>
         <label class="f"><span>{{ t('lbl_idioma') }}</span>
           <select name="lang" onchange="this.form.requestSubmit()">{% for k,n in [('es','Español'),('en','English'),('bg','Български')] %}<option value="{{ k }}" {{ 'selected' if lang==k }}>{{ n }}</option>{% endfor %}</select></label>
         </form>

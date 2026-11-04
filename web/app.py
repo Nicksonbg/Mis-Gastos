@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-4"
+APP_VERSION = "web-5"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -93,6 +93,14 @@ def money(v):
     if LANGS[cur_lang()]["cur"] == "pre":
         return ("-€" + s[1:]) if s.startswith("-") else "€" + s
     return s + " €"
+
+
+def hero(v):
+    """Separa una cantidad en parte entera y decimales para la cifra grande."""
+    s = num(r2(v))
+    d = LANGS[cur_lang()]["dec"]
+    i, _, f = s.partition(d)
+    return i, d + f
 
 
 def fmt_d(s):
@@ -182,7 +190,7 @@ def ctx(tab, **kw):
         av = {"img": P["foto"]}
     else:
         av = {"txt": P.get("icono") or (nombre or user.get("email") or "?").strip()[:1].upper()}
-    return dict(t=t, money=money, fmt_d=fmt_d, dec1=dec1, num=num, tab=tab, lang=cur_lang(),
+    return dict(t=t, money=money, hero=hero, fmt_d=fmt_d, dec1=dec1, num=num, tab=tab, lang=cur_lang(),
                 theme=request.cookies.get("pb_theme", ""), csrf=csrf_token(), fb_cfg=json.dumps(FB_CFG),
                 dev=DEV, avatar=av, user=user, msg=request.args.get("ok"), err=request.args.get("err"),
                 version=APP_VERSION, **kw)
@@ -279,6 +287,9 @@ def resumen():
             i["st"] = ("warn", t("st_hoy"))
         else:
             i["st"] = ("mute", t("en_d", d=(calc.parse(i["fecha"]) - calc.today()).days))
+    items0 = calc.mes_items(S, 0)[1]
+    mes_tot0 = r2(sum(i["importe"] for i in items0))
+    mes_pag0 = r2(sum(i["importe"] for i in items0 if i["pagado"]))
     tot = r2(sum(i["importe"] for i in items))
     pag = r2(sum(i["importe"] for i in items if i["pagado"]))
     donut, legend = calc.donut_svg(S, money, t, esc)
@@ -287,7 +298,7 @@ def resumen():
         "resumen.html", **ctx("resumen", S=S, tm=tm, n_gastos=len(S["gastos"]), pend=pend, cap=cap, paid=paid,
                                fin=fin, fin_sub=fin_sub, alerts=alerts, up=up, up_total=sum(u["importe"] for u in up),
                                off=off, mes_lbl=t("meses").split("|")[m0.month - 1] + " " + str(m0.year),
-                               items=items, mes_tot=tot, mes_pag=pag, donut=donut, legend=legend, debt=debt))
+                               items=items, mes_tot=tot, mes_pag=pag, mes_tot0=mes_tot0, mes_pag0=mes_pag0, donut=donut, legend=legend, debt=debt))
 
 
 @app.post("/mes/toggle")

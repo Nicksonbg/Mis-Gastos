@@ -2,11 +2,16 @@
 {% block main %}
 <div id="alerts">{% for cls,ic,txt in alerts %}<div class="alert {{ cls }}">{{ ic }} <div>{{ txt|safe }}</div></div>{% endfor %}</div>
 <section>
-  <div class="grid kpis">
-    <div class="card kpi"><div class="lbl">{{ t('k_mes') }}</div><div class="val">{{ money(tm) }}</div><div class="sub">{{ t('gastos_n', n=n_gastos) }}</div></div>
-    <div class="card kpi"><div class="lbl">{{ t('k_anio') }}</div><div class="val">{{ money(tm*12) }}</div><div class="sub">{{ t('k_anio_sub') }}</div></div>
-    <div class="card kpi"><div class="lbl">{{ t('k_deuda') }}</div><div class="val">{{ money(pend) }}</div><div class="sub">{{ t('ya_pagado', paid=money(paid), cap=money(cap)) }}</div></div>
-    <div class="card kpi"><div class="lbl">{{ t('k_fin') }}</div><div class="val">{{ fmt_d(fin) if fin else '—' }}</div><div class="sub">{{ fin_sub }}</div></div>
+  {% set h = hero(tm) %}
+  <div class="card hero">
+    <div class="hero-top"><span class="dot"></span>{{ t('k_mes') }}</div>
+    <div class="hero-val"><span class="cur">€</span>{{ h[0] }}<span class="dec">{{ h[1] }}</span></div>
+    <div class="hero-sub"><span class="up">↗ {{ t('pill_pagado', x=money(mes_pag0)) }}</span>&nbsp;&nbsp;<span class="muted">{{ t('pill_queda', x=money(mes_tot0-mes_pag0)) }}</span></div>
+    <div class="hero-stats">
+      <div><div class="lbl">{{ t('k_anio') }}</div><div class="v">{{ money(tm*12) }}</div><div class="s">{{ t('gastos_n', n=n_gastos) }}</div></div>
+      <div><div class="lbl">{{ t('k_deuda') }}</div><div class="v">{{ money(pend) }}</div><div class="s">{{ t('ya_pagado', paid=money(paid), cap=money(cap)) }}</div></div>
+      <div><div class="lbl">{{ t('k_fin') }}</div><div class="v">{{ fmt_d(fin) if fin else '—' }}</div><div class="s">{{ fin_sub }}</div></div>
+    </div>
   </div>
   <div class="grid two" style="margin-top:16px">
     <div class="card"><h2>{{ t('h_donut') }}</h2>
@@ -23,7 +28,7 @@
   </div>
   <div class="card" style="margin-top:16px" id="mes">
     <div class="row" style="margin-bottom:10px"><h2 style="margin:0">{{ t('h_mes') }}</h2>
-      <a class="icon" href="{{ url_for('resumen', m=off-1) }}#mes" title="{{ t('mes_prev') }}">◀</a><b style="min-width:120px;text-align:center">{{ mes_lbl }}</b><a class="icon" href="{{ url_for('resumen', m=off+1) }}#mes" title="{{ t('mes_next') }}">▶</a>
+      <span class="chips"><a href="{{ url_for('resumen', m=off-1) }}#mes" title="{{ t('mes_prev') }}">‹</a><a class="on" href="{{ url_for('resumen', m=0) }}#mes">{{ mes_lbl }}</a><a href="{{ url_for('resumen', m=off+1) }}#mes" title="{{ t('mes_next') }}">›</a></span>
       <span class="spacer"></span><span class="small"><span class="pill ok">{{ t('pill_pagado', x=money(mes_pag)) }}</span> <span class="pill warn">{{ t('pill_queda', x=money(mes_tot-mes_pag)) }}</span></span></div>
     <div class="bar" style="margin-bottom:10px"><i style="width:{{ '%.1f'|format(mes_pag/mes_tot*100 if mes_tot else 0) }}%"></i></div>
     <div class="tbl-wrap"><table>
