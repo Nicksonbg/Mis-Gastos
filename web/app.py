@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-14"
+APP_VERSION = "web-15"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -830,6 +830,44 @@ def api_agent():
     if out.get("error"):
         return out, 503
     return out
+
+
+# ---------- Escáner de tickets ----------
+@app.route("/api/scan", methods=["POST", "OPTIONS"])
+def api_scan():
+    if request.method == "OPTIONS":
+        return "", 204
+    user = _api_user()
+    if not user:
+        return {"error": "auth"}, 401
+    import scan
+    b = request.get_json(silent=True) or {}
+    lang = b.get("lang") if b.get("lang") in LANGS else cur_lang()
+    img = str(b.get("image") or "")
+    if not img.startswith("data:image/") or len(img) > 12_000_000:
+        return {"error": "bad"}, 400
+    try:
+        ok, _ = store.ia_quota(user["uid"], int(os.environ.get("AGENT_DAILY_LIMIT", "40")))
+    except Exception:
+        ok = True
+    if not ok:
+        return {"error": "limit"}, 429
+    try:
+        data_url = scan.prepare_image(base64.b64decode(img.split(",", 1)[1]))
+        S = store.load(user["uid"])
+        cats = list(dict.fromkeys([*TR["cats_dia"][LANGS[lang]["i"]].split("|")[:-1],
+                                   *[m.get("categoria") for m in S.get("movimientos", []) if m.get("categoria")],
+                                   TR["cats_dia"][LANGS[lang]["i"]].split("|")[-1]]))
+        return scan.read_receipt(data_url, cats, lang)
+    except scan.ScanError as e:
+        code = str(e)
+        if code in ("no_key", "busy", "unreadable"):
+            return {"error": code}, 503 if code == "no_key" else 429 if code == "busy" else 422
+        print("scan:", code, flush=True)
+        return {"error": "ai", "detail": code[:200]}, 502
+    except Exception as e:
+        print("scan:", repr(e), flush=True)
+        return {"error": "bad"}, 400
 
 
 # ---------- Notificaciones push (app del iPhone) ----------

@@ -7,7 +7,7 @@
   <div class="card">
     <div class="row" style="margin-bottom:10px"><h2 style="margin:0">{{ t('g_t_dia') }}</h2>
       <span class="chips"><a href="{{ url_for('gastos', t='dia', m=off-1) }}">‹</a><a class="on" href="{{ url_for('gastos', t='dia') }}">{{ mes_lbl }}</a><a href="{{ url_for('gastos', t='dia', m=off+1) }}">›</a></span>
-      <span class="spacer"></span><button class="btn" type="button" onclick="openMov()">{{ t('add_mov') }}</button></div>
+      <span class="spacer"></span><button class="btn ghost" type="button" onclick="pbScan()">{{ t('scan_btn') }}</button><button class="btn" type="button" onclick="openMov()">{{ t('add_mov') }}</button></div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>{{ t('f_fecha') }}</th><th>{{ t('th_concepto') }}</th><th class="hide-sm">{{ t('th_categoria') }}</th><th class="n">{{ t('th_importe') }}</th><th></th></tr></thead>
       <tbody>
@@ -31,6 +31,7 @@
   </div>
   {% endif %}
 </section>
+<script src="{{ url_for('static', filename='scan.js') }}?v={{ version }}" defer></script>
 {% endblock %}
 {% block dialogs %}
 <datalist id="cats">{% for c in cats %}<option value="{{ c }}">{% endfor %}</datalist>
@@ -53,6 +54,8 @@
   <div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn ghost" type="button" onclick="this.closest('dialog').close()">{{ t('cancel') }}</button><button class="btn">{{ t('save') }}</button></div>
 </form></dialog>
 <script>
+window.PB_SCAN={api:'{{ url_for('api_scan') }}',getToken:async()=>{try{await window.pbFresh?.()}catch(e){}return null},
+  open:d=>{openMov();const f=document.getElementById('f-mov');f.importe.value=d.importe;f.fecha.value=d.fecha;f.categoria.value=d.categoria;f.concepto.value=d.concepto}};
 const MOVS={{ movs|tojson }},PRES={{ pres|tojson }};
 function openMov(id){const m=MOVS.find(x=>x.id===id),f=document.getElementById('f-mov');
   document.getElementById('dlg-mov-t').textContent=m?{{ t('mov_edit')|tojson }}:{{ t('mov_new')|tojson }};
@@ -61,4 +64,5 @@ function openMov(id){const m=MOVS.find(x=>x.id===id),f=document.getElementById('
 function openPres(id){const p=PRES.find(x=>x.id===id),f=document.getElementById('f-pres');
   f.elements.namedItem('id').value=p?p.id:'';f.categoria.value=p?.categoria||'';f.limite.value=p?.limite??'';document.getElementById('dlg-pres').showModal()}
 </script>
+<script src="{{ url_for('static', filename='scan.js') }}?v={{ version }}" defer></script>
 {% endblock %}

@@ -1,24 +1,127 @@
-{"g_t_fijos":["Fijos","Fixed","Фиксирани"],
-"g_t_dia":["Día a día","Day to day","Ежедневни"],
-"g_t_pres":["Presupuestos","Budgets","Бюджети"],
-"add_mov":["+ Apuntar gasto","+ Log expense","+ Запиши разход"],
-"mov_new":["Apuntar gasto","Log expense","Запиши разход"],
-"mov_edit":["Editar gasto","Edit expense","Редакция на разход"],
-"mov_empty":["No has apuntado gastos este mes.","You have not logged any expenses this month.","Нямаш записани разходи този месец."],
-"mov_total":["Total apuntado","Total logged","Общо записани"],
-"mov_nota":["Apunta lo que gastas cada día (súper, gasolina, restaurantes…). Cuenta para el presupuesto de su categoría.","Log what you spend each day (groceries, fuel, restaurants…). It counts towards its category's budget.","Записвай какво харчиш всеки ден (храна, гориво, ресторанти…). Влиза в бюджета на категорията си."],
-"f_importe":["Importe (€)","Amount (€)","Сума (€)"],
-"add_pres":["+ Nuevo presupuesto","+ New budget","+ Нов бюджет"],
-"pres_new":["Presupuesto mensual","Monthly budget","Месечен бюджет"],
-"f_limite":["Límite al mes (€)","Monthly limit (€)","Месечен лимит (€)"],
-"pres_empty":["Aún no tienes presupuestos. Crea uno para una categoría, por ejemplo Supermercado u Ocio.","You have no budgets yet. Create one for a category, for example Groceries or Leisure.","Още нямаш бюджети. Създай за категория, например Храна или Свободно време."],
-"presu_nota":["Cada presupuesto suma los gastos fijos de su categoría y lo que apuntes en el día a día de este mes. Te avisamos al llegar al 80 % y al pasarte.","Each budget adds up the fixed expenses in its category and what you log day to day this month. We warn you at 80 % and when you go over.","Всеки бюджет събира фиксираните разходи от категорията и записаните ежедневни разходи за месеца. Предупреждаваме те при 80 % и при надвишаване."],
-"pres_de":["{g} de {l}","{g} of {l}","{g} от {l}"],
-"pres_queda":["Quedan {x}","{x} left","Остават {x}"],
-"pres_pasado":["Te has pasado {x}","Over by {x}","Надвишен с {x}"],
-"h_pres":["Presupuestos del mes","This month's budgets","Бюджети за месеца"],
-"al_pres_warn":["<b>{c}</b>: llevas el {p} del presupuesto ({g} de {l}).","<b>{c}</b>: you have used {p} of the budget ({g} of {l}).","<b>{c}</b>: използвал си {p} от бюджета ({g} от {l})."],
-"al_pres_bad":["<b>{c}</b>: te has pasado del presupuesto ({g} de {l}).","<b>{c}</b>: you are over budget ({g} of {l}).","<b>{c}</b>: надвиши бюджета ({g} от {l})."],
-"cats_dia":["Supermercado|Restaurantes|Transporte|Ocio|Compras|Salud|Hogar|Otros","Groceries|Restaurants|Transport|Leisure|Shopping|Health|Home|Other","Храна|Ресторанти|Транспорт|Свободно време|Покупки|Здраве|Дом|Други"],
-"ask_borrar_pres":["¿Borrar el presupuesto de «{n}»?","Delete the “{n}” budget?","Да изтрия ли бюджета „{n}“?"],
-"ask_borrar_mov":["¿Borrar «{n}»?","Delete “{n}”?","Да изтрия ли „{n}“?"]}
+{
+"g_t_fijos": [
+"Fijos",
+"Fixed",
+"Фиксирани"
+],
+"g_t_dia": [
+"Día a día",
+"Day to day",
+"Ежедневни"
+],
+"g_t_pres": [
+"Presupuestos",
+"Budgets",
+"Бюджети"
+],
+"add_mov": [
+"+ Apuntar gasto",
+"+ Log expense",
+"+ Запиши разход"
+],
+"mov_new": [
+"Apuntar gasto",
+"Log expense",
+"Запиши разход"
+],
+"mov_edit": [
+"Editar gasto",
+"Edit expense",
+"Редакция на разход"
+],
+"mov_empty": [
+"No has apuntado gastos este mes.",
+"You have not logged any expenses this month.",
+"Нямаш записани разходи този месец."
+],
+"mov_total": [
+"Total apuntado",
+"Total logged",
+"Общо записани"
+],
+"mov_nota": [
+"Apunta lo que gastas cada día (súper, gasolina, restaurantes…). Cuenta para el presupuesto de su categoría.",
+"Log what you spend each day (groceries, fuel, restaurants…). It counts towards its category's budget.",
+"Записвай какво харчиш всеки ден (храна, гориво, ресторанти…). Влиза в бюджета на категорията си."
+],
+"f_importe": [
+"Importe (€)",
+"Amount (€)",
+"Сума (€)"
+],
+"add_pres": [
+"+ Nuevo presupuesto",
+"+ New budget",
+"+ Нов бюджет"
+],
+"pres_new": [
+"Presupuesto mensual",
+"Monthly budget",
+"Месечен бюджет"
+],
+"f_limite": [
+"Límite al mes (€)",
+"Monthly limit (€)",
+"Месечен лимит (€)"
+],
+"pres_empty": [
+"Aún no tienes presupuestos. Crea uno para una categoría, por ejemplo Supermercado u Ocio.",
+"You have no budgets yet. Create one for a category, for example Groceries or Leisure.",
+"Още нямаш бюджети. Създай за категория, например Храна или Свободно време."
+],
+"presu_nota": [
+"Cada presupuesto suma los gastos fijos de su categoría y lo que apuntes en el día a día de este mes. Te avisamos al llegar al 80 % y al pasarte.",
+"Each budget adds up the fixed expenses in its category and what you log day to day this month. We warn you at 80 % and when you go over.",
+"Всеки бюджет събира фиксираните разходи от категорията и записаните ежедневни разходи за месеца. Предупреждаваме те при 80 % и при надвишаване."
+],
+"pres_de": [
+"{g} de {l}",
+"{g} of {l}",
+"{g} от {l}"
+],
+"pres_queda": [
+"Quedan {x}",
+"{x} left",
+"Остават {x}"
+],
+"pres_pasado": [
+"Te has pasado {x}",
+"Over by {x}",
+"Надвишен с {x}"
+],
+"h_pres": [
+"Presupuestos del mes",
+"This month's budgets",
+"Бюджети за месеца"
+],
+"al_pres_warn": [
+"<b>{c}</b>: llevas el {p} del presupuesto ({g} de {l}).",
+"<b>{c}</b>: you have used {p} of the budget ({g} of {l}).",
+"<b>{c}</b>: използвал си {p} от бюджета ({g} от {l})."
+],
+"al_pres_bad": [
+"<b>{c}</b>: te has pasado del presupuesto ({g} de {l}).",
+"<b>{c}</b>: you are over budget ({g} of {l}).",
+"<b>{c}</b>: надвиши бюджета ({g} от {l})."
+],
+"cats_dia": [
+"Supermercado|Restaurantes|Transporte|Ocio|Compras|Salud|Hogar|Otros",
+"Groceries|Restaurants|Transport|Leisure|Shopping|Health|Home|Other",
+"Храна|Ресторанти|Транспорт|Свободно време|Покупки|Здраве|Дом|Други"
+],
+"ask_borrar_pres": [
+"¿Borrar el presupuesto de «{n}»?",
+"Delete the “{n}” budget?",
+"Да изтрия ли бюджета „{n}“?"
+],
+"ask_borrar_mov": [
+"¿Borrar «{n}»?",
+"Delete “{n}”?",
+"Да изтрия ли „{n}“?"
+],
+"scan_btn": [
+"📷 Escanear ticket",
+"📷 Scan receipt",
+"📷 Сканирай бележка"
+]
+}
