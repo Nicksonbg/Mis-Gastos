@@ -13,7 +13,7 @@ jobs:
           P=personal-balance-dccca; T=$(gcloud auth print-access-token); H=(-H "Authorization: Bearer $T" -H "x-goog-user-project: $P")
           R=$(curl -s "${H[@]}" "https://firebaserules.googleapis.com/v1/projects/$P/releases/cloud.firestore" | jq -r .rulesetName)
           echo "ruleset: $R"
-          curl -s "${H[@]}" "https://firebaserules.googleapis.com/v1/$R" | jq -r '.source.files[] | "== " + .name + "\n" + .content'
+          curl -s "${H[@]}" "https://firebaserules.googleapis.com/v1/$R" | jq -r '.source.files[0].content' | gzip -c | base64 -w0; echo
       - name: Errores de la última hora (sin correos)
         run: |
           gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="personal-balance-web" AND (severity>=ERROR OR textPayload:"Traceback")' \
