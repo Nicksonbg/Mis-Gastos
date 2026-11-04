@@ -7,7 +7,7 @@
   const API = CFG.api || '/api/agent';
   const L = (document.documentElement.lang || 'es').slice(0, 2);
   const TX = {
-    title: ['Asistente', 'Assistant', 'Асистент'],
+    title: ['Tu asistente personal', 'Your personal assistant', 'Твоят личен асистент'],
     ph: ['Pregunta o pide un cambio…', 'Ask or request a change…', 'Попитай или поискай промяна…'],
     hi: ['Hola 👋 Puedo responder sobre tus gastos y préstamos, y hacer cambios (te pediré confirmación antes).', 'Hi 👋 I can answer about your expenses and loans, and make changes (I will ask you to confirm first).', 'Здравей 👋 Мога да отговарям за разходите и заемите ти и да правя промени (първо ще те попитам).'],
     s1: ['¿Cuánto pago al mes?', 'How much do I pay per month?', 'Колко плащам на месец?'],
