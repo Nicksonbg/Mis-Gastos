@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-28"
+APP_VERSION = "web-29"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -77,7 +77,7 @@ TR.update({
     "op_send": ["Enviar", "Send", "Изпрати"],
     "op_ok": ["¡Gracias! Hemos recibido tu opinión.", "Thank you! We got your feedback.", "Благодарим! Получихме мнението ти."],
     "op_limit": ["Ya has enviado muchas opiniones hoy. Prueba mañana.", "You have sent a lot of feedback today. Try tomorrow.", "Изпрати много мнения днес. Опитай утре."],
-    "op_vacio": ["Escribe algo antes de enviar.", "Write something before sending.", "Напиши нещо преди да изпратиш."],
+    "op_vacio": ["Escribe algo o pon estrellas antes de enviar.", "Write something or add stars before sending.", "Напиши нещо или дай звезди преди да изпратиш."],
     "op_admin": ["Opiniones recibidas", "Feedback received", "Получени мнения"],
     "op_nuevas": ["{n} sin leer", "{n} unread", "{n} непрочетени"],
     "op_leida": ["Marcar como leída", "Mark as read", "Маркирай като прочетено"],
@@ -1186,13 +1186,14 @@ def is_admin(user):
 def _save_opinion(user, data, origen):
     from store import now_iso
     texto = str(data.get("texto") or "").strip()[:3000]
-    if not texto:
-        return "op_vacio"
     tipo = data.get("tipo") if data.get("tipo") in OP_TIPOS else "otro"
     try:
         nota = max(0, min(5, int(data.get("nota") or 0)))
     except (TypeError, ValueError):
         nota = 0
+    # El texto es opcional con «Me gusta» o con estrellas; si no, hace falta escribir algo
+    if not texto and tipo != "gusta" and not nota:
+        return "op_vacio"
     doc = {"uid": user["uid"], "email": user.get("email", ""), "nombre": user.get("name", ""), "texto": texto,
            "tipo": tipo, "nota": nota, "origen": origen, "version": str(data.get("version") or APP_VERSION)[:20],
            "idioma": str(data.get("lang") or cur_lang())[:5], "fecha": now_iso(), "leida": False}

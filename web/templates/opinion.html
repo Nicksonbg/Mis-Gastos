@@ -10,7 +10,7 @@
       <div class="op-chips">{% for k in ['idea','fallo','gusta','otro'] %}<label><input type="radio" name="tipo" value="{{ k }}" {{ 'checked' if loop.first }}><span>{{ t('op_' ~ k) }}</span></label>{% endfor %}</div>
       <div class="small muted" style="margin-top:12px">{{ t('op_nota') }}</div>
       <div class="op-stars">{% for n in [5,4,3,2,1] %}<input type="radio" name="nota" value="{{ n }}" id="st{{ n }}"><label for="st{{ n }}" title="{{ n }}">★</label>{% endfor %}</div>
-      <textarea name="texto" rows="6" maxlength="3000" required placeholder="{{ t('op_texto') }}" style="width:100%;margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text);font:inherit;resize:vertical"></textarea>
+      <textarea name="texto" rows="6" maxlength="3000" placeholder="{{ t('op_texto') }}" style="width:100%;margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text);font:inherit;resize:vertical"></textarea>
       <div class="row" style="margin-top:12px"><span class="spacer"></span><a class="btn ghost" href="{{ url_for('perfil') }}" style="text-decoration:none">{{ t('cancel') }}</a><button class="btn">{{ t('op_send') }}</button></div>
     </form>
   </div>

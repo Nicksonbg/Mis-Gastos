@@ -7,7 +7,7 @@
     {% for o in ops %}
     <div class="op-item {{ '' if o.leida else 'new' }}">
       <div class="row small" style="gap:8px;flex-wrap:wrap"><b>{{ t('op_' ~ (o.tipo or 'otro')) }}</b>{% if o.nota %}<span style="color:#f5b301">{{ '★' * o.nota }}<span style="color:var(--line)">{{ '★' * (5 - o.nota) }}</span></span>{% endif %}<span class="spacer"></span><span class="muted">{{ fmt_d((o.fecha or '')[:10]) }} {{ (o.fecha or '')[11:16] }}</span></div>
-      <div style="white-space:pre-wrap;margin:8px 0">{{ o.texto }}</div>
+      {% if o.texto %}<div style="white-space:pre-wrap;margin:8px 0">{{ o.texto }}</div>{% else %}<div style="margin:6px 0"></div>{% endif %}
       <div class="row small muted" style="gap:8px;flex-wrap:wrap"><span>{{ o.nombre or '' }} &lt;{{ o.email }}&gt; · {{ o.origen }} {{ o.version }} · {{ o.idioma }}</span><span class="spacer"></span>
         <form method="post" action="{{ url_for('opiniones_marcar') }}" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ o._id }}"><input type="hidden" name="f" value="{{ f }}"><input type="hidden" name="leida" value="{{ '0' if o.leida else '1' }}"><button class="btn ghost sm">{{ t('op_noleida' if o.leida else 'op_leida') }}</button></form>
         <form method="post" action="{{ url_for('opiniones_marcar') }}" class="inline" onsubmit="return confirm('{{ t('op_borrar') }}?')"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ o._id }}"><input type="hidden" name="f" value="{{ f }}"><input type="hidden" name="accion" value="borrar"><button class="btn ghost sm" style="color:var(--bad)">{{ t('op_borrar') }}</button></form></div>
