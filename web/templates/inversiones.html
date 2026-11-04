@@ -1,4 +1,108 @@
 {% extends "base.html" %}
 {% block main %}
-<section><div class="alert info"><div>📈 {{ t('w_soon') }}</div></div></section>
+<section>
+  <div class="row" style="margin-bottom:10px"><span class="muted small">{{ t('inv_nota') }}</span><span class="spacer"></span>{% if tabn=='cartera' %}<button class="btn" type="button" onclick="openInv()">{{ t('add_inv') }}</button>{% endif %}</div>
+  <div class="chips" style="margin-bottom:14px">
+    {% for k,l in [('cartera','inv_t_cartera'),('watch','inv_t_watch'),('conectar','inv_t_conectar')] %}<a href="{{ url_for('inversiones', t=k) }}" class="{{ 'on' if tabn==k }}">{{ t(l) }}</a>{% endfor %}
+  </div>
+
+  {% if tabn=='cartera' %}
+  <p class="small" id="inv-status" style="margin:0 0 12px"></p>
+  <div class="card hero" style="margin-bottom:16px" id="inv-total">
+    <div class="hero-top"><span class="dot"></span>{{ t('inv_valor') }}</div><div class="hero-val">—</div><div class="hero-sub"></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>{{ t('th_activo') }}</th><th class="n hide-sm">{{ t('th_cant') }}</th><th class="n hide-sm">{{ t('th_precio') }}</th><th class="n">{{ t('th_valor') }}</th><th class="n">{{ t('th_gp') }}</th><th class="n hide-sm">{{ t('th_hoy') }}</th><th></th></tr></thead>
+      <tbody id="inv-body">
+      {% for i in inv %}
+        <tr data-id="{{ i.id }}"><td><span class="ai" data-icon></span><b>{{ i.simbolo|upper }}</b> <span class="pill mute">{{ t('tipo_'+i.tipo) }}</span><span data-candle></span><div class="muted small">{{ i.broker or '' }}</div></td>
+          <td class="n hide-sm" data-qty></td><td class="n hide-sm" data-px><span class="muted">…</span></td><td class="n" data-val><span class="muted">—</span></td><td class="n" data-gp><span class="muted">—</span></td><td class="n hide-sm" data-ch><span class="muted">—</span></td>
+          <td class="n" style="white-space:nowrap"><button class="icon" type="button" onclick="openInv('{{ i.id }}')" title="{{ t('editar') }}">✏️</button><form class="inline" method="post" action="{{ url_for('inv_delete') }}" data-confirm="{{ t('ask_borrar_inv', n=i.simbolo) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ i.id }}"><button class="icon" title="{{ t('borrar') }}">🗑️</button></form></td></tr>
+      {% else %}<tr><td colspan="7" class="muted" style="text-align:center;padding:18px">{{ t('inv_vacio') }}</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card" id="inv-brokers" style="margin-bottom:16px"><h2>{{ t('h_broker') }}</h2><p class="muted small">—</p></div>
+  {% if not fh and inv|selectattr('tipo','equalto','accion')|list %}<p class="muted small">{{ t('watch_nokey') }} <a href="{{ url_for('inversiones', t='conectar') }}" style="color:var(--accent)">{{ t('inv_t_conectar') }} →</a></p>{% endif %}
+
+  {% elif tabn=='watch' %}
+  <div class="card">
+    <div class="row"><h2 style="margin:0">{{ t('h_watch') }}</h2><span class="spacer"></span><span class="muted small">{{ watch|length }} / 20</span></div>
+    <div class="chips" id="wf" style="margin:12px 0">{% for k,l in [('all','wf_all'),('cripto','wf_cripto'),('accion','wf_accion'),('divisa','wf_divisa'),('indice','wf_indice')] %}<a href="#" data-wf="{{ k }}" class="{{ 'on' if k=='all' }}">{{ t(l) }}</a>{% endfor %}</div>
+    <form method="post" action="{{ url_for('watch_add') }}" class="row" style="gap:8px;margin-bottom:10px">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <select name="tipo" style="flex:0 0 auto;padding:9px 10px">{% for k in ['auto','cripto','accion','divisa','indice'] %}<option value="{{ k }}">{{ t('tipo_'+k) }}</option>{% endfor %}</select>
+      <input name="simbolo" required autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="{{ t('watch_ph') }}" style="flex:1 1 140px;min-width:0;padding:9px 12px;border-radius:12px;border:1px solid var(--chip);background:var(--card2);color:var(--text)">
+      <button class="btn">{{ t('watch_add') }}</button>
+    </form>
+    {% if not fh and watch|rejectattr('tipo','in',['cripto','divisa'])|list %}<p class="small" style="color:var(--warn)">{{ t('watch_nokey') }}</p>{% endif %}
+    <div id="watch-body">
+    {% for w in watch %}
+      <div class="row" data-wid="{{ w.id }}" data-tipo="{{ w.tipo }}" style="padding:10px 0;border-top:1px solid var(--line);gap:8px;flex-wrap:nowrap">
+        <div style="min-width:0"><span class="ai" data-icon></span><b>{{ w.simbolo }}</b> <span class="pill mute">{{ t('tipo_'+w.tipo) }}</span><span data-candle></span></div><span class="spacer"></span>
+        <div class="n" style="text-align:right" data-px><span class="muted">…</span></div>
+        <form class="inline" method="post" action="{{ url_for('watch_delete') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ w.id }}"><button class="icon" title="{{ t('borrar') }}">🗑️</button></form>
+      </div>
+    {% else %}<p class="muted small" style="margin:6px 0">{{ t('watch_empty') }}</p>{% endfor %}
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card" style="margin-bottom:16px" id="ibkr-card">
+    <h2>{{ t('h_ibkr') }}</h2>
+    <p class="muted small">{{ t('ibkr_txt')|safe }}</p>
+    <div id="ibkr-form" {% if ibkr %}class="hidden"{% endif %}>
+      <div class="fgrid"><label class="f"><span>{{ t('ibkr_token') }}</span><input id="ibkr-token" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <label class="f"><span>{{ t('ibkr_query') }}</span><input id="ibkr-query" inputmode="numeric" autocomplete="off"></label></div>
+      <button class="btn" id="ibkr-connect" type="button">{{ t('ibkr_connect') }}</button>
+    </div>
+    <div id="ibkr-on" {% if not ibkr %}class="hidden"{% endif %}><div class="row"><button class="btn" id="ibkr-sync" type="button">{{ t('ibkr_sync') }}</button><button class="btn ghost" id="ibkr-off" type="button">{{ t('ibkr_off') }}</button></div></div>
+    <p class="small" id="ibkr-msg" style="margin:10px 0 0"></p>
+  </div>
+  <div class="card">
+    <h2>{{ t('h_finnhub') }}</h2>
+    <p class="muted small">{{ t('finnhub_txt') }}</p>
+    <form method="post" action="{{ url_for('inv_finnhub') }}" class="row"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <input name="key" value="{{ fh_key }}" placeholder="{{ t('finnhub_ph') }}" autocomplete="off" style="flex:1;min-width:0;padding:9px 12px;border-radius:12px;border:1px solid var(--chip);background:var(--card2);color:var(--text)">
+      <button class="btn">{{ t('save') }}</button></form>
+    <p class="muted small" style="margin-top:10px">{{ t('inv_fx_nota') }}</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
+{% block dialogs %}
+<dialog id="dlg-inv"><form method="post" action="{{ url_for('inv_save') }}" id="f-inv">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id">
+  <h3 id="dlg-inv-t"></h3>
+  <div class="fgrid">
+    <label class="f"><span>{{ t('f_tipo') }}</span><select name="tipo" onchange="invTipo()">{% for k in ['cripto','accion','divisa'] %}<option value="{{ k }}">{{ t('tipo_'+k) }}</option>{% endfor %}</select></label>
+    <label class="f"><span>{{ t('f_simbolo') }}</span><input name="simbolo" required autocapitalize="characters" autocomplete="off"></label>
+  </div>
+  <div class="fgrid">
+    <label class="f"><span>{{ t('f_cant') }}</span><input name="cantidad" type="number" step="any" min="0" required></label>
+    <label class="f"><span>{{ t('f_pcompra') }}</span><input name="precioCompra" type="number" step="any" min="0"></label>
+  </div>
+  <label class="f"><span>{{ t('f_broker') }}</span><input name="broker" list="brokers"></label>
+  <datalist id="brokers">{% for b in brokers %}<option value="{{ b }}">{% endfor %}</datalist>
+  <div class="fgrid" id="inv-acc">
+    <label class="f"><span>{{ t('f_moneda') }}</span><select name="moneda"><option>USD</option><option>EUR</option></select></label>
+    <label class="f"><span>{{ t('f_pmanual') }}</span><input name="precioManual" type="number" step="any" min="0"></label>
+  </div>
+  <div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn ghost" type="button" onclick="this.closest('dialog').close()">{{ t('cancel') }}</button><button class="btn">{{ t('save') }}</button></div>
+</form></dialog>
+<script>
+window.PB_INV={inv:{{ inv|tojson }},watch:{{ watch|tojson }},fh:{{ fh_key|tojson }},lang:{{ lang|tojson }},
+  tx:{inv_live:{{ t('inv_live')|tojson }},inv_upd:{{ t('inv_upd')|tojson }},inv_off:{{ t('inv_off')|tojson }},inv_sin_precio:{{ t('inv_sin_precio')|tojson }},
+      inv_invertido:{{ t('inv_invertido')|tojson }},inv_gp:{{ t('inv_gp')|tojson }},inv_hoy:{{ t('inv_hoy')|tojson }},inv_valor:{{ t('inv_valor')|tojson }},
+      h_broker:{{ t('h_broker')|tojson }},sin_broker:{{ t('sin_broker')|tojson }},inv_new:{{ t('inv_new')|tojson }},inv_edit:{{ t('inv_edit')|tojson }},
+      ibkr_ok:{{ t('ibkr_ok')|tojson }},ibkr_skip:{{ t('ibkr_skip')|tojson }},ibkr_err:{{ t('ibkr_err')|tojson }},ibkr_bye:{{ t('ibkr_bye')|tojson }}}};
+function invTipo(){const f=document.getElementById('f-inv');document.getElementById('inv-acc').classList.toggle('hidden',f.tipo.value!=='accion')}
+function openInv(id){const i=PB_INV.inv.find(x=>x.id===id),f=document.getElementById('f-inv');
+  document.getElementById('dlg-inv-t').textContent=i?PB_INV.tx.inv_edit:PB_INV.tx.inv_new;
+  f.elements.namedItem('id').value=i?i.id:'';f.tipo.value=i?.tipo||'cripto';f.simbolo.value=i?.simbolo||'';f.cantidad.value=i?.cantidad??'';
+  f.precioCompra.value=i?.precioCompra??'';f.broker.value=i?.broker||'';f.moneda.value=i?.moneda||'USD';f.precioManual.value=i?.precioManual??'';invTipo();
+  document.getElementById('dlg-inv').showModal()}
+</script>
+<script src="{{ url_for('static', filename='inv.js') }}?v={{ version }}" defer></script>
 {% endblock %}

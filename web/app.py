@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-11"
+APP_VERSION = "web-12"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -587,11 +587,133 @@ def cuenta_eliminar():
     return redirect(url_for("salir"))
 
 
+# ---------- Inversiones (solo lectura; precios en vivo en el navegador) ----------
+CRYPTO = {"BTC", "ETH", "SOL", "XRP", "ADA", "DOGE", "BNB", "DOT", "LTC", "AVAX", "LINK", "MATIC", "POL", "TRX", "SHIB",
+          "USDT", "USDC", "ATOM", "XLM", "NEAR", "UNI", "BCH", "ETC", "APT", "ARB", "OP", "SUI", "PEPE", "TON", "HBAR"}
+FIATS = {"USD", "EUR", "GBP", "CHF", "JPY", "BGN", "CAD", "AUD", "NZD", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "RON",
+         "TRY", "CNY", "INR", "BRL", "MXN"}
+WIX = {"SP500": ("S&P 500", "SPY"), "SPX": ("S&P 500", "SPY"), "NASDAQ": ("NASDAQ 100", "QQQ"), "NASDAQ100": ("NASDAQ 100", "QQQ"),
+       "NDX": ("NASDAQ 100", "QQQ"), "DOW": ("Dow Jones", "DIA"), "DOWJONES": ("Dow Jones", "DIA"), "DJI": ("Dow Jones", "DIA"),
+       "RUSSELL2000": ("Russell 2000", "IWM"), "DAX": ("DAX", "EWG"), "IBEX": ("IBEX 35", "EWP"), "IBEX35": ("IBEX 35", "EWP"),
+       "FTSE": ("FTSE 100", "EWU"), "NIKKEI": ("Nikkei 225", "EWJ"), "EUROSTOXX": ("Euro Stoxx 50", "FEZ")}
+INV_TIPOS = ("cripto", "accion", "divisa", "indice")
+
+
+def ibkr_connected(uid):
+    if DEV or not getattr(store, "db", None):
+        return False
+    try:
+        return store.db.collection("ibkr_secrets").document(uid).get().exists
+    except Exception:
+        return False
+
+
 @app.get("/inversiones")
 @login_required
 def inversiones():
-    load()
-    return render_template("inversiones.html", **ctx("inversiones"))
+    S = load()
+    tabn = request.args.get("t") if request.args.get("t") in ("cartera", "watch", "conectar") else "cartera"
+    return render_template("inversiones.html", **ctx(
+        "inversiones", tabn=tabn, inv=S.get("inversiones", []), watch=S.get("watch", []), fh=bool(S.get("finnhub")),
+        fh_key=S.get("finnhub", ""), ibkr=ibkr_connected(g.uid), brokers=sorted({i.get("broker") for i in S.get("inversiones", []) if i.get("broker")})))
+
+
+@app.post("/inversiones/save")
+@login_required
+def inv_save():
+    S = load()
+    tipo = request.form.get("tipo") if request.form.get("tipo") in ("cripto", "accion", "divisa") else "cripto"
+    v = {"tipo": tipo, "simbolo": request.form.get("simbolo", "").strip().upper()[:20], "cantidad": fnum("cantidad", 0) or 0,
+         "precioCompra": fnum("precioCompra"), "broker": request.form.get("broker", "").strip()[:60],
+         "moneda": request.form.get("moneda") if request.form.get("moneda") in ("USD", "EUR") else "USD",
+         "precioManual": fnum("precioManual")}
+    if tipo != "accion":
+        v["moneda"], v["precioManual"] = "EUR", None
+    if not v["simbolo"]:
+        return redirect(url_for("inversiones"))
+    S.setdefault("inversiones", [])
+    iid = request.form.get("id")
+    it = next((x for x in S["inversiones"] if x.get("id") == iid), None) if iid else None
+    if it:
+        it.update(v)
+    else:
+        S["inversiones"].append({"id": calc.uid(), **v})
+    return save_and_back("inversiones")
+
+
+@app.post("/inversiones/delete")
+@login_required
+def inv_delete():
+    S = load()
+    S["inversiones"] = [x for x in S.get("inversiones", []) if x.get("id") != request.form["id"]]
+    return save_and_back("inversiones")
+
+
+@app.post("/watch/add")
+@login_required
+def watch_add():
+    S = load()
+    S.setdefault("watch", [])
+    sy = request.form.get("simbolo", "").strip().upper().replace(" ", "").replace("/", "")[:20]
+    tipo = request.form.get("tipo", "auto")
+    if not sy:
+        return redirect(url_for("inversiones", t="watch"))
+    if len(S["watch"]) >= 20:
+        return redirect(url_for("inversiones", t="watch", err="watch_full"))
+    key = sy.replace("&", "").replace("-", "")
+    if tipo not in INV_TIPOS:
+        tipo = "indice" if key in WIX else "cripto" if sy in CRYPTO else "divisa" if sy in FIATS else "accion"
+    item = {"id": calc.uid(), "tipo": tipo, "simbolo": sy}
+    if tipo == "indice":
+        nm, px = WIX.get(key, (sy, sy))
+        item.update(simbolo=nm, proxy=px)
+    if any(w.get("tipo") == item["tipo"] and w.get("simbolo") == item["simbolo"] for w in S["watch"]):
+        return redirect(url_for("inversiones", t="watch", err="watch_dup"))
+    S["watch"].append(item)
+    store.save(g.uid, S)
+    return redirect(url_for("inversiones", t="watch"))
+
+
+@app.post("/watch/delete")
+@login_required
+def watch_delete():
+    S = load()
+    S["watch"] = [x for x in S.get("watch", []) if x.get("id") != request.form["id"]]
+    store.save(g.uid, S)
+    return redirect(url_for("inversiones", t="watch"))
+
+
+@app.post("/inversiones/finnhub")
+@login_required
+def inv_finnhub():
+    S = load()
+    k = request.form.get("key", "").strip()[:80]
+    if k:
+        S["finnhub"] = k
+    else:
+        S.pop("finnhub", None)
+    store.save(g.uid, S)
+    return redirect(url_for("inversiones", t="conectar", ok="w_saved"))
+
+
+@app.route("/api/ibkr-import", methods=["POST"])
+def ibkr_import():
+    user = _api_user()
+    if not user:
+        return {"error": "auth"}, 401
+    S = store.load(user["uid"])
+    pos = (request.get_json(silent=True) or {}).get("positions") or []
+    keep = [i for i in S.get("inversiones", []) if i.get("fuente") != "ibkr"]
+    nuevas = []
+    for p in pos[:300]:
+        tipo = p.get("tipo") if p.get("tipo") in ("cripto", "accion", "divisa") else "accion"
+        nuevas.append({"id": calc.uid(), "tipo": tipo, "simbolo": str(p.get("simbolo", "")).upper()[:20],
+                       "cantidad": float(p.get("cantidad") or 0), "precioCompra": p.get("precioCompra"),
+                       "broker": "Interactive Brokers", "moneda": p.get("moneda") or ("USD" if tipo == "accion" else "EUR"),
+                       "precioManual": p.get("precioManual"), "fuente": "ibkr"})
+    S["inversiones"] = keep + nuevas
+    store.save(user["uid"], S)
+    return {"ok": True, "n": len(nuevas)}
 
 
 @app.errorhandler(500)

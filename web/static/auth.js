@@ -20,6 +20,7 @@ if (DEV) {
 
   // Antes de enviar un formulario, asegurar que el token no ha caducado
   window.pbFresh = async () => { const u = auth.currentUser; if (u) setTok(await u.getIdToken()) };
+  window.pbCall = async (name, data) => { const F = await import(B + 'firebase-functions.js'); return (await F.httpsCallable(F.getFunctions(app, 'europe-west1'), name)(data || {})).data };
   document.addEventListener('submit', async e => {
     const f = e.target; if (f.dataset.fresh === '1' || f.method === 'dialog' || page !== 'app' || (f.dataset.confirm && !f.dataset.ok)) return;
     e.preventDefault(); try { await window.pbFresh() } catch (x) {} f.dataset.fresh = '1'; f.requestSubmit ? f.requestSubmit(e.submitter) : f.submit();
