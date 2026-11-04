@@ -1,0 +1,1 @@
+{% macro gchips(tabn) %}<div class="chips" style="margin-bottom:14px">{% for k,l in [('fijos','g_t_fijos'),('dia','g_t_dia'),('pres','g_t_pres')] %}<a href="{{ url_for('gastos', t=k) }}" class="{{ 'on' if tabn==k }}">{{ t(l) }}</a>{% endfor %}</div>{% endmacro %}

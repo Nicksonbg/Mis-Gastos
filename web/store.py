@@ -97,6 +97,13 @@ class FirestoreStore:
     def list_subs(self):
         return [d.to_dict() | {"_id": d.id} for d in self.db.collection("push_subs").stream()]
 
+    def get_alert_state(self, uid):
+        d = self.db.collection("budget_alerts").document(uid).get()
+        return d.to_dict() if d.exists else {}
+
+    def set_alert_state(self, uid, data):
+        self.db.collection("budget_alerts").document(uid).set(data)
+
 
 class LocalStore:
     """Solo para desarrollo: guarda en un archivo JSON."""
@@ -145,6 +152,14 @@ class LocalStore:
 
     def list_subs(self):
         return [v | {"_id": k} for k, v in self._subs.items()]
+
+    _alerts = {}
+
+    def get_alert_state(self, uid):
+        return self._alerts.get(uid, {})
+
+    def set_alert_state(self, uid, data):
+        self._alerts[uid] = data
 
     def ia_quota(self, uid, limit):
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")

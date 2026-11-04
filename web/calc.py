@@ -48,14 +48,14 @@ def add_months(iso_str: str, k: int, day: int | None = None) -> str:
 
 
 def seed() -> dict:
-    return {"version": 1, "gastos": [], "prestamos": [], "inversiones": [], "watch": []}
+    return {"version": 1, "gastos": [], "prestamos": [], "inversiones": [], "watch": [], "movimientos": [], "presupuestos": []}
 
 
 def normalize(S: dict) -> dict:
     base = seed()
     if isinstance(S, dict):
         base.update(S)
-    for k in ("gastos", "prestamos", "inversiones", "watch"):
+    for k in ("gastos", "prestamos", "inversiones", "watch", "movimientos", "presupuestos"):
         if not isinstance(base.get(k), list):
             base[k] = []
     for l in base["prestamos"]:
@@ -313,3 +313,56 @@ def debt_chart(S, money, t, esc, mes_c, loc_k):
     svg = f'<svg class="debt-svg" viewBox="0 0 {W} {H}" width="100%" role="img" aria-label="{t("aria_deuda")}">{s}</svg>'
     legend = [{"nombre": l.get("nombre", ""), "color": f"var(--c{j % 8 + 1})"} for j, l in enumerate(loans)]
     return {"svg": svg, "legend": legend}
+
+
+# ---------- Gastos del día a día y presupuestos ----------
+def normalize_extra(S):
+    for k in ("movimientos", "presupuestos"):
+        if not isinstance(S.get(k), list):
+            S[k] = []
+    return S
+
+
+def month_key(off=0):
+    m0 = month_start(off)
+    return f"{m0.year}-{m0.month:02d}"
+
+
+def gasto_por_categoria(S, mk):
+    """Lo gastado en el mes mk (AAAA-MM) por categoría: gastos fijos (o sus cuotas) + gastos del día a día."""
+    out = {}
+    for g in S.get("gastos", []):
+        cat = (g.get("categoria") or "").strip()
+        if not cat:
+            continue
+        l = g.get("prestamoId") and loan_by_id(S, g["prestamoId"])
+        if l:
+            v = sum(float(c.get("cuota") or 0) for c in l.get("cuotas", []) if (c.get("fecha") or "")[:7] == mk)
+        else:
+            v = float(g.get("importe") or 0)
+        out[cat.lower()] = out.get(cat.lower(), 0) + v
+    for m in S.get("movimientos", []):
+        if (m.get("fecha") or "")[:7] == mk:
+            cat = (m.get("categoria") or "").strip().lower()
+            out[cat] = out.get(cat, 0) + float(m.get("importe") or 0)
+    return out
+
+
+def presupuestos_estado(S, off=0):
+    """Lista de presupuestos con lo gastado este mes, % y nivel (ok / warn >=80 % / bad >=100 %)."""
+    mk = month_key(off)
+    gasto = gasto_por_categoria(S, mk)
+    out = []
+    for p in S.get("presupuestos", []):
+        lim = float(p.get("limite") or 0)
+        g = r2(gasto.get((p.get("categoria") or "").strip().lower(), 0))
+        pct = g / lim * 100 if lim > 0 else 0
+        out.append({**p, "gastado": g, "pct": pct, "queda": r2(lim - g),
+                    "nivel": "bad" if pct >= 100 else "warn" if pct >= 80 else "ok"})
+    return sorted(out, key=lambda x: -x["pct"])
+
+
+def movimientos_mes(S, off=0):
+    mk = month_key(off)
+    return sorted([m for m in S.get("movimientos", []) if (m.get("fecha") or "")[:7] == mk],
+                  key=lambda m: (m.get("fecha") or "", m.get("id") or ""), reverse=True)

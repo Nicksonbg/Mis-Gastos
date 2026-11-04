@@ -38,8 +38,30 @@ READ_TOOLS = [
     {"name": "listar_inversiones",
      "description": "Posiciones de inversión guardadas (símbolo, tipo, cantidad, precio de compra, bróker). No incluye precios en vivo.",
      "input_schema": {"type": "object", "properties": {}}},
+    {"name": "ver_presupuestos",
+     "description": "Presupuestos mensuales por categoría con lo gastado este mes (gastos fijos + gastos del día a día), porcentaje y lo que queda.",
+     "input_schema": {"type": "object", "properties": {}}},
+    {"name": "listar_gastos_dia",
+     "description": "Gastos del día a día apuntados en un mes (id, fecha, importe, categoría, concepto). offset 0 = mes actual.",
+     "input_schema": {"type": "object", "properties": {"offset": {"type": "integer"}}}},
 ]
 WRITE_TOOLS = [
+    {"name": "apuntar_gasto_dia",
+     "description": "Apunta un gasto del día a día (súper, gasolina, restaurante…). Cuenta para el presupuesto de su categoría.",
+     "input_schema": {"type": "object", "properties": {
+         "importe": {"type": "number"}, "categoria": {"type": "string", "description": "p. ej. Supermercado, Restaurantes, Transporte, Ocio, Compras, Salud, Hogar, Otros"},
+         "concepto": {"type": "string"}, "fecha": {"type": "string", "description": "Fecha ISO; por defecto hoy"}},
+         "required": ["importe", "categoria"]}},
+    {"name": "borrar_gasto_dia",
+     "description": "Borra un gasto del día a día.",
+     "input_schema": {"type": "object", "properties": {"id": {"type": "string"}}, "required": ["id"]}},
+    {"name": "fijar_presupuesto",
+     "description": "Crea o cambia el presupuesto mensual de una categoría.",
+     "input_schema": {"type": "object", "properties": {"categoria": {"type": "string"}, "limite": {"type": "number"}},
+                      "required": ["categoria", "limite"]}},
+    {"name": "borrar_presupuesto",
+     "description": "Borra el presupuesto de una categoría.",
+     "input_schema": {"type": "object", "properties": {"categoria": {"type": "string"}}, "required": ["categoria"]}},
     {"name": "anadir_gasto",
      "description": "Añade un gasto mensual fijo.",
      "input_schema": {"type": "object", "properties": {
@@ -83,7 +105,7 @@ def system_prompt(lang, nombre):
         "Eres el asistente de Personal Balance, la app de finanzas personales de "
         f"{nombre or 'el usuario'}. Hoy es {date.today().isoformat()}. "
         f"Responde siempre en {LANG_NAMES.get(lang, 'español')}, breve y claro, con importes en euros. "
-        "Usa las herramientas para consultar los datos reales antes de responder; no inventes cifras. "
+        "Usa las herramientas para consultar los datos reales antes de responder; no inventes cifras. Hay gastos fijos mensuales y gastos del día a día (apuntados uno a uno), y presupuestos mensuales por categoría. "
         "Para cambiar datos usa las herramientas de escritura: la app pedirá confirmación al usuario antes de aplicarlas, "
         "así que llámalas directamente cuando el usuario lo pida (no preguntes «¿quieres que lo haga?» antes), y de una en una. "
         "Si falta un dato imprescindible (por ejemplo el importe), pregúntalo. "
@@ -111,7 +133,8 @@ def run_read(S, name, inp):
             pend += s["pendiente"]; cap += s["capital"]; paid += s["pagado"]
             if s["fin"] and (not fin or s["fin"] > fin):
                 fin = s["fin"]
-        return {"total_mensual": tm, "total_anual": r2(tm * 12), "n_gastos": len(S["gastos"]),
+        dia = r2(sum(float(m.get("importe") or 0) for m in calc.movimientos_mes(S, 0)))
+        return {"total_mensual": tm, "total_anual": r2(tm * 12), "n_gastos": len(S["gastos"]), "gastos_dia_a_dia_este_mes": dia,
                 "mes_actual": {"total": tot, "pagado": pag, "pendiente": r2(tot - pag)},
                 "prestamos": {"pendiente_de_pagar": r2(pend), "ya_pagado": r2(paid), "capital_pendiente": r2(cap),
                               "ultimo_pago": fin, "n": len(S["prestamos"])}}
@@ -143,6 +166,13 @@ def run_read(S, name, inp):
         return [{"id": c["id"], "fecha": c["fecha"], "cuota": c.get("cuota"), "amortizacion": c.get("amortizacion"),
                  "intereses": c.get("intereses"), "capital_antes": c.get("capitalAntes"), "pagada": calc.is_paid(c),
                  "nota": c.get("nota") or ""} for c in calc.sorted_cuotas(l) if d <= c["fecha"] <= h][:120]
+    if name == "ver_presupuestos":
+        return [{"categoria": p["categoria"], "limite": p.get("limite"), "gastado": p["gastado"], "porcentaje": round(p["pct"]),
+                 "queda": p["queda"]} for p in calc.presupuestos_estado(S, 0)]
+    if name == "listar_gastos_dia":
+        ms = calc.movimientos_mes(S, int(inp.get("offset") or 0))
+        return {"mes": calc.month_key(int(inp.get("offset") or 0)), "total": r2(sum(float(m.get("importe") or 0) for m in ms)),
+                "gastos": [{k: m.get(k) for k in ("id", "fecha", "importe", "categoria", "concepto")} for m in ms[:150]]}
     if name == "listar_inversiones":
         return [{"simbolo": i.get("simbolo"), "tipo": i.get("tipo"), "cantidad": i.get("cantidad"),
                  "precio_compra_eur": i.get("precioCompra"), "broker": i.get("broker")} for i in S.get("inversiones", [])]
@@ -176,6 +206,16 @@ def describe(S, name, inp):
         return (f"Crear préstamo «{inp.get('nombre')}»: {_money(inp.get('importe'))}, {inp.get('tin') or 0} % TIN, "
                 f"{inp.get('n_cuotas')} cuotas desde el {inp.get('primera_cuota')}"
                 + (" y añadir la cuota a los gastos" if inp.get("anadir_a_gastos", True) else ""))
+    if name == "apuntar_gasto_dia":
+        return (f"Apuntar {_money(inp.get('importe'))} en «{inp.get('categoria')}»"
+                + (f" ({inp['concepto']})" if inp.get("concepto") else "") + (f" el {inp['fecha']}" if inp.get("fecha") else " hoy"))
+    if name == "borrar_gasto_dia":
+        m = next((x for x in S.get("movimientos", []) if x.get("id") == inp.get("id")), {})
+        return f"Borrar el gasto «{m.get('concepto') or m.get('categoria', '?')}» de {_money(m.get('importe'))} ({m.get('fecha', '?')})"
+    if name == "fijar_presupuesto":
+        return f"Presupuesto de «{inp.get('categoria')}»: {_money(inp.get('limite'))} al mes"
+    if name == "borrar_presupuesto":
+        return f"Borrar el presupuesto de «{inp.get('categoria')}»"
     if name == "borrar_prestamo":
         return f"Borrar el préstamo «{(calc.loan_by_id(S, inp.get('id')) or {}).get('nombre', '?')}» y todas sus cuotas"
     return name
@@ -218,6 +258,32 @@ def run_write(S, name, inp, cats_loans="Préstamos"):
             S["gastos"].append({"id": calc.uid(), "concepto": l["nombre"], "importe": q, "categoria": cats_loans,
                                 "dia": day, "prestamoId": l["id"]})
         return {"ok": True, "cuota_mensual": q, "fin": l["cuotas"][-1]["fecha"]}
+    if name == "apuntar_gasto_dia":
+        S.setdefault("movimientos", []).append({"id": calc.uid(), "fecha": inp.get("fecha") or date.today().isoformat(),
+                                                "importe": r2(inp.get("importe")), "categoria": str(inp.get("categoria", "")).strip()[:40],
+                                                "concepto": str(inp.get("concepto") or "").strip()[:80]})
+        return {"ok": True}
+    if name == "borrar_gasto_dia":
+        n = len(S.get("movimientos", []))
+        S["movimientos"] = [x for x in S.get("movimientos", []) if x.get("id") != inp.get("id")]
+        return {"ok": len(S["movimientos"]) < n}
+    if name == "fijar_presupuesto":
+        cat = str(inp.get("categoria", "")).strip()[:40]
+        lim = r2(inp.get("limite"))
+        if not cat or lim <= 0:
+            return {"error": "Categoría o límite no válidos"}
+        ps = S.setdefault("presupuestos", [])
+        p = next((x for x in ps if x.get("categoria", "").lower() == cat.lower()), None)
+        if p:
+            p.update(categoria=cat, limite=lim)
+        else:
+            ps.append({"id": calc.uid(), "categoria": cat, "limite": lim})
+        return {"ok": True}
+    if name == "borrar_presupuesto":
+        cat = str(inp.get("categoria", "")).strip().lower()
+        n = len(S.get("presupuestos", []))
+        S["presupuestos"] = [x for x in S.get("presupuestos", []) if x.get("categoria", "").lower() != cat]
+        return {"ok": len(S["presupuestos"]) < n}
     if name == "borrar_prestamo":
         lid = inp.get("id")
         S["prestamos"] = [x for x in S["prestamos"] if x["id"] != lid]

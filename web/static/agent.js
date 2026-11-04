@@ -13,7 +13,7 @@
     s1: ['¿Cuánto pago al mes?', 'How much do I pay per month?', 'Колко плащам на месец?'],
     s2: ['¿Qué me queda por pagar este mes?', 'What is left to pay this month?', 'Какво остава да платя този месец?'],
     s3: ['¿Cuándo termino de pagar los préstamos?', 'When do I finish paying my loans?', 'Кога ще изплатя заемите?'],
-    s4: ['Añade Netflix 12,99 € el día 5', 'Add Netflix €12.99 on day 5', 'Добави Netflix 12,99 € на 5-о число'],
+    s4: ['Apunta 45 € de súper hoy', 'Log €45 of groceries today', 'Запиши 45 € за храна днес'],
     ok: ['Confirmar', 'Confirm', 'Потвърди'], no: ['Cancelar', 'Cancel', 'Отказ'],
     done: ['Hecho ✓', 'Done ✓', 'Готово ✓'], cancelled: ['Cancelado', 'Cancelled', 'Отказано'],
     nokey: ['El asistente aún no está activado: falta la clave de la IA en el servidor.', 'The assistant is not enabled yet: the AI key is missing on the server.', 'Асистентът още не е активиран: липсва ключът за ИИ на сървъра.'],

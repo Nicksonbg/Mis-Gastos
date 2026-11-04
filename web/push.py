@@ -27,6 +27,9 @@ TXT = {
     "one": ["Mañana: {c} · {a}", "Tomorrow: {c} · {a}", "Утре: {c} · {a}"],
     "many": ["Mañana tienes {n} pagos · {a}", "Tomorrow you have {n} payments · {a}", "Утре имаш {n} плащания · {a}"],
     "title": ["Pago pendiente", "Payment due", "Предстоящо плащане"],
+    "pres_t": ["Presupuesto", "Budget", "Бюджет"],
+    "pres_warn": ["{c}: llevas el {p} del presupuesto ({g} de {l}).", "{c}: you have used {p} of the budget ({g} of {l}).", "{c}: използвал си {p} от бюджета ({g} от {l})."],
+    "pres_bad": ["{c}: te has pasado del presupuesto ({g} de {l}).", "{c}: you are over budget ({g} of {l}).", "{c}: надвиши бюджета ({g} от {l})."],
     "test_t": ["Avisos activados ✓", "Notifications on ✓", "Известията са включени ✓"],
     "test_b": ["Te avisaré el día antes de cada pago.", "I will remind you the day before each payment.", "Ще те напомням ден преди всяко плащане."],
 }
@@ -138,3 +141,24 @@ def send(sub, payload, priv):
         if code in (404, 410):
             return False
         raise
+
+
+LEVEL = {"ok": 0, "warn": 1, "bad": 2}
+
+
+def budget_alerts(S, prev, lang):
+    """Avisos de presupuesto que suben de nivel (80 % / 100 %) respecto a lo ya avisado este mes.
+    Devuelve (mensaje o None, nuevo estado)."""
+    mk = local_today().strftime("%Y-%m")
+    seen = prev.get("niveles", {}) if prev.get("mes") == mk else {}
+    new, lines = dict(seen), []
+    for p in calc.presupuestos_estado(S, 0):
+        k = p["categoria"].strip().lower()
+        if LEVEL[p["nivel"]] > LEVEL.get(seen.get(k, "ok"), 0):
+            new[k] = p["nivel"]
+            lines.append(tx("pres_bad" if p["nivel"] == "bad" else "pres_warn", lang, c=p["categoria"], p=f"{p['pct']:.0f} %",
+                            g=money(p["gastado"], lang), l=money(p["limite"], lang)))
+    state = {"mes": mk, "niveles": new}
+    if not lines:
+        return None, state
+    return {"title": tx("pres_t", lang), "body": "\n".join(lines[:4]), "tag": "pb-presupuesto", "url": "./"}, state

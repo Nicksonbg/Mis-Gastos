@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block main %}
+{% from "_gchips.html" import gchips with context %}
+<section>
+  {{ gchips(tabn) }}
+  {% if tabn=='dia' %}
+  <div class="card">
+    <div class="row" style="margin-bottom:10px"><h2 style="margin:0">{{ t('g_t_dia') }}</h2>
+      <span class="chips"><a href="{{ url_for('gastos', t='dia', m=off-1) }}">‹</a><a class="on" href="{{ url_for('gastos', t='dia') }}">{{ mes_lbl }}</a><a href="{{ url_for('gastos', t='dia', m=off+1) }}">›</a></span>
+      <span class="spacer"></span><button class="btn" type="button" onclick="openMov()">{{ t('add_mov') }}</button></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>{{ t('f_fecha') }}</th><th>{{ t('th_concepto') }}</th><th class="hide-sm">{{ t('th_categoria') }}</th><th class="n">{{ t('th_importe') }}</th><th></th></tr></thead>
+      <tbody>
+      {% for m in movs %}
+        <tr><td>{{ fmt_d(m.fecha)[:5] }}</td><td>{{ m.concepto or '—' }}<div class="muted small" style="display:none" data-sm>{{ m.categoria }}</div></td><td class="hide-sm muted">{{ m.categoria }}</td><td class="n">{{ money(m.importe) }}</td>
+          <td class="n" style="white-space:nowrap"><button class="icon" type="button" onclick="openMov('{{ m.id }}')" title="{{ t('editar') }}">✏️</button><form class="inline" method="post" action="{{ url_for('mov_delete') }}" data-confirm="{{ t('ask_borrar_mov', n=(m.concepto or m.categoria)) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ m.id }}"><input type="hidden" name="m" value="{{ off }}"><button class="icon" title="{{ t('borrar') }}">🗑️</button></form></td></tr>
+      {% else %}<tr><td colspan="5" class="muted">{{ t('mov_empty') }}</td></tr>{% endfor %}
+      </tbody>
+      <tfoot><tr><td></td><td>{{ t('mov_total') }}</td><td class="hide-sm"></td><td class="n">{{ money(mov_total) }}</td><td></td></tr></tfoot>
+    </table></div>
+    <p class="muted small">{{ t('mov_nota') }}</p>
+  </div>
+  {% else %}
+  <div class="card">
+    <div class="row" style="margin-bottom:6px"><h2 style="margin:0">{{ t('h_pres') }}</h2><span class="spacer"></span><button class="btn" type="button" onclick="openPres()">{{ t('add_pres') }}</button></div>
+    {% for p in pres %}
+      <div class="row" style="gap:0;align-items:flex-start"><div style="flex:1;min-width:0">{% include "_pres_row.html" %}</div>
+        <div style="padding-top:10px;white-space:nowrap"><button class="icon" type="button" onclick="openPres('{{ p.id }}')" title="{{ t('editar') }}">✏️</button><form class="inline" method="post" action="{{ url_for('pres_delete') }}" data-confirm="{{ t('ask_borrar_pres', n=p.categoria) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ p.id }}"><button class="icon" title="{{ t('borrar') }}">🗑️</button></form></div></div>
+    {% else %}<p class="muted">{{ t('pres_empty') }}</p>{% endfor %}
+    <p class="muted small" style="margin-top:12px">{{ t('presu_nota') }}</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
+{% block dialogs %}
+<datalist id="cats">{% for c in cats %}<option value="{{ c }}">{% endfor %}</datalist>
+<dialog id="dlg-mov"><form method="post" action="{{ url_for('mov_save') }}" id="f-mov">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id"><input type="hidden" name="m" value="{{ off }}">
+  <h3 id="dlg-mov-t"></h3>
+  <div class="fgrid">
+    <label class="f"><span>{{ t('f_importe') }}</span><input name="importe" type="number" step="0.01" min="0" required inputmode="decimal"></label>
+    <label class="f"><span>{{ t('f_fecha') }}</span><input name="fecha" type="date" required></label>
+  </div>
+  <label class="f"><span>{{ t('f_categoria') }}</span><input name="categoria" list="cats" required></label>
+  <label class="f"><span>{{ t('f_concepto') }}</span><input name="concepto"></label>
+  <div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn ghost" type="button" onclick="this.closest('dialog').close()">{{ t('cancel') }}</button><button class="btn">{{ t('save') }}</button></div>
+</form></dialog>
+<dialog id="dlg-pres"><form method="post" action="{{ url_for('pres_save') }}" id="f-pres">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id">
+  <h3>{{ t('pres_new') }}</h3>
+  <label class="f"><span>{{ t('f_categoria') }}</span><input name="categoria" list="cats" required></label>
+  <label class="f"><span>{{ t('f_limite') }}</span><input name="limite" type="number" step="0.01" min="1" required inputmode="decimal"></label>
+  <div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn ghost" type="button" onclick="this.closest('dialog').close()">{{ t('cancel') }}</button><button class="btn">{{ t('save') }}</button></div>
+</form></dialog>
+<script>
+const MOVS={{ movs|tojson }},PRES={{ pres|tojson }};
+function openMov(id){const m=MOVS.find(x=>x.id===id),f=document.getElementById('f-mov');
+  document.getElementById('dlg-mov-t').textContent=m?{{ t('mov_edit')|tojson }}:{{ t('mov_new')|tojson }};
+  f.elements.namedItem('id').value=m?m.id:'';f.importe.value=m?.importe??'';f.fecha.value=m?.fecha||{{ today|tojson }};f.categoria.value=m?.categoria||'';f.concepto.value=m?.concepto||'';
+  document.getElementById('dlg-mov').showModal();setTimeout(()=>f.importe.focus(),50)}
+function openPres(id){const p=PRES.find(x=>x.id===id),f=document.getElementById('f-pres');
+  f.elements.namedItem('id').value=p?p.id:'';f.categoria.value=p?.categoria||'';f.limite.value=p?.limite??'';document.getElementById('dlg-pres').showModal()}
+</script>
+{% endblock %}

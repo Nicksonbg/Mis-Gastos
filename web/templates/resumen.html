@@ -13,6 +13,12 @@
       <div><div class="lbl">{{ t('k_fin') }}</div><div class="v">{{ fmt_d(fin) if fin else '—' }}</div><div class="s">{{ fin_sub }}</div></div>
     </div>
   </div>
+  {% if pres %}
+  <div class="card" style="margin-top:16px">
+    <div class="row" style="margin-bottom:6px"><h2 style="margin:0">{{ t('h_pres') }}</h2><span class="spacer"></span><a class="small" href="{{ url_for('gastos', t='pres') }}" style="color:var(--muted)">{{ t('g_t_pres') }} →</a></div>
+    {% for p in pres %}{% include "_pres_row.html" %}{% endfor %}
+  </div>
+  {% endif %}
   <div class="grid two" style="margin-top:16px">
     <div class="card"><h2>{{ t('h_donut') }}</h2>
       <div class="donut-wrap">{{ donut|safe }}<ul class="legend">{% for i in legend %}<li><span class="sw" style="background:{{ i.color }}"></span>{{ i.concepto }}<span class="amt">{{ money(i.importe) }} <span class="muted small">{{ dec1(i.pct) }} %</span></span></li>{% endfor %}</ul></div>

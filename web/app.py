@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-12"
+APP_VERSION = "web-14"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -60,6 +60,8 @@ TR.update({
     "w_retry": ["Volver a entrar", "Sign in again", "Влез отново"],
     "w_upd": ["Actualizar", "Refresh", "Обнови"],
 })
+with open(os.path.join(os.path.dirname(__file__), "tr_budget.json"), encoding="utf-8") as f:
+    TR.update(json.load(f))
 LANGS = {"es": {"i": 0, "dec": ",", "grp": ".", "sep": "/", "cur": "suf"},
          "en": {"i": 1, "dec": ".", "grp": ",", "sep": "/", "cur": "pre"},
          "bg": {"i": 2, "dec": ",", "grp": " ", "sep": ".", "cur": "suf"}}
@@ -272,6 +274,11 @@ def resumen():
     if soon:
         alerts.append(("warn", "🔔", t("al_soon") + " " + " · ".join(
             t("al_soon_item", name=esc(u["nombre"]), amt=money(u["importe"]), date=fmt_d(u["fecha"])) for u in soon)))
+    pres = calc.presupuestos_estado(S, 0)
+    for p in pres:
+        if p["nivel"] != "ok":
+            alerts.append((p["nivel"], "🎯", t("al_pres_bad" if p["nivel"] == "bad" else "al_pres_warn", c=esc(p["categoria"]),
+                                                p=f"{p['pct']:.0f} %", g=money(p["gastado"]), l=money(p["limite"]))))
     if not S["gastos"] and not S["prestamos"]:
         alerts.insert(0, ("info", "", t("welcome")))
     # Pendientes de este mes
@@ -313,7 +320,7 @@ def resumen():
         "resumen.html", **ctx("resumen", S=S, tm=tm, n_gastos=len(S["gastos"]), pend=pend, cap=cap, paid=paid,
                                fin=fin, fin_sub=fin_sub, alerts=alerts, up=up, up_total=sum(u["importe"] for u in up),
                                off=off, mes_lbl=t("meses").split("|")[m0.month - 1] + " " + str(m0.year),
-                               items=items, mes_tot=tot, mes_pag=pag, mes_tot0=mes_tot0, mes_pag0=mes_pag0, donut=donut, legend=legend, debt=debt))
+                               items=items, pres=pres, mes_tot=tot, mes_pag=pag, mes_tot0=mes_tot0, mes_pag0=mes_pag0, donut=donut, legend=legend, debt=debt))
 
 
 @app.post("/mes/toggle")
@@ -330,6 +337,17 @@ def mes_toggle():
 @login_required
 def gastos():
     S = load()
+    tabn = request.args.get("t") if request.args.get("t") in ("fijos", "dia", "pres") else "fijos"
+    if tabn != "fijos":
+        off = request.args.get("m", 0, type=int)
+        m0 = calc.month_start(off)
+        movs = calc.movimientos_mes(S, off)
+        cats = sorted({*t("cats_dia").split("|"), *t("cats").split("|"),
+                       *[x.get("categoria") for x in S["gastos"] + S["movimientos"] if x.get("categoria")]})
+        return render_template("gastos_extra.html", **ctx(
+            "gastos", tabn=tabn, off=off, mes_lbl=t("meses").split("|")[m0.month - 1] + " " + str(m0.year),
+            movs=movs, mov_total=calc.r2(sum(float(m.get("importe") or 0) for m in movs)),
+            pres=calc.presupuestos_estado(S, 0), cats=cats, today=calc.iso(calc.today())))
     tm = calc.total_mes(S)
     rows = []
     for gst in S["gastos"]:
@@ -337,7 +355,7 @@ def gastos():
         st = calc.loan_stats(l) if l else None
         rows.append({**gst, "pct": float(gst.get("importe") or 0) / tm * 100 if tm else 0,
                      "hasta": st["fin"] if st else None})
-    return render_template("gastos.html", **ctx("gastos", S=S, rows=rows, tm=tm, cats=t("cats").split("|"),
+    return render_template("gastos.html", **ctx("gastos", S=S, tabn="fijos", rows=rows, tm=tm, cats=t("cats").split("|"),
                                                    gastos_json=json.dumps(S["gastos"])))
 
 
@@ -365,6 +383,58 @@ def gasto_delete():
     S = load()
     S["gastos"] = [x for x in S["gastos"] if x["id"] != request.form["id"]]
     return save_and_back("gastos")
+
+
+@app.post("/mov/save")
+@login_required
+def mov_save():
+    S = load()
+    v = {"fecha": request.form.get("fecha") or calc.iso(calc.today()), "importe": r2(fnum("importe", 0)),
+         "categoria": request.form.get("categoria", "").strip()[:40], "concepto": request.form.get("concepto", "").strip()[:80]}
+    mid = request.form.get("id")
+    m = next((x for x in S["movimientos"] if x.get("id") == mid), None) if mid else None
+    if m:
+        m.update(v)
+    else:
+        S["movimientos"].append({"id": calc.uid(), **v})
+    store.save(g.uid, S)
+    return redirect(url_for("gastos", t="dia", m=request.form.get("m", 0, type=int), ok="w_saved"))
+
+
+@app.post("/mov/delete")
+@login_required
+def mov_delete():
+    S = load()
+    S["movimientos"] = [x for x in S["movimientos"] if x.get("id") != request.form["id"]]
+    store.save(g.uid, S)
+    return redirect(url_for("gastos", t="dia", m=request.form.get("m", 0, type=int)))
+
+
+@app.post("/pres/save")
+@login_required
+def pres_save():
+    S = load()
+    cat = request.form.get("categoria", "").strip()[:40]
+    lim = r2(fnum("limite", 0))
+    if cat and lim > 0:
+        pid = request.form.get("id")
+        p = next((x for x in S["presupuestos"] if x.get("id") == pid), None) if pid else \
+            next((x for x in S["presupuestos"] if x.get("categoria", "").lower() == cat.lower()), None)
+        if p:
+            p.update(categoria=cat, limite=lim)
+        else:
+            S["presupuestos"].append({"id": calc.uid(), "categoria": cat, "limite": lim})
+        store.save(g.uid, S)
+    return redirect(url_for("gastos", t="pres", ok="w_saved"))
+
+
+@app.post("/pres/delete")
+@login_required
+def pres_delete():
+    S = load()
+    S["presupuestos"] = [x for x in S["presupuestos"] if x.get("id") != request.form["id"]]
+    store.save(g.uid, S)
+    return redirect(url_for("gastos", t="pres"))
 
 
 @app.get("/prestamos")
@@ -828,21 +898,29 @@ def cron_recordatorios():
     sent = removed = users = 0
     for uid, lst in by_uid.items():
         try:
-            items = push.due_tomorrow(store.load(uid))
+            S = store.load(uid)
+            items = push.due_tomorrow(S)
+            lang = lst[0].get("lang", "es")
+            pmsg, pstate = push.budget_alerts(S, store.get_alert_state(uid), lang)
         except Exception as e:
             print("cron load:", uid, repr(e), flush=True)
             continue
-        if not items:
+        msgs = ([push.message(items, lang)] if items else []) + ([pmsg] if pmsg else [])
+        if not msgs:
             continue
         users += 1
-        for sb in lst:
-            try:
-                if push.send(sb, push.message(items, sb.get("lang", "es")), priv):
-                    sent += 1
-                else:
-                    store.delete_sub(sb["_id"]); removed += 1
-            except Exception as e:
-                print("cron send:", repr(e), flush=True)
+        for sb in list(lst):
+            for m in msgs:
+                try:
+                    if push.send(sb, m, priv):
+                        sent += 1
+                    else:
+                        store.delete_sub(sb["_id"]); removed += 1
+                        break
+                except Exception as e:
+                    print("cron send:", repr(e), flush=True)
+        if pmsg:
+            store.set_alert_state(uid, pstate)
     print(f"recordatorios: usuarios={users} enviados={sent} borrados={removed}", flush=True)
     return {"users": users, "sent": sent, "removed": removed, "subs": len(subs)}
 

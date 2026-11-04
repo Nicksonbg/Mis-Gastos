@@ -1,0 +1,5 @@
+<div style="padding:10px 0;border-top:1px solid var(--line)">
+  <div class="row" style="gap:8px"><b>{{ p.categoria }}</b><span class="spacer"></span><span class="small" style="font-variant-numeric:tabular-nums">{{ t('pres_de', g=money(p.gastado), l=money(p.limite)) }}</span></div>
+  <div class="bar" style="margin:6px 0 4px"><i style="width:{{ '%.1f'|format([p.pct,100]|min) }}%;background:var(--{{ 'bad' if p.nivel=='bad' else 'warn' if p.nivel=='warn' else 'accent' }})"></i></div>
+  <div class="small {{ 'muted' if p.nivel=='ok' }}" style="{{ 'color:var(--bad)' if p.nivel=='bad' else 'color:var(--warn)' if p.nivel=='warn' else '' }}">{{ t('pres_pasado', x=money(-p.queda)) if p.queda < 0 else t('pres_queda', x=money(p.queda)) }} · {{ '%.0f'|format(p.pct) }} %</div>
+</div>
