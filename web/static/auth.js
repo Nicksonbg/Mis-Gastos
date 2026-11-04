@@ -45,7 +45,7 @@ if (DEV) {
   if (page === 'login') {
     const $ = s => document.querySelector(s), err = $('#auth-err');
     let mode = 'login';
-    const E = c => ({ 'auth/invalid-credential': 'e_invalid', 'auth/wrong-password': 'e_invalid', 'auth/user-not-found': 'e_invalid', 'auth/invalid-email': 'e_email', 'auth/email-already-in-use': 'e_exists', 'auth/weak-password': 'e_weak', 'auth/network-request-failed': 'e_net', 'auth/too-many-requests': 'e_many', 'auth/popup-closed-by-user': 'e_popup', 'auth/popup-blocked': 'e_popup' }[c] || 'e_generic');
+    const E = c => ({ 'auth/invalid-credential': 'e_invalid', 'auth/wrong-password': 'e_invalid', 'auth/user-not-found': 'e_invalid', 'auth/invalid-email': 'e_email', 'auth/email-already-in-use': 'e_exists', 'auth/weak-password': 'e_weak', 'auth/network-request-failed': 'e_net', 'auth/too-many-requests': 'e_many', 'auth/popup-closed-by-user': 'e_popup', 'auth/popup-blocked': 'e_popup', 'auth/unauthorized-domain': 'e_domain' }[c] || 'e_generic');
     const showErr = k => { err.textContent = tr[k] || k; err.className = 'err' };
     const setMode = m => {
       mode = m; $('#seg-login').classList.toggle('on', m === 'login'); $('#seg-reg').classList.toggle('on', m === 'reg');

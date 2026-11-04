@@ -26,14 +26,18 @@ jobs:
           URL=$(gcloud run services describe $SERVICE --region $REGION --project $PROJECT --format='value(status.url)')
           echo "URL=$URL" >> $GITHUB_ENV
           echo "### Web publicada: $URL" >> $GITHUB_STEP_SUMMARY
-      - name: Autorizar el dominio en Firebase Auth (para entrar con Google)
-        continue-on-error: true
+      - name: Autorizar los dominios en Firebase Auth (para entrar con Google)
         run: |
-          HOST=${URL#https://}
+          # Cloud Run tiene dos direcciones (formato nuevo y antiguo): se autorizan las dos
+          URLS=$(gcloud run services describe $SERVICE --region $REGION --project $PROJECT --format=json \
+            | jq -r '[.status.url] + ((.metadata.annotations["run.googleapis.com/urls"] // "[]") | fromjson) | unique | .[]')
           TOKEN=$(gcloud auth print-access-token)
           API=https://identitytoolkit.googleapis.com/admin/v2/projects/$PROJECT/config
           CUR=$(curl -sf -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJECT" $API | jq -c '.authorizedDomains // []')
-          if echo "$CUR" | jq -e --arg h "$HOST" 'index($h)' >/dev/null; then echo "Ya autorizado: $HOST"; exit 0; fi
-          NEW=$(echo "$CUR" | jq -c --arg h "$HOST" '. + [$h]')
-          curl -sf -X PATCH -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJECT" -H "Content-Type: application/json" \
-            "$API?updateMask=authorizedDomains" -d "{\"authorizedDomains\":$NEW}" >/dev/null && echo "Dominio autorizado: $HOST"
+          NEW=$CUR
+          for U in $URLS; do NEW=$(echo "$NEW" | jq -c --arg h "${U#https://}" 'if index($h) then . else . + [$h] end'); done
+          echo "Dominios: $NEW"
+          if [ "$NEW" != "$CUR" ]; then
+            curl -sf -X PATCH -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJECT" -H "Content-Type: application/json" \
+              "$API?updateMask=authorizedDomains" -d "{\"authorizedDomains\":$NEW}" >/dev/null
+          fi

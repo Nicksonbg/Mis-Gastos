@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-1"
+APP_VERSION = "web-2"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -51,6 +51,7 @@ TR.update({
     "w_soon": ["Inversiones llegará a la web en la siguiente fase. Mientras tanto, úsalas en la app del iPhone.", "Investments are coming to the web in the next phase. Meanwhile, use them in the iPhone app.", "Инвестициите идват в уеб версията в следващата фаза. Дотогава ги ползвай в приложението на iPhone."],
     "w_type_delete": ["Escribe ELIMINAR para confirmar", "Type DELETE to confirm", "Напиши ИЗТРИЙ за потвърждение"],
     "w_confirm_word": ["ELIMINAR", "DELETE", "ИЗТРИЙ"],
+    "e_domain": ["Esta dirección aún no está autorizada para entrar con Google. Prueba con correo y contraseña.", "This address is not yet authorised for Google sign-in. Try email and password.", "Този адрес още не е разрешен за вход с Google. Опитай с имейл и парола."],
     "w_upd": ["Actualizar", "Refresh", "Обнови"],
 })
 LANGS = {"es": {"i": 0, "dec": ",", "grp": ".", "sep": "/", "cur": "suf"},
