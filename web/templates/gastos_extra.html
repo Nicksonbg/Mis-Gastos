@@ -12,7 +12,7 @@
       <thead><tr><th>{{ t('f_fecha') }}</th><th>{{ t('th_concepto') }}</th><th class="hide-sm">{{ t('th_categoria') }}</th><th class="n">{{ t('th_importe') }}</th><th></th></tr></thead>
       <tbody>
       {% for m in movs %}
-        <tr><td>{{ fmt_d(m.fecha)[:5] }}</td><td>{{ m.concepto or '—' }}{% if m.lineas %} <button class="icon" type="button" title="{{ m.lineas|length }}" onclick="pbShowTicket(MOVS.find(x=>x.id==='{{ m.id }}'))">🧾</button>{% endif %}</td><td class="hide-sm muted">{{ m.categoria }}</td><td class="n">{{ money(m.importe) }}</td>
+        <tr data-mid="{{ m.id }}"><td>{{ fmt_d(m.fecha)[:5] }}</td><td>{{ m.concepto or '—' }}{% if m.lineas %} <span class="small" title="{{ m.lineas|length }}">🧾</span>{% endif %}</td><td class="hide-sm muted">{{ m.categoria }}</td><td class="n">{{ money(m.importe) }}</td>
           <td class="n" style="white-space:nowrap"><button class="icon" type="button" onclick="openMov('{{ m.id }}')" title="{{ t('editar') }}">✏️</button><form class="inline" method="post" action="{{ url_for('mov_delete') }}" data-confirm="{{ t('ask_borrar_mov', n=(m.concepto or m.categoria)) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ m.id }}"><input type="hidden" name="m" value="{{ off }}"><button class="icon" title="{{ t('borrar') }}">🗑️</button></form></td></tr>
       {% else %}<tr><td colspan="5" class="muted">{{ t('mov_empty') }}</td></tr>{% endfor %}
       </tbody>
@@ -61,6 +61,7 @@ function openMov(id){const m=MOVS.find(x=>x.id===id),f=document.getElementById('
   document.getElementById('dlg-mov-t').textContent=m?{{ t('mov_edit')|tojson }}:{{ t('mov_new')|tojson }};
   f.elements.namedItem('id').value=m?m.id:'';f.lineas.value=m&&m.lineas?JSON.stringify(m.lineas):'';f.ticket.value=m&&m.ticket?JSON.stringify(m.ticket):'';f.importe.value=m?.importe??'';f.fecha.value=m?.fecha||{{ today|tojson }};f.categoria.value=m?.categoria||'';f.concepto.value=m?.concepto||'';
   document.getElementById('dlg-mov').showModal();setTimeout(()=>f.importe.focus(),50)}
+document.addEventListener('click',e=>{const tr=e.target.closest('tr[data-mid]');if(!tr||e.target.closest('button,form,a,input'))return;window.pbToggleTicket&&pbToggleTicket(tr,MOVS.find(x=>x.id===tr.dataset.mid),5)});
 function openPres(id){const p=PRES.find(x=>x.id===id),f=document.getElementById('f-pres');
   f.elements.namedItem('id').value=p?p.id:'';f.categoria.value=p?.categoria||'';f.limite.value=p?.limite??'';document.getElementById('dlg-pres').showModal()}
 </script>

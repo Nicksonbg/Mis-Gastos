@@ -23,7 +23,7 @@
     busy: ['La IA gratuita está saturada. Inténtalo en unos minutos.', 'The free AI is busy. Try again in a few minutes.', 'Безплатният ИИ е претоварен. Опитай след малко.'],
     limit: ['Has llegado al límite de usos de IA de hoy.', 'You have reached today\'s AI limit.', 'Достигна дневния лимит за ИИ.'],
     err: ['No se pudo leer el ticket. Inténtalo de nuevo.', 'Could not read the receipt. Try again.', 'Неуспешно четене. Опитай отново.'],
-    tk_total: ['TOTAL', 'TOTAL', 'ОБЩО'], tk_disc: ['Descuentos', 'Discounts', 'Отстъпки'], tk_items: ['{n} artículos', '{n} items', '{n} артикула'],
+    tk_total: ['TOTAL', 'TOTAL', 'ОБЩО'], tk_disc: ['Descuentos', 'Discounts', 'Отстъпки'], tk_items: ['{n} artículos', '{n} items', '{n} артикула'], tk_item1: ['1 artículo', '1 item', '1 артикул'],
     tk_pay: ['Pago', 'Payment', 'Плащане'], tk_thanks: ['Ticket electrónico · Personal Balance', 'E-receipt · Personal Balance', 'Електронна бележка · Personal Balance'],
     tk_close: ['Cerrar', 'Close', 'Затвори'], tk_cat: ['Categoría', 'Category', 'Категория'],
   };
@@ -57,6 +57,11 @@
   .pbt .q{color:#777;font-size:11.5px;margin:-2px 0 2px 10px}.pbt .neg{color:#1f7a4d}
   .pbt .tot{font-weight:700;font-size:20px;margin-top:2px}.pbt .bc{display:block;margin:12px auto 4px;height:34px;width:70%}
   .pbt-wrap{max-height:56vh;overflow:auto;padding:6px 2px 14px;margin:0 -6px}
+  .pbt-row>td{padding:0!important;border-bottom:0!important}.pbt-slide{height:0;overflow:hidden;transition:height .38s cubic-bezier(.2,.8,.2,1)}
+  .pbt-slide-in{padding:4px 0 16px;transform:translateY(-24px);opacity:0;transition:transform .38s cubic-bezier(.2,.8,.2,1),opacity .3s}
+  .pbt-slide.open .pbt-slide-in{transform:none;opacity:1}
+  tr.pbt-on>td{background:color-mix(in srgb,var(--text,#fff) 6%,transparent)}
+  tr[data-mid]{cursor:pointer}
   .pbt-modal{position:fixed;inset:0;z-index:72;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);overflow:auto;padding:max(24px,env(safe-area-inset-top,0px)) 16px 24px;display:flex;flex-direction:column;align-items:center}
   .pbt-modal button{margin-top:18px;border:0;border-radius:999px;padding:12px 22px;font:700 15px Inter,system-ui,sans-serif;background:#fff;color:#000;cursor:pointer}`;
   document.head.appendChild(css);
@@ -180,7 +185,7 @@
       h += `<div class="r ${x.importe < 0 ? 'neg' : ''}"><span>${esc(x.desc)}</span><span>${n2(x.importe)}</span></div>`;
       if (q !== 1 && x.importe > 0) h += `<div class="q">${String(q).replace('.', L === 'en' ? '.' : ',')} × ${n2(x.importe / q)}</div>`;
     }
-    if (lin.length) h += `<hr><div class="r s"><span>${esc(t('tk_items', { n: nItems }))}</span><span></span></div>`;
+    if (lin.length) h += `<hr><div class="r s"><span>${esc(nItems === 1 ? t('tk_item1') : t('tk_items', { n: nItems }))}</span><span></span></div>`;
     if (disc < 0) h += `<div class="r s neg"><span>${esc(t('tk_disc'))}</span><span>${n2(disc)}</span></div>`;
     h += `<div class="r tot"><span>${esc(t('tk_total'))}</span><span>${n2(d.importe)} €</span></div>`;
     if (tk.forma_pago) h += `<div class="r s"><span>${esc(t('tk_pay'))}</span><span>${esc(tk.forma_pago)}</span></div>`;
@@ -188,8 +193,28 @@
     h += `<hr>${barcode((tk.comercio || '') + d.fecha + d.importe)}<div class="c s">${esc(t('tk_thanks'))}</div></div></div>`;
     return h;
   };
+  // Desplegar el ticket debajo de la fila pulsada (y recogerlo al volver a pulsar)
+  const asTicket = d => (d.lineas && d.lineas.length) ? d : { ...d, lineas: [{ desc: d.concepto || d.categoria || '—', cant: 1, importe: +d.importe || 0 }], ticket: d.ticket || { comercio: d.concepto || d.categoria || '' } };
+  function collapse(tr) {
+    const row = tr.nextElementSibling; if (!row || !row.classList.contains('pbt-row')) return;
+    const sl = row.querySelector('.pbt-slide'); sl.style.height = sl.scrollHeight + 'px'; sl.offsetHeight;
+    sl.classList.remove('open'); sl.style.height = '0px'; tr.classList.remove('pbt-on');
+    sl.addEventListener('transitionend', () => row.remove(), { once: true }); setTimeout(() => row.remove(), 500);
+  }
+  window.pbToggleTicket = (tr, d, cols) => {
+    if (!tr || !d) return;
+    const open = tr.nextElementSibling && tr.nextElementSibling.classList.contains('pbt-row');
+    tr.parentElement.querySelectorAll('tr.pbt-on').forEach(x => collapse(x));
+    if (open) return;
+    const row = document.createElement('tr'); row.className = 'pbt-row';
+    row.innerHTML = `<td colspan="${cols || 5}"><div class="pbt-slide"><div class="pbt-slide-in">${window.pbTicketHTML(asTicket(d))}</div></div></td>`;
+    tr.after(row); tr.classList.add('pbt-on');
+    const sl = row.querySelector('.pbt-slide');
+    requestAnimationFrame(() => { sl.classList.add('open'); sl.style.height = sl.firstElementChild.scrollHeight + 'px' });
+    sl.addEventListener('transitionend', e => { if (e.propertyName === 'height' && sl.classList.contains('open')) { sl.style.height = 'auto'; const r = tr.getBoundingClientRect(); if (r.top < 70) scrollBy({ top: r.top - 90, behavior: 'smooth' }) } }, { once: true });
+  };
   window.pbShowTicket = d => {
-    const o = document.createElement('div'); o.className = 'pbt-modal'; o.innerHTML = window.pbTicketHTML(d) + `<button type="button">${esc(t('tk_close'))}</button>`;
+    const o = document.createElement('div'); o.className = 'pbt-modal'; o.innerHTML = window.pbTicketHTML(asTicket(d)) + `<button type="button">${esc(t('tk_close'))}</button>`;
     o.onclick = e => { if (e.target === o || e.target.tagName === 'BUTTON') o.remove() }; document.body.appendChild(o);
   };
 
