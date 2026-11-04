@@ -5,14 +5,14 @@
  ('prestamos','tab_prestamos','<path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>'),
  ('inversiones','tab_inv','<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>'),
  ('datos','tab_datos','<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>')] %}
-{% macro navlinks() %}{% for k,lbl,ic in NAV %}<a href="{{ url_for(k) }}" class="{{ 'on' if tab==k }}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ ic|safe }}</svg><span>{{ t(lbl) }}</span></a>{% endfor %}{% endmacro %}
+{% macro navlinks() %}{% for k,lbl,ic in NAV if k!='inversiones' or show_inv %}<a href="{{ url_for(k) }}" class="{{ 'on' if tab==k }}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ ic|safe }}</svg><span>{{ t(lbl) }}</span></a>{% endfor %}{% endmacro %}
 <body data-page="app" data-dev="{{ '1' if dev else '0' }}" data-fb='{{ fb_cfg }}'>
 <header>
   <a class="avatar" href="{{ url_for('perfil') }}" title="{{ t('tab_perfil') }}">{% if avatar.img %}<img alt="" src="{{ avatar.img }}">{% else %}{{ avatar.txt }}{% endif %}</a>
   <h1>💶 Personal Balance <span class="sync">{{ 'web' }}</span></h1>
   <nav id="nav-top">{{ navlinks() }}</nav>
 </header>
-<nav id="nav">{{ navlinks() }}</nav>
+<nav id="nav" style="--ncols:{{ 5 if show_inv else 4 }}">{{ navlinks() }}</nav>
 <main>
   {% if msg %}<div class="flash">{{ t(msg) }}</div>{% endif %}
   {% if err %}<div class="flash bad">{{ t(err) }}</div>{% endif %}

@@ -31,6 +31,9 @@
           <select name="theme" onchange="this.form.requestSubmit()">{% for v,k in [('', 'tema_oscuro'),('light','tema_claro')] %}<option value="{{ v }}" {{ 'selected' if theme==v }}>{{ t(k) }}</option>{% endfor %}</select></label>
         <label class="f"><span>{{ t('lbl_idioma') }}</span>
           <select name="lang" onchange="this.form.requestSubmit()">{% for k,n in [('es','Español'),('en','English'),('bg','Български')] %}<option value="{{ k }}" {{ 'selected' if lang==k }}>{{ n }}</option>{% endfor %}</select></label>
+        <input type="hidden" name="adv_present" value="1">
+        <label class="small" style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-top:4px"><input type="checkbox" name="adv_inv" value="1" {{ 'checked' if show_inv }} onchange="this.form.requestSubmit()"><span>{{ t('adv_inv') }}</span></label>
+        <p class="muted small" style="margin:4px 0 0">{{ t('adv_inv_note') }}</p>
         </form>
       </div>
       <div class="card">

@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-25"
+APP_VERSION = "web-26"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -41,6 +41,8 @@ ICONS = ["😀", "😎", "🦊", "🐼", "🦁", "🐯", "🐸", "🦄", "🚀",
 with open(os.path.join(os.path.dirname(__file__), "translations.json"), encoding="utf-8") as f:
     TR = json.load(f)
 TR.update({
+    "adv_inv": ["Inversiones (avanzado)", "Investments (advanced)", "Инвестиции (за напреднали)"],
+    "adv_inv_note": ["Muestra la pestaña Inversiones: cartera, seguimiento y conexión con brókeres.", "Shows the Investments tab: portfolio, watchlist and broker connection.", "Показва раздела Инвестиции: портфейл, следене и връзка с брокери."],
     "w_dev": ["Entrar (modo prueba)", "Sign in (test mode)", "Вход (тестов режим)"],
     "w_saved": ["Guardado", "Saved", "Запазено"],
     "w_imported": ["Datos cargados", "Data loaded", "Данните са заредени"],
@@ -203,6 +205,13 @@ def csrf_token():
     return c
 
 
+def inv_on(S):
+    a = (S or {}).get("ajustes") or {}
+    if isinstance(a.get("inversiones"), bool):
+        return a["inversiones"]
+    return bool((S or {}).get("inversiones") or (S or {}).get("watch"))
+
+
 def ctx(tab, **kw):
     P = g.get("P") or {"nombre": "", "foto": "", "icono": ""}
     user = g.get("user") or {}
@@ -211,6 +220,7 @@ def ctx(tab, **kw):
         av = {"img": P["foto"]}
     else:
         av = {"txt": P.get("icono") or (nombre or user.get("email") or "?").strip()[:1].upper()}
+    kw.setdefault("show_inv", inv_on(g.get("S")))
     return dict(t=t, money=money, hero=hero, fmt_d=fmt_d, dec1=dec1, num=num, tab=tab, lang=cur_lang(),
                 theme=request.cookies.get("pb_theme", ""), csrf=csrf_token(), fb_cfg=json.dumps(FB_CFG),
                 dev=DEV, avatar=av, user=user, msg=request.args.get("ok"), err=request.args.get("err"),
@@ -672,6 +682,10 @@ def ajustes():
     th = request.form.get("theme", "")
     if th in ("", "light", "dark"):
         resp.set_cookie("pb_theme", th, max_age=31536000, samesite="Lax")
+    if request.form.get("adv_present"):
+        S = load()
+        S.setdefault("ajustes", {})["inversiones"] = bool(request.form.get("adv_inv"))
+        store.save(g.uid, S)
     return resp
 
 
