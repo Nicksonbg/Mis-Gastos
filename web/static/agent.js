@@ -19,6 +19,7 @@
     nokey: ['El asistente aún no está activado: falta la clave de Claude en el servidor.', 'The assistant is not enabled yet: the Claude key is missing on the server.', 'Асистентът още не е активиран: липсва ключът за Claude на сървъра.'],
     err: ['No se pudo contactar con el asistente. Inténtalo de nuevo.', 'Could not reach the assistant. Try again.', 'Няма връзка с асистента. Опитай отново.'],
     auth: ['Tu sesión ha caducado. Recarga la página.', 'Your session expired. Reload the page.', 'Сесията изтече. Презареди страницата.'],
+    limit: ['Has llegado al límite de mensajes de hoy. Vuelve mañana.', 'You have reached today\'s message limit. Come back tomorrow.', 'Достигна дневния лимит на съобщения. Опитай утре.'],
     clear: ['Nueva conversación', 'New conversation', 'Нов разговор'],
   };
   const t = k => (TX[k] || [k])[{ es: 0, en: 1, bg: 2 }[L] ?? 0];
@@ -109,6 +110,7 @@
       const j = await r.json().catch(() => ({}));
       if (r.status === 401) st.view.push({ k: 'e', text: t('auth') });
       else if (j.error === 'no_key') st.view.push({ k: 'e', text: t('nokey') });
+      else if (j.error === 'limit') st.view.push({ k: 'e', text: t('limit') });
       else if (!r.ok || j.error) st.view.push({ k: 'e', text: t('err') + (j.detail ? ' (' + j.detail + ')' : '') });
       else {
         st.messages = j.messages || st.messages;

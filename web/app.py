@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-6"
+APP_VERSION = "web-7"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -616,6 +616,14 @@ def api_agent():
     P = store.load_profile(g.uid)
     lang = body.get("lang") if body.get("lang") in LANGS else cur_lang()
     import agent
+    limit = int(os.environ.get("AGENT_DAILY_LIMIT", "40"))
+    try:
+        ok, _ = store.ia_quota(g.uid, limit)
+    except Exception as e:
+        print("ia_quota:", repr(e), flush=True)
+        ok = True
+    if not ok:
+        return {"error": "limit", "limit": limit}, 429
     try:
         out = agent.run(S, body.get("messages") or [], lang, P.get("nombre") or user.get("name", ""),
                         decision=body.get("decision"), save=lambda s: store.save(g.uid, s),

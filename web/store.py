@@ -68,6 +68,25 @@ class FirestoreStore:
                 pass
 
 
+    def ia_quota(self, uid, limit):
+        """Suma un uso de IA de hoy y dice si aún está dentro del límite.
+        Va en la colección "ia_uso", que los clientes no pueden escribir (solo el servidor)."""
+        from google.cloud import firestore as gfs
+        ref = self.db.collection("ia_uso").document(uid)
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+        @gfs.transactional
+        def tx(t):
+            snap = ref.get(transaction=t)
+            d = snap.to_dict() if snap.exists else {}
+            n = d.get("n", 0) if d.get("fecha") == today else 0
+            if n >= limit:
+                return False, n
+            t.set(ref, {"fecha": today, "n": n + 1, "total": d.get("total", 0) + 1})
+            return True, n + 1
+        return tx(self.db.transaction())
+
+
 class LocalStore:
     """Solo para desarrollo: guarda en un archivo JSON."""
 
@@ -102,6 +121,17 @@ class LocalStore:
         d = self._all()
         d.setdefault(uid, {})["perfil"] = P
         self._write(d)
+
+    _uso = {}
+
+    def ia_quota(self, uid, limit):
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        f, n = self._uso.get(uid, (today, 0))
+        n = n if f == today else 0
+        if n >= limit:
+            return False, n
+        self._uso[uid] = (today, n + 1)
+        return True, n + 1
 
     def delete_user_data(self, uid):
         d = self._all()
