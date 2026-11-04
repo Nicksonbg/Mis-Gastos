@@ -23,6 +23,9 @@
     busy: ['La IA gratuita está saturada. Inténtalo en unos minutos.', 'The free AI is busy. Try again in a few minutes.', 'Безплатният ИИ е претоварен. Опитай след малко.'],
     limit: ['Has llegado al límite de usos de IA de hoy.', 'You have reached today\'s AI limit.', 'Достигна дневния лимит за ИИ.'],
     err: ['No se pudo leer el ticket. Inténtalo de nuevo.', 'Could not read the receipt. Try again.', 'Неуспешно четене. Опитай отново.'],
+    tk_total: ['TOTAL', 'TOTAL', 'ОБЩО'], tk_disc: ['Descuentos', 'Discounts', 'Отстъпки'], tk_items: ['{n} artículos', '{n} items', '{n} артикула'],
+    tk_pay: ['Pago', 'Payment', 'Плащане'], tk_thanks: ['Ticket electrónico · Personal Balance', 'E-receipt · Personal Balance', 'Електронна бележка · Personal Balance'],
+    tk_close: ['Cerrar', 'Close', 'Затвори'], tk_cat: ['Categoría', 'Category', 'Категория'],
   };
   const t = (k, p) => { let s = TX[k][I]; for (const a in (p || {})) s = s.replace('{' + a + '}', p[a]); return s };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -44,7 +47,18 @@
   .pbs-note{border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:13px;background:var(--accent-soft,rgba(90,211,122,.14));color:var(--text,#fff)}
   .pbs-note .w{color:var(--warn,#f5a524);display:block;margin-top:4px}.pbs-note .ok{color:var(--ok,#5ad37a);display:block;margin-top:4px}
   .pbs-note details{margin-top:6px}.pbs-note summary{color:var(--muted,#8e8e93);font-weight:500;font-size:13px}
-  .pbs-note table{width:100%;margin-top:6px;font-size:12px}.pbs-note td{padding:3px 0;border-bottom:1px solid var(--line,#262626)}`;
+  .pbs-note table{width:100%;margin-top:6px;font-size:12px}.pbs-note td{padding:3px 0;border-bottom:1px solid var(--line,#262626)}
+  .pbt-s{margin:10px auto;width:min(320px,100%);filter:drop-shadow(0 6px 16px rgba(0,0,0,.35))}
+  .pbt{--zz:conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) top/12px 51% repeat-x,conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/12px 51% repeat-x;
+    -webkit-mask:var(--zz);mask:var(--zz);background:#fbfaf5;color:#1d1d1d;font:13px/1.45 "DM Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;padding:26px 18px}
+  .pbt .c{text-align:center}.pbt .m{font:800 18px/1.2 Inter,system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+  .pbt .s{color:#666;font-size:11.5px}.pbt hr{border:0;border-top:1.5px dashed #b9b6ac;margin:10px 0}
+  .pbt .r{display:flex;gap:8px;align-items:baseline}.pbt .r span:first-child{flex:1;min-width:0;overflow-wrap:anywhere}.pbt .r span:last-child{white-space:nowrap}
+  .pbt .q{color:#777;font-size:11.5px;margin:-2px 0 2px 10px}.pbt .neg{color:#1f7a4d}
+  .pbt .tot{font-weight:700;font-size:20px;margin-top:2px}.pbt .bc{display:block;margin:12px auto 4px;height:34px;width:70%}
+  .pbt-wrap{max-height:56vh;overflow:auto;padding:6px 2px 14px;margin:0 -6px}
+  .pbt-modal{position:fixed;inset:0;z-index:72;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);overflow:auto;padding:max(24px,env(safe-area-inset-top,0px)) 16px 24px;display:flex;flex-direction:column;align-items:center}
+  .pbt-modal button{margin-top:18px;border:0;border-radius:999px;padding:12px 22px;font:700 15px Inter,system-ui,sans-serif;background:#fff;color:#000;cursor:pointer}`;
   document.head.appendChild(css);
 
   const overlay = html => { const o = document.createElement('div'); o.className = 'pbs-ov'; o.innerHTML = `<div class="pbs-box">${html}</div>`; document.body.appendChild(o); return o };
@@ -150,6 +164,35 @@
     return out.toDataURL('image/jpeg', 0.9);
   }
 
+  // ---------- Ticket electrónico ----------
+  const fdate = s => { if (!s) return ''; const [y, m, d] = String(s).split('-'); return d && m && y ? `${d}/${m}/${y}` : s };
+  function barcode(seed) { let h = 0; for (const ch of String(seed || 'pb')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    let x = 0, b = ''; for (let i = 0; i < 46; i++) { h = (h * 1103515245 + 12345) >>> 0; const w = 1 + (h >>> 29) % 3; if (i % 2 === 0) b += `<rect x="${x}" width="${w}" height="34"/>`; x += w } return `<svg class="bc" viewBox="0 0 ${x} 34" preserveAspectRatio="none" fill="#1d1d1d" aria-hidden="true">${b}</svg>` }
+  window.pbTicketHTML = d => {
+    const tk = d.ticket || d, lin = d.lineas || [], n2 = v => (+v).toLocaleString(L === 'en' ? 'en-GB' : L === 'bg' ? 'bg-BG' : 'es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const disc = lin.filter(x => x.importe < 0).reduce((a, x) => a + x.importe, 0), nItems = lin.filter(x => x.importe >= 0).length;
+    let h = `<div class="pbt-s"><div class="pbt"><div class="c m">${esc(tk.comercio || d.concepto || '')}</div>`;
+    if (tk.direccion) h += `<div class="c s">${esc(tk.direccion)}</div>`;
+    if (tk.nif) h += `<div class="c s">NIF ${esc(tk.nif)}</div>`;
+    h += `<hr><div class="r s"><span>${esc(fdate(d.fecha))}${tk.hora ? ' · ' + esc(tk.hora) : ''}</span><span>${tk.num_ticket ? 'Nº ' + esc(tk.num_ticket) : ''}</span></div><hr>`;
+    for (const x of lin) {
+      const q = +x.cant || 1;
+      h += `<div class="r ${x.importe < 0 ? 'neg' : ''}"><span>${esc(x.desc)}</span><span>${n2(x.importe)}</span></div>`;
+      if (q !== 1 && x.importe > 0) h += `<div class="q">${String(q).replace('.', L === 'en' ? '.' : ',')} × ${n2(x.importe / q)}</div>`;
+    }
+    if (lin.length) h += `<hr><div class="r s"><span>${esc(t('tk_items', { n: nItems }))}</span><span></span></div>`;
+    if (disc < 0) h += `<div class="r s neg"><span>${esc(t('tk_disc'))}</span><span>${n2(disc)}</span></div>`;
+    h += `<div class="r tot"><span>${esc(t('tk_total'))}</span><span>${n2(d.importe)} €</span></div>`;
+    if (tk.forma_pago) h += `<div class="r s"><span>${esc(t('tk_pay'))}</span><span>${esc(tk.forma_pago)}</span></div>`;
+    if (d.categoria) h += `<div class="r s"><span>${esc(t('tk_cat'))}</span><span>${esc(d.categoria)}</span></div>`;
+    h += `<hr>${barcode((tk.comercio || '') + d.fecha + d.importe)}<div class="c s">${esc(t('tk_thanks'))}</div></div></div>`;
+    return h;
+  };
+  window.pbShowTicket = d => {
+    const o = document.createElement('div'); o.className = 'pbt-modal'; o.innerHTML = window.pbTicketHTML(d) + `<button type="button">${esc(t('tk_close'))}</button>`;
+    o.onclick = e => { if (e.target === o || e.target.tagName === 'BUTTON') o.remove() }; document.body.appendChild(o);
+  };
+
   // ---------- 3. Resultado en el formulario ----------
   function note(d) {
     const f = document.getElementById('f-mov'); if (!f) return;
@@ -159,7 +202,7 @@
     else if (d.lineas.length) h += `<span class="ok">${esc(t('sumok', { n: d.lineas.length }))}</span>`;
     if (d.avisos.includes('fecha')) h += `<span class="w">⚠️ ${esc(t('date'))}</span>`;
     if (d.avisos.includes('moneda')) h += `<span class="w">⚠️ ${esc(t('cur', { m: d.moneda }))}</span>`;
-    if (d.lineas.length) h += `<details open><summary>${esc(t('lines', { n: d.lineas.length }))}</summary><table>${d.lineas.map(x => `<tr><td>${esc(x.desc)}${x.cant && x.cant !== 1 ? ` <span style="opacity:.6">×${esc(x.cant)}</span>` : ''}</td><td style="text-align:right">${eur(x.importe)}</td></tr>`).join('')}</table></details>`;
+    h += `<div class="pbt-wrap">${window.pbTicketHTML(d)}</div>`;
     const n = document.createElement('div'); n.className = 'pbs-note'; n.innerHTML = h;
     f.querySelector('h3').after(n);
     f.closest('dialog')?.addEventListener('close', () => { n.remove(); setTimeout(() => { window.pbLastScan = null }, 0) }, { once: true });

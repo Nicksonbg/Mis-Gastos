@@ -38,7 +38,9 @@ def prompt(cats, lang):
         '{"comercio": str, "fecha": "AAAA-MM-DD" o null, "total": número (importe final pagado, con impuestos), '
         '"moneda": código ISO (EUR por defecto), "categoria": una de ' + json.dumps(cats, ensure_ascii=False) + ", "
         '"concepto": descripción corta (máx. 40 caracteres), '
-        '"lineas": [{"desc": str, "cant": número, "importe": número}], "hora": "HH:MM" o null, "legible": true/false}\n'
+        '"lineas": [{"desc": str, "cant": número, "importe": número}], "hora": "HH:MM" o null, '
+        '"direccion": str o null, "nif": str o null, "forma_pago": str o null (p. ej. Tarjeta, Efectivo), '
+        '"num_ticket": str o null, "legible": true/false}\n'
         "Reglas: en \"lineas\" pon TODAS las líneas de productos o servicios del ticket, en el mismo orden, con el texto tal cual, "
         "la cantidad (1 si no aparece) y el importe de la línea; los descuentos y promociones van como líneas con importe negativo; "
         "no incluyas como líneas el subtotal, el IVA, el total, la forma de pago ni el cambio. "
@@ -138,6 +140,11 @@ def clean(d, cats):
         avisos.append("fecha")
     if moneda != "EUR":
         avisos.append("moneda")
+    txt = lambda k, n=60: (str(d.get(k)).strip()[:n] if d.get(k) not in (None, "", "null") else "")  # noqa: E731
+    hora = txt("hora", 5)
+    if hora and not re.match(r"^\d{1,2}:\d{2}$", hora):
+        hora = ""
     return {"importe": calc.r2(total), "fecha": fecha or date.today().isoformat(), "categoria": cat,
             "concepto": concepto, "comercio": comercio, "moneda": moneda, "lineas": lineas, "suma_lineas": suma,
-            "avisos": avisos}
+            "hora": hora, "direccion": txt("direccion", 80), "nif": txt("nif", 20), "forma_pago": txt("forma_pago", 30),
+            "num_ticket": txt("num_ticket", 30), "avisos": avisos}

@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-17"
+APP_VERSION = "web-19"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -398,6 +398,12 @@ def mov_save():
     if isinstance(lin, list) and lin:
         v["lineas"] = [{"desc": str(x.get("desc", ""))[:60], "cant": x.get("cant", 1), "importe": r2(x.get("importe"))}
                        for x in lin[:120] if isinstance(x, dict)]
+    try:
+        tk = json.loads(request.form.get("ticket") or "null")
+    except ValueError:
+        tk = None
+    if isinstance(tk, dict):
+        v["ticket"] = {k: str(tk.get(k) or "")[:80] for k in ("comercio", "direccion", "nif", "hora", "forma_pago", "num_ticket")}
     mid = request.form.get("id")
     m = next((x for x in S["movimientos"] if x.get("id") == mid), None) if mid else None
     if m:

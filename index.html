@@ -819,7 +819,7 @@ function renderPres(){const ps=presEstado();
 function renderDia(){const mk=mkOf(diaOff),[y,m]=mk.split('-').map(Number);
   $('#dia-lbl').textContent=t('meses').split('|')[m-1]+' '+y;
   const ms=(S.movimientos||[]).filter(x=>(x.fecha||'').slice(0,7)===mk).sort((a,b)=>a.fecha<b.fecha?1:a.fecha>b.fecha?-1:0);
-  $('#dia-body').innerHTML=ms.map(x=>`<tr><td>${fmtD(x.fecha).slice(0,5)}</td><td>${esc(x.concepto||'—')}${x.lineas&&x.lineas.length?` <button class="icon" data-tk="${x.id}" title="${x.lineas.length}">🧾</button>`:''}</td><td class="hide-sm muted">${esc(x.categoria||'')}</td><td class="n">${money(x.importe)}</td><td class="n" style="white-space:nowrap"><button class="icon" data-em="${x.id}" title="${t('editar')}">✏️</button><button class="icon" data-dm="${x.id}" title="${t('borrar')}">🗑️</button></td></tr>`+(x.lineas&&x.lineas.length?`<tr class="hidden" id="tk-${x.id}"><td></td><td colspan="4"><table class="small" style="margin:0">${x.lineas.map(l=>`<tr><td class="muted" style="border:0;padding:2px 0">${esc(l.desc)}${l.cant&&l.cant!==1?' ×'+esc(l.cant):''}</td><td class="n muted" style="border:0;padding:2px 0">${money(l.importe)}</td></tr>`).join('')}</table></td></tr>`:'')).join('')||`<tr><td colspan="5" class="muted">${t('mov_empty')}</td></tr>`;
+  $('#dia-body').innerHTML=ms.map(x=>`<tr><td>${fmtD(x.fecha).slice(0,5)}</td><td>${esc(x.concepto||'—')}${x.lineas&&x.lineas.length?` <button class="icon" data-tk="${x.id}" title="${x.lineas.length}">🧾</button>`:''}</td><td class="hide-sm muted">${esc(x.categoria||'')}</td><td class="n">${money(x.importe)}</td><td class="n" style="white-space:nowrap"><button class="icon" data-em="${x.id}" title="${t('editar')}">✏️</button><button class="icon" data-dm="${x.id}" title="${t('borrar')}">🗑️</button></td></tr>`).join('')||`<tr><td colspan="5" class="muted">${t('mov_empty')}</td></tr>`;
   $('#dia-total').textContent=money(ms.reduce((a,x)=>a+(+x.importe||0),0))}
 $('#g-seg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;['fijos','dia','pres'].forEach(k=>$('#gp-'+k).classList.toggle('hidden',k!==b.dataset.gp));document.querySelectorAll('#g-seg button').forEach(x=>x.classList.toggle('on',x===b))});
 $('#dia-prev').onclick=()=>{diaOff--;renderDia()};$('#dia-next').onclick=()=>{diaOff++;renderDia()};
@@ -830,9 +830,10 @@ $('#scan-mov').onclick=()=>window.pbScan&&window.pbScan();
 window.PB_SCAN={api:'https://personal-balance-web-778378922815.europe-west1.run.app/api/scan',getToken:()=>window.__pbTok?window.__pbTok():null,open:d=>{openMov();fM.importe.value=d.importe;fM.fecha.value=d.fecha;fM.categoria.value=d.categoria;fM.concepto.value=d.concepto}};
 dM.addEventListener('close',()=>{if(dM.returnValue!=='ok')return;const v={fecha:fM.fecha.value||todayISO(),importe:r2(fM.importe.value),categoria:fM.categoria.value.trim(),concepto:fM.concepto.value.trim()};
   const sc=window.pbLastScan;if(sc&&Array.isArray(sc.lineas)&&sc.lineas.length)v.lineas=sc.lineas.slice(0,120);
+  if(sc)v.ticket={comercio:sc.comercio||'',direccion:sc.direccion||'',nif:sc.nif||'',hora:sc.hora||'',forma_pago:sc.forma_pago||'',num_ticket:sc.num_ticket||''};
   S.movimientos=S.movimientos||[];if(editM)Object.assign(editM,v);else S.movimientos.push({id:uid(),...v});save()});
 $('#dia-body').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
-  if(b.dataset.tk){$('#tk-'+b.dataset.tk).classList.toggle('hidden');return}
+  if(b.dataset.tk){const x=S.movimientos.find(y=>y.id===b.dataset.tk);if(x&&window.pbShowTicket)window.pbShowTicket(x);return}
   if(b.dataset.em)openMov(S.movimientos.find(x=>x.id===b.dataset.em));
   if(b.dataset.dm){const x=S.movimientos.find(y=>y.id===b.dataset.dm);ask(t('ask_borrar_mov',{n:x.concepto||x.categoria}),'',t('borrar'),false,true).then(ok=>{if(ok){S.movimientos=S.movimientos.filter(y=>y!==x);save()}})}});
 const dPr=$('#dlg-pres'),fP=$('#f-pres');let editP=null;
@@ -1000,7 +1001,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='47';$('#ver').textContent='v'+APP_V;
+const APP_V='48';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 /* ---------- Avisos de pagos (notificaciones push) ---------- */
 const PUSH_API='https://personal-balance-web-778378922815.europe-west1.run.app/api/push/';
