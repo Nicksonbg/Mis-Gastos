@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-31"
+APP_VERSION = "web-32"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -198,6 +198,55 @@ def login_required(f):
 def csrf_ok():
     c = request.cookies.get("pb_csrf")
     return c and secrets.compare_digest(c, request.form.get("csrf", ""))
+
+
+# ---------- Límite de peticiones por IP (segunda barrera contra abuso) ----------
+# Ventana deslizante en memoria. El límite firme por usuario (40 IA/día) sigue en Firestore;
+# esto solo frena el martilleo automático antes de llegar a él.
+import collections
+import threading
+
+_rl_lock = threading.Lock()
+_rl_hits = collections.defaultdict(collections.deque)
+RL_RULES = (("/api/agent", 20, 60), ("/api/scan", 20, 60), ("/api/opinion", 15, 60),
+            ("/api/pago", 60, 60), ("/api/", 120, 60))
+RL_DEFAULT = (240, 60)  # resto de la web
+
+
+def client_ip():
+    xff = request.headers.get("X-Forwarded-For", "")
+    return (xff.split(",")[0].strip() if xff else request.remote_addr) or "?"
+
+
+def rate_limited():
+    path = request.path
+    limit, window = RL_DEFAULT
+    for pref, lim, win in RL_RULES:
+        if path.startswith(pref):
+            limit, window = lim, win
+            break
+    import time as _t
+    now = _t.monotonic()
+    key = client_ip() + "|" + (next((p for p, *_ in RL_RULES if path.startswith(p)), "web"))
+    with _rl_lock:
+        q = _rl_hits[key]
+        while q and now - q[0] > window:
+            q.popleft()
+        if len(q) >= limit:
+            return True
+        q.append(now)
+        if len(_rl_hits) > 20000:  # evitar crecer sin control
+            _rl_hits.clear()
+    return False
+
+
+@app.before_request
+def throttle():
+    if request.method == "OPTIONS" or request.path == "/healthz":
+        return
+    if rate_limited():
+        return make_response(("Demasiadas peticiones. Espera un momento.", 429,
+                              {"Retry-After": "30"}))
 
 
 @app.before_request
