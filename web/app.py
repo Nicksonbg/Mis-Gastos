@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-29"
+APP_VERSION = "web-30"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -237,7 +237,9 @@ def csrf_token():
 
 
 def inv_on(S):
-    a = (S or {}).get("ajustes") or {}
+    a = (S or {}).get("ajustes") if isinstance(S, dict) else None
+    if not isinstance(a, dict):
+        a = {}
     if isinstance(a.get("inversiones"), bool):
         return a["inversiones"]
     return bool((S or {}).get("inversiones") or (S or {}).get("watch"))
@@ -721,7 +723,9 @@ def ajustes():
         resp.set_cookie("pb_theme", th, max_age=31536000, samesite="Lax")
     if request.form.get("adv_present"):
         S = load()
-        S.setdefault("ajustes", {})["inversiones"] = bool(request.form.get("adv_inv"))
+        if not isinstance(S.get("ajustes"), dict):
+            S["ajustes"] = {}
+        S["ajustes"]["inversiones"] = bool(request.form.get("adv_inv"))
         store.save(g.uid, S)
     return resp
 
