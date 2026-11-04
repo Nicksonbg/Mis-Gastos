@@ -916,7 +916,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='43';$('#ver').textContent='v'+APP_V;
+const APP_V='44';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 /* ---------- Avisos de pagos (notificaciones push) ---------- */
 const PUSH_API='https://personal-balance-web-778378922815.europe-west1.run.app/api/push/';
@@ -941,10 +941,11 @@ $('#p-push').onchange=async e=>{if(e.target.checked)return pushTurnOn();pushMsg(
 async function pushAuto(){try{
   if(!pushOk()||!curUid||store.get(PUSH_OFF))return;
   if(Notification.permission==='granted'){if(!(await pushSub()))await pushEnable(false);$('#p-push').checked=true;return}
-  if(Notification.permission==='default'&&!store.get(PUSH_ASKED)&&!$('#lock:not(.hidden)')){store.set(PUSH_ASKED,'1');$('#dlg-push').showModal()}
+  if(Notification.permission==='default'&&!store.get(PUSH_ASKED)&&!$('#lock:not(.hidden)')&&!$('#dlg-push').open){store.set(PUSH_ASKED,'1');$('#dlg-push').showModal()}
 }catch(x){}}
 $('#push-yes').onclick=()=>{$('#dlg-push').close();pushTurnOn()};
 $('#push-later').onclick=()=>$('#dlg-push').close();
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(pushAuto,1500)});
 pushSync();
 $('#upd-app').onclick=async()=>{try{if(window.caches)for(const k of await caches.keys())await caches.delete(k);if(navigator.serviceWorker)for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister()}catch(e){}location.reload()};
 const dI=$('#dlg-inv'),fI=$('#f-inv');let editI=null;
@@ -1202,7 +1203,7 @@ let unlocking=false;
 async function tryUnlock(auto){if(unlocking)return;unlocking=true;
   try{await Promise.race([lockVerify(),new Promise((_,r)=>setTimeout(()=>r(Object.assign(new Error('timeout'),{name:'Timeout'})),20000))]);showLock(false)}catch(e){if(!auto||!(e&&(e.name==='NotAllowedError'||e.name==='SecurityError')))$('#l-err').textContent=t('l_fail')}
   unlocking=false}
-function showLock(on){$('#lock').classList.toggle('hidden',!on);$('#l-err').textContent='';if(on)setTimeout(()=>tryUnlock(true),350)}
+function showLock(on){$('#lock').classList.toggle('hidden',!on);$('#l-err').textContent='';if(on)setTimeout(()=>tryUnlock(true),350);else setTimeout(()=>{try{pushAuto()}catch(x){}},1200)}
 $('#l-unlock').onclick=()=>tryUnlock(false);
 $('#l-out').onclick=()=>{showLock(false);if(fb)fb.Au.signOut(fb.auth)};
 $('#p-lock').onchange=async e=>{
