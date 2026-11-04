@@ -13,6 +13,20 @@
       <div><div class="lbl">{{ t('k_fin') }}</div><div class="v">{{ fmt_d(fin) if fin else '—' }}</div><div class="s">{{ fin_sub }}</div></div>
     </div>
   </div>
+  {% if msum and msum.total %}{% set mn = t('meses').split('|')[msum.mes_n-1] %}
+  <div class="card" style="margin-top:16px;border:1px solid color-mix(in srgb,var(--accent) 40%,transparent)" id="resumen-mes">
+    <h2>📊 {{ t('sum_t', m=mn) }}</h2>
+    <div class="hero-stats" style="margin-top:0">
+      <div><div class="lbl">{{ t('sum_total') }}</div><div class="v">{{ money(msum.total) }}</div>{% if msum.dif is not none %}<div class="s" style="color:var(--{{ 'bad' if msum.dif > 0 else 'ok' }})">{{ '+' if msum.dif > 0 else '' }}{{ money(msum.dif) }} {{ t('sum_vs') }}</div>{% endif %}</div>
+      <div><div class="lbl">{{ t('sum_fijos') }}</div><div class="v">{{ money(msum.fijos) }}</div></div>
+      <div><div class="lbl">{{ t('sum_dia') }}</div><div class="v">{{ money(msum.dia) }}</div><div class="s">{{ t('sum_n', n=msum.n_movs) }}</div></div>
+    </div>
+    {% if msum.top %}<div class="small muted" style="margin:14px 0 4px">{{ t('sum_top') }}</div>
+    {% for c,a in msum.top %}<div class="row" style="padding:5px 0;border-top:1px solid var(--line)"><span>{{ c }}</span><span class="spacer"></span><b>{{ money(a) }}</b><span class="muted small" style="width:48px;text-align:right">{{ (a/msum.total*100)|round|int }} %</span></div>{% endfor %}{% endif %}
+    <div class="small" style="margin-top:10px">{% if msum.mayor %}<span class="muted">{{ t('sum_mayor') }}:</span> {{ msum.mayor.concepto }} · {{ money(msum.mayor.importe) }}{% endif %}
+    {% if msum.n_pres %}<br><span class="muted">{{ t('sum_pres') }}:</span> {{ msum.pres_ok }} / {{ msum.n_pres }}{% if msum.pres_pasados %} · <span style="color:var(--bad)">{{ t('sum_pasados', c=msum.pres_pasados|join(', ')) }}</span>{% endif %}{% endif %}</div>
+  </div>
+  {% endif %}
   {% if pres %}
   <div class="card" style="margin-top:16px">
     <div class="row" style="margin-bottom:6px"><h2 style="margin:0">{{ t('h_pres') }}</h2><span class="spacer"></span><a class="small" href="{{ url_for('gastos', t='pres') }}" style="color:var(--muted)">{{ t('g_t_pres') }} →</a></div>

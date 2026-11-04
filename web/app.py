@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-26"
+APP_VERSION = "web-27"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -64,6 +64,16 @@ TR.update({
     "w_demo_t": ["Cuenta de pruebas", "Test account", "Тестов профил"],
     "w_demo_txt": ["Esta es una cuenta de pruebas: puedes llenarla con datos de ejemplo (gastos, préstamos, presupuestos, tickets e inversiones). Sustituye los datos de esta cuenta.", "This is a test account: you can fill it with sample data. It replaces this account's data.", "Това е тестов профил: можеш да го напълниш с примерни данни. Заменя данните на този профил."],
     "w_demo_ok": ["Datos de ejemplo cargados", "Sample data loaded", "Примерните данни са заредени"],
+    "sum_n": ["{n} gastos", "{n} expenses", "{n} разхода"],
+    "sum_t": ["Resumen de {m}", "{m} summary", "Резюме за {m}"],
+    "sum_total": ["Gastado en total", "Total spent", "Общо похарчено"],
+    "sum_fijos": ["Gastos fijos", "Fixed expenses", "Фиксирани разходи"],
+    "sum_dia": ["Día a día", "Day to day", "Ежедневни"],
+    "sum_vs": ["vs. mes anterior", "vs. previous month", "спрямо миналия месец"],
+    "sum_top": ["En qué se fue", "Where it went", "За какво отидоха"],
+    "sum_mayor": ["Gasto más grande", "Biggest expense", "Най-голям разход"],
+    "sum_pres": ["Presupuestos cumplidos", "Budgets kept", "Спазени бюджети"],
+    "sum_pasados": ["Te pasaste en: {c}", "Over budget in: {c}", "Надвишени: {c}"],
     "w_upd": ["Actualizar", "Refresh", "Обнови"],
 })
 with open(os.path.join(os.path.dirname(__file__), "tr_budget.json"), encoding="utf-8") as f:
@@ -288,6 +298,9 @@ def resumen():
     if soon:
         alerts.append(("warn", "🔔", t("al_soon") + " " + " · ".join(
             t("al_soon_item", name=esc(u["nombre"]), amt=money(u["importe"]), date=fmt_d(u["fecha"])) for u in soon)))
+    td0 = calc.today()
+    show_sum = request.args.get("resumen") == "1" or td0.day <= 5 or (td0 + __import__("datetime").timedelta(days=3)).month != td0.month
+    msum = calc.month_summary(S, -1 if (td0.day <= 5 and request.args.get("resumen") != "1") else 0) if show_sum else None
     pres = calc.presupuestos_estado(S, 0)
     for p in pres:
         if p["nivel"] != "ok":
@@ -334,7 +347,7 @@ def resumen():
         "resumen.html", **ctx("resumen", S=S, tm=tm, n_gastos=len(S["gastos"]), pend=pend, cap=cap, paid=paid,
                                fin=fin, fin_sub=fin_sub, alerts=alerts, up=up, up_total=sum(u["importe"] for u in up),
                                off=off, mes_lbl=t("meses").split("|")[m0.month - 1] + " " + str(m0.year),
-                               items=items, pres=pres, mes_tot=tot, mes_pag=pag, mes_tot0=mes_tot0, mes_pag0=mes_pag0, donut=donut, legend=legend, debt=debt))
+                               items=items, pres=pres, msum=msum, mes_tot=tot, mes_pag=pag, mes_tot0=mes_tot0, mes_pag0=mes_pag0, donut=donut, legend=legend, debt=debt))
 
 
 @app.post("/mes/toggle")
@@ -1095,6 +1108,40 @@ def cron_recordatorios():
             store.set_alert_state(uid, pstate)
     print(f"recordatorios: usuarios={users} enviados={sent} borrados={removed}", flush=True)
     return {"users": users, "sent": sent, "removed": removed, "subs": len(subs)}
+
+
+@app.post("/cron/resumen")
+def cron_resumen():
+    """Resumen del mes: se llama cada noche; solo envía el último día del mes (o con force=1 para probar)."""
+    key = os.environ.get("CRON_KEY", "")
+    if not key or not secrets.compare_digest(request.headers.get("X-Cron-Key", ""), key):
+        abort(403)
+    import push
+    if not push.is_last_day() and request.args.get("force") != "1":
+        return {"skipped": "no es el último día del mes"}
+    priv = push.vapid(store.db)[0]
+    by_uid = {}
+    for sb in store.list_subs():
+        by_uid.setdefault(sb["uid"], []).append(sb)
+    sent = 0
+    for uid, lst in by_uid.items():
+        try:
+            msg = push.summary_message(store.load(uid), lst[0].get("lang", "es"))
+        except Exception as e:
+            print("resumen:", uid, repr(e), flush=True)
+            continue
+        if not msg:
+            continue
+        for sb in lst:
+            try:
+                if push.send(sb, msg, priv):
+                    sent += 1
+                else:
+                    store.delete_sub(sb["_id"])
+            except Exception as e:
+                print("resumen send:", repr(e), flush=True)
+    print(f"resumen mensual: enviados={sent}", flush=True)
+    return {"sent": sent, "users": len(by_uid)}
 
 
 @app.get("/healthz")

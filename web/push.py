@@ -32,6 +32,12 @@ TXT = {
     "pres_bad": ["{c}: te has pasado del presupuesto ({g} de {l}).", "{c}: you are over budget ({g} of {l}).", "{c}: надвиши бюджета ({g} от {l})."],
     "pago_t": ["¿Añadir este gasto?", "Add this expense?", "Да добавя ли този разход?"],
     "pago_b": ["{c} · {a} — toca para añadirlo a tus gastos", "{c} · {a} — tap to add it to your expenses", "{c} · {a} — докосни, за да го добавиш"],
+    "res_t": ["Tu resumen de {m}", "Your {m} summary", "Твоето резюме за {m}"],
+    "res_b": ["Has gastado {t} (fijos {f} + día a día {d}).", "You spent {t} (fixed {f} + day to day {d}).", "Похарчи {t} (фиксирани {f} + ежедневни {d})."],
+    "res_up": [" {x} más que el mes pasado.", " {x} more than last month.", " С {x} повече от миналия месец."],
+    "res_down": [" {x} menos que el mes pasado.", " {x} less than last month.", " С {x} по-малко от миналия месец."],
+    "res_top": ["\nLo que más: {c} ({a}).", "\nTop: {c} ({a}).", "\nНай-много: {c} ({a})."],
+    "res_pres": ["\nPresupuestos: {ok} de {n} cumplidos.", "\nBudgets: {ok} of {n} kept.", "\nБюджети: спазени {ok} от {n}."],
     "test_t": ["Avisos activados ✓", "Notifications on ✓", "Известията са включени ✓"],
     "test_b": ["Te avisaré el día antes de cada pago.", "I will remind you the day before each payment.", "Ще те напомням ден преди всяко плащане."],
 }
@@ -164,3 +170,28 @@ def budget_alerts(S, prev, lang):
     if not lines:
         return None, state
     return {"title": tx("pres_t", lang), "body": "\n".join(lines[:4]), "tag": "pb-presupuesto", "url": "./"}, state
+
+
+MESES = {"es": "enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre".split(),
+         "en": "January February March April May June July August September October November December".split(),
+         "bg": "януари февруари март април май юни юли август септември октомври ноември декември".split()}
+
+
+def is_last_day(d=None):
+    d = d or local_today()
+    return (d + timedelta(days=1)).month != d.month
+
+
+def summary_message(S, lang):
+    r = calc.month_summary(S, 0)
+    if not r["total"]:
+        return None
+    body = tx("res_b", lang, t=money(r["total"], lang), f=money(r["fijos"], lang), d=money(r["dia"], lang))
+    if r["dif"]:
+        body += tx("res_up" if r["dif"] > 0 else "res_down", lang, x=money(abs(r["dif"]), lang))
+    if r["top"]:
+        body += tx("res_top", lang, c=r["top"][0][0], a=money(r["top"][0][1], lang))
+    if r["n_pres"]:
+        body += tx("res_pres", lang, ok=r["pres_ok"], n=r["n_pres"])
+    m = MESES.get(lang, MESES["es"])[r["mes_n"] - 1]
+    return {"title": tx("res_t", lang, m=m), "body": body, "tag": "pb-resumen", "url": "./?resumen=1"}

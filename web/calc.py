@@ -415,3 +415,35 @@ def demo_data() -> dict:
     S["watch"] = [{"id": uid(), "tipo": "cripto", "simbolo": "ETH"}, {"id": uid(), "tipo": "divisa", "simbolo": "USD"},
                   {"id": uid(), "tipo": "indice", "simbolo": "S&P 500", "proxy": "SPY"}]
     return S
+
+
+# ---------- Resumen del mes ----------
+def month_summary(S, off=0):
+    """Totales de un mes: fijos (cuotas incluidas), día a día, por categoría, comparación y presupuestos."""
+    m0 = month_start(off)
+    mk = f"{m0.year}-{m0.month:02d}"
+
+    def tot(o):
+        _, it = mes_items(S, o)
+        fij = r2(sum(i["importe"] for i in it))
+        dia = r2(sum(float(m.get("importe") or 0) for m in S.get("movimientos", []) if (m.get("fecha") or "").startswith(month_key(o))))
+        return fij, dia
+
+    fij, dia = tot(off)
+    pfij, pdia = tot(off - 1)
+    cats = gasto_por_categoria(S, mk)
+    names = {}
+    for x in S.get("gastos", []) + S.get("movimientos", []):
+        c = (x.get("categoria") or "").strip()
+        if c:
+            names.setdefault(c.lower(), c)
+    top = sorted(((names.get(k, k.capitalize() or "—"), r2(v)) for k, v in cats.items() if v > 0), key=lambda x: -x[1])[:5]
+    movs = [m for m in S.get("movimientos", []) if (m.get("fecha") or "").startswith(mk)]
+    big = max(movs, key=lambda m: float(m.get("importe") or 0), default=None)
+    pres = presupuestos_estado(S, off) if off == 0 else []
+    total, ptotal = r2(fij + dia), r2(pfij + pdia)
+    return {"mes": mk, "anio": m0.year, "mes_n": m0.month, "fijos": fij, "dia": dia, "total": total,
+            "anterior": ptotal, "dif": r2(total - ptotal) if ptotal else None, "n_movs": len(movs),
+            "top": top, "mayor": ({"concepto": big.get("concepto") or big.get("categoria"), "importe": float(big.get("importe") or 0)} if big else None),
+            "pres_ok": sum(1 for p in pres if p["nivel"] != "bad"), "pres_pasados": [p["categoria"] for p in pres if p["nivel"] == "bad"],
+            "n_pres": len(pres)}

@@ -61,3 +61,12 @@ jobs:
           else
             gcloud scheduler jobs create http pb-recordatorios "${COMMON[@]}" --headers "X-Cron-Key=$CK"
           fi
+      - name: Programar el resumen mensual (21:00, último día del mes)
+        run: |
+          COMMON=(--location $REGION --project $PROJECT --schedule "0 21 28-31 * *" --time-zone "Atlantic/Canary" \
+            --uri "$URL/cron/resumen" --http-method POST --attempt-deadline 300s)
+          if gcloud scheduler jobs describe pb-resumen --location $REGION --project $PROJECT >/dev/null 2>&1; then
+            gcloud scheduler jobs update http pb-resumen "${COMMON[@]}" --update-headers "X-Cron-Key=$CK"
+          else
+            gcloud scheduler jobs create http pb-resumen "${COMMON[@]}" --headers "X-Cron-Key=$CK"
+          fi
