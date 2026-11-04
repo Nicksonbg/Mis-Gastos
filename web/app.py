@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-21"
+APP_VERSION = "web-22"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -58,6 +58,10 @@ TR.update({
     "w_session": ["No se pudo abrir la sesión en la web.", "Could not open the session on the web.", "Неуспешно отваряне на сесията в уеб версията."],
     "w_error": ["Algo ha fallado en el servidor.", "Something went wrong on the server.", "Нещо се обърка на сървъра."],
     "w_retry": ["Volver a entrar", "Sign in again", "Влез отново"],
+    "w_demo": ["Cargar datos de ejemplo", "Load sample data", "Зареди примерни данни"],
+    "w_demo_t": ["Cuenta de pruebas", "Test account", "Тестов профил"],
+    "w_demo_txt": ["Esta es una cuenta de pruebas: puedes llenarla con datos de ejemplo (gastos, préstamos, presupuestos, tickets e inversiones). Sustituye los datos de esta cuenta.", "This is a test account: you can fill it with sample data. It replaces this account's data.", "Това е тестов профил: можеш да го напълниш с примерни данни. Заменя данните на този профил."],
+    "w_demo_ok": ["Datos de ejemplo cargados", "Sample data loaded", "Примерните данни са заредени"],
     "w_upd": ["Actualizar", "Refresh", "Обнови"],
 })
 with open(os.path.join(os.path.dirname(__file__), "tr_budget.json"), encoding="utf-8") as f:
@@ -540,7 +544,7 @@ def cuota_toggle():
 @login_required
 def datos():
     load()
-    return render_template("datos.html", **ctx("datos"))
+    return render_template("datos.html", **ctx("datos", test=DEV or calc.is_test_email(g.user.get("email"))))
 
 
 @app.get("/datos/export")
@@ -570,6 +574,28 @@ def datos_import():
         return redirect(url_for("datos", err="w_bad_file"))
     g.S = calc.normalize(d)
     return save_and_back("resumen", ok="w_imported")
+
+
+@app.post("/datos/demo")
+@login_required
+def datos_demo():
+    load()
+    if not (DEV or calc.is_test_email(g.user.get("email"))):
+        abort(403)
+    g.S = calc.demo_data()
+    return save_and_back("resumen", ok="w_demo_ok")
+
+
+@app.route("/api/demo-data", methods=["POST", "OPTIONS"])
+def api_demo():
+    if request.method == "OPTIONS":
+        return "", 204
+    user = _api_user()
+    if not user:
+        return {"error": "auth"}, 401
+    if not (DEV or calc.is_test_email(user.get("email"))):
+        return {"error": "forbidden"}, 403
+    return calc.demo_data()
 
 
 @app.post("/datos/reset")

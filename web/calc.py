@@ -366,3 +366,52 @@ def movimientos_mes(S, off=0):
     mk = month_key(off)
     return sorted([m for m in S.get("movimientos", []) if (m.get("fecha") or "")[:7] == mk],
                   key=lambda m: (m.get("fecha") or "", m.get("id") or ""), reverse=True)
+
+
+# ---------- Datos de ejemplo (solo cuentas de prueba) ----------
+def is_test_email(email: str) -> bool:
+    e = (email or "").lower()
+    return "+prueba" in e or "+test" in e
+
+
+def demo_data() -> dict:
+    t0 = today()
+    mk = f"{t0.year}-{t0.month:02d}"
+    first = date(t0.year, t0.month, 1)
+    coche, q1, d1 = build_loan("Préstamo coche", "Banco Demo", 12000, 6.5, 48, add_months(iso(first), -18, 5))
+    movil, q2, d2 = build_loan("Móvil a plazos", "Tienda Demo", 900, 0, 12, add_months(iso(first), -4, 20))
+    S = seed()
+    S["prestamos"] = [coche, movil]
+    S["gastos"] = [
+        {"id": uid(), "concepto": "Alquiler", "importe": 750, "dia": 1, "categoria": "Vivienda", "prestamoId": ""},
+        {"id": uid(), "concepto": "Luz", "importe": 65.4, "dia": 12, "categoria": "Suministros", "prestamoId": ""},
+        {"id": uid(), "concepto": "Internet y móvil", "importe": 45, "dia": 8, "categoria": "Suministros", "prestamoId": ""},
+        {"id": uid(), "concepto": "Gimnasio", "importe": 39.9, "dia": None, "categoria": "Salud", "prestamoId": ""},
+        {"id": uid(), "concepto": "Netflix", "importe": 12.99, "dia": 15, "categoria": "Suscripciones", "prestamoId": ""},
+        {"id": uid(), "concepto": coche["nombre"], "importe": q1, "dia": d1, "categoria": "Préstamos", "prestamoId": coche["id"]},
+        {"id": uid(), "concepto": movil["nombre"], "importe": q2, "dia": d2, "categoria": "Préstamos", "prestamoId": movil["id"]},
+    ]
+    dias = [d for d in (1, 2, 3, 5, 6, 8) if d <= t0.day] or [t0.day]
+    S["movimientos"] = [
+        {"id": uid(), "fecha": f"{mk}-{dias[0]:02d}", "importe": 86.4, "categoria": "Supermercado", "concepto": "Mercadona",
+         "lineas": [{"desc": "LECHE ENTERA", "cant": 6, "importe": 6.6}, {"desc": "PAN BARRA", "cant": 2, "importe": 1.7},
+                    {"desc": "POLLO ENTERO", "cant": 1, "importe": 7.95}, {"desc": "FRUTA Y VERDURA", "cant": 1, "importe": 18.4},
+                    {"desc": "LIMPIEZA HOGAR", "cant": 1, "importe": 22.15}, {"desc": "BEBIDAS", "cant": 1, "importe": 31.1},
+                    {"desc": "DESC. PROMO", "cant": 1, "importe": -1.5}],
+         "ticket": {"comercio": "MERCADONA S.A.", "direccion": "C/ Ejemplo 1, Las Palmas", "nif": "A00000000", "hora": "18:42",
+                    "forma_pago": "Tarjeta", "num_ticket": "0001-001-123"}},
+        {"id": uid(), "fecha": f"{mk}-{dias[-1]:02d}", "importe": 42.5, "categoria": "Supermercado", "concepto": "Lidl"},
+        {"id": uid(), "fecha": f"{mk}-{dias[min(1, len(dias) - 1)]:02d}", "importe": 24.8, "categoria": "Restaurantes", "concepto": "Cena"},
+        {"id": uid(), "fecha": f"{mk}-{dias[min(2, len(dias) - 1)]:02d}", "importe": 55, "categoria": "Transporte", "concepto": "Gasolina"},
+    ]
+    S["presupuestos"] = [{"id": uid(), "categoria": "Supermercado", "limite": 150},
+                         {"id": uid(), "categoria": "Restaurantes", "limite": 100},
+                         {"id": uid(), "categoria": "Transporte", "limite": 120}]
+    S["inversiones"] = [
+        {"id": uid(), "tipo": "cripto", "simbolo": "BTC", "cantidad": 0.02, "precioCompra": 40000, "broker": "Binance", "moneda": "EUR", "precioManual": None},
+        {"id": uid(), "tipo": "accion", "simbolo": "AAPL", "cantidad": 5, "precioCompra": 150, "broker": "Demo Broker", "moneda": "USD", "precioManual": 230},
+        {"id": uid(), "tipo": "accion", "simbolo": "KO", "cantidad": 10, "precioCompra": 55, "broker": "Demo Broker", "moneda": "USD", "precioManual": 70},
+    ]
+    S["watch"] = [{"id": uid(), "tipo": "cripto", "simbolo": "ETH"}, {"id": uid(), "tipo": "divisa", "simbolo": "USD"},
+                  {"id": uid(), "tipo": "indice", "simbolo": "S&P 500", "proxy": "SPY"}]
+    return S
