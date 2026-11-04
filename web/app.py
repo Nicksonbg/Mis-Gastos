@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-5"
+APP_VERSION = "web-6"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -34,6 +34,7 @@ FB_CFG = {
     "messagingSenderId": "778378922815",
     "appId": "1:778378922815:web:16071b8fb93c5a2957e18a",
 }
+CORS_ORIGINS = {"https://nicksonbg.github.io"} | set(filter(None, os.environ.get("PB_CORS", "").split(",")))
 ICONS = ["😀", "😎", "🦊", "🐼", "🦁", "🐯", "🐸", "🦄", "🚀", "⭐", "💎", "🌿"]
 
 # ---------- Idiomas ----------
@@ -161,6 +162,12 @@ def csrf_ok():
 
 @app.before_request
 def check_csrf():
+    if request.method == "OPTIONS":
+        return
+    # /api/: JSON o token Bearer -> el navegador exige CORS previo, así que no hay riesgo de CSRF
+    if request.method == "POST" and request.path.startswith("/api/") and (
+            request.headers.get("Authorization", "").startswith("Bearer ") or request.is_json):
+        return
     if request.method == "POST" and not csrf_ok():
         abort(400, "CSRF")
 
@@ -169,6 +176,12 @@ def check_csrf():
 def set_csrf(resp):
     if not request.cookies.get("pb_csrf") and g.get("csrf_new"):
         resp.set_cookie("pb_csrf", g.csrf_new, samesite="Lax", secure=not DEV, httponly=True, max_age=31536000)
+    if request.path.startswith("/api/") and request.headers.get("Origin") in CORS_ORIGINS:
+        resp.headers["Access-Control-Allow-Origin"] = request.headers["Origin"]
+        resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
+        resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        resp.headers["Access-Control-Max-Age"] = "3600"
+        resp.headers["Vary"] = "Origin"
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("Referrer-Policy", "same-origin")
     return resp
@@ -586,6 +599,33 @@ def err500(e):
     traceback.print_exception(orig)
     why = f"{type(orig).__name__}: {str(orig)[:200]}"
     return render_template("error.html", **ctx(None, why=why)), 500
+
+
+@app.route("/api/agent", methods=["POST", "OPTIONS"])
+def api_agent():
+    if request.method == "OPTIONS":
+        return "", 204
+    h = request.headers.get("Authorization", "")
+    tok = h[7:] if h.startswith("Bearer ") else request.cookies.get("pb_token")
+    user = verify(tok) if tok else None
+    if not user:
+        return {"error": "auth"}, 401
+    g.user, g.uid = user, user["uid"]
+    body = request.get_json(silent=True) or {}
+    S = store.load(g.uid)
+    P = store.load_profile(g.uid)
+    lang = body.get("lang") if body.get("lang") in LANGS else cur_lang()
+    import agent
+    try:
+        out = agent.run(S, body.get("messages") or [], lang, P.get("nombre") or user.get("name", ""),
+                        decision=body.get("decision"), save=lambda s: store.save(g.uid, s),
+                        loans_cat=TR["cats"][LANGS[lang]["i"]].split("|")[1])
+    except Exception as e:  # error de la API de IA
+        print("agent:", repr(e), flush=True)
+        return {"error": "ai", "detail": f"{type(e).__name__}: {str(e)[:200]}"}, 502
+    if out.get("error"):
+        return out, 503
+    return out
 
 
 @app.get("/healthz")

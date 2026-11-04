@@ -904,7 +904,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='41';$('#ver').textContent='v'+APP_V;
+const APP_V='42';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 $('#upd-app').onclick=async()=>{try{if(window.caches)for(const k of await caches.keys())await caches.delete(k);if(navigator.serviceWorker)for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister()}catch(e){}location.reload()};
 const dI=$('#dlg-inv'),fI=$('#f-inv');let editI=null;
@@ -1135,6 +1135,7 @@ async function syncStart(u,hasLocal){
     setSync('sync_ok')},()=>setSync('sync_fail'));
   setSync('sync_ok');
 }
+window.__pbTok=async()=>fb&&fb.auth.currentUser?await fb.auth.currentUser.getIdToken():null;
 function pushRemote(){if(!fb||!curUid)return;clearTimeout(pushTimer);pushTimer=setTimeout(doPush,800)}
 async function doPush(){if(!fb||!curUid)return;if(pushing){pushAgain=true;return}pushing=true;
   try{await fb.Fs.setDoc(refs(curUid).e,{json:JSON.stringify(S),actualizado:store.get(tsKey(curUid))||new Date().toISOString()});setSync('sync_ok')}catch(e){setSync('sync_fail')}
@@ -1235,5 +1236,7 @@ initAuth();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
 </script>
+<script>window.PB_AGENT={api:'https://personal-balance-web-778378922815.europe-west1.run.app/api/agent',getToken:()=>window.__pbTok?window.__pbTok():null}</script>
+<script src="https://personal-balance-web-778378922815.europe-west1.run.app/static/agent.js" defer></script>
 </body>
 </html>

@@ -35,6 +35,8 @@ addEventListener('DOMContentLoaded',()=>{try{const y=sessionStorage.getItem('pb-
   <h3 id="dlg-ok-t"></h3><p id="dlg-ok-m" class="muted"></p>
   <div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn ghost" value="cancel">{{ t('cancel') }}</button><button class="btn danger" value="ok">{{ t('accept') }}</button></div>
 </form></dialog>
+<script>window.PB_AGENT={api:'{{ url_for('api_agent') }}',getToken:async()=>{try{await window.pbFresh?.()}catch(e){}return null},onChange:()=>setTimeout(()=>location.reload(),900)}</script>
+<script src="{{ url_for('static', filename='agent.js') }}?v={{ version }}" defer></script>
 {% include "_i18n.html" %}
 </body>
 </html>

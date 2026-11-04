@@ -2,3 +2,4 @@ dev-data.json
 __pycache__/
 *.pyc
 .venv/
+fake_ai.py

@@ -20,9 +20,13 @@ jobs:
       - name: Activar servicios necesarios
         run: gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project $PROJECT
       - name: Desplegar en Cloud Run
+        env:
+          AK: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          EXTRA=""
+          if [ -n "$AK" ]; then EXTRA="--update-env-vars=ANTHROPIC_API_KEY=$AK"; else echo "::warning::Falta el secreto ANTHROPIC_API_KEY: el asistente de IA no funcionará"; fi
           gcloud run deploy $SERVICE --source web --region $REGION --project $PROJECT \
-            --allow-unauthenticated --memory 512Mi --min-instances 0 --max-instances 2 --quiet
+            --allow-unauthenticated --memory 512Mi --min-instances 0 --max-instances 2 --timeout 120 --quiet $EXTRA
           URL=$(gcloud run services describe $SERVICE --region $REGION --project $PROJECT --format='value(status.url)')
           echo "URL=$URL" >> $GITHUB_ENV
           echo "### Web publicada: $URL" >> $GITHUB_STEP_SUMMARY
