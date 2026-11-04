@@ -123,7 +123,30 @@ def _money(v):
     return f"{r2(v):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " €"
 
 
+NO_MONEY = {"cantidad", "cant", "porcentaje", "n", "n_gastos", "offset", "dia"}
+
+
+def _fmt_money(x, key=None):
+    """Pasa los importes a texto en euros ("1.272,87 €") para que el modelo no se equivoque con miles y decimales."""
+    if isinstance(x, dict):
+        return {k: _fmt_money(v, k) for k, v in x.items()}
+    if isinstance(x, list):
+        return [_fmt_money(v, key) for v in x]
+    if isinstance(x, float) and key not in NO_MONEY:
+        return _money(x)
+    if isinstance(x, int) and not isinstance(x, bool) and key not in NO_MONEY and key in MONEY_INT:
+        return _money(x)
+    return x
+
+
+MONEY_INT = {"limite", "importe", "total", "gastado", "queda", "pagado", "pendiente", "precio_compra_eur", "total_mensual", "total_anual"}
+
+
 def run_read(S, name, inp):
+    return _fmt_money(_run_read(S, name, inp))
+
+
+def _run_read(S, name, inp):
     if name == "ver_resumen":
         tm = calc.total_mes(S)
         _, items = calc.mes_items(S, 0)
