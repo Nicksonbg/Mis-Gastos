@@ -9,7 +9,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Personal Balance">
-<meta name="theme-color" content="#2f6f5e">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap">
 <title>Personal Balance</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -156,6 +158,88 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:po
   nav button span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   main{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
 }
+/* ================= Estilo oscuro tipo "panel de inversión" ================= */
+:root:not([data-theme="light"]){
+  --bg:#000;--card:#161616;--card2:#1f1f1f;--chip:#262626;--text:#fff;--muted:#8e8e93;--line:#262626;
+  --accent:#5ad37a;--accent-soft:rgba(90,211,122,.14);--warn:#f5a524;--warn-soft:rgba(245,165,36,.13);
+  --bad:#ff5a4e;--bad-soft:rgba(255,90,78,.14);--ok:#5ad37a;--ok-soft:rgba(90,211,122,.14);
+  --c1:#5ad37a;--c2:#4c8dff;--c3:#f5a524;--c4:#c084fc;--c5:#ff5a4e;--c6:#2dd4bf;--c7:#f472b6;--c8:#a3a3a3;color-scheme:dark;
+}
+:root[data-theme="light"]{--card2:#f1f0ec;--chip:#ecebe6}
+body{font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:-.005em}
+.mono,.hero-val,.kpi .val,.upc .amt,td.n,.loan-stats .v{font-variant-numeric:tabular-nums}
+header{background:var(--bg);border-bottom:0;padding-block:12px}
+body::before{background:var(--bg)}
+header h1{font-size:22px;font-weight:800;letter-spacing:-.02em}
+header .sync{display:none}
+header .avatar{width:40px;height:40px;box-shadow:0 0 0 2px var(--chip)}
+nav button{border-radius:999px;padding:8px 15px;font-weight:600;font-size:14px;color:var(--muted)}
+nav button:hover{color:var(--text)}
+nav button.on{background:var(--chip);color:var(--text)}
+main{max-width:1080px}
+.card{border:0;border-radius:18px;padding:20px}
+.card h2{font-size:17px;font-weight:700;margin-bottom:14px}
+.btn{background:var(--text);color:var(--bg)!important;border-radius:999px;padding:10px 18px;font-weight:700}
+.btn.ghost{background:var(--card);color:var(--text)!important;border:1px solid var(--chip)}
+.btn.danger{background:transparent;color:var(--bad)!important;border:1px solid var(--chip)}
+.btn.sm{padding:6px 12px;font-size:13px}
+.icon:hover{background:var(--chip)}
+th{text-transform:none;letter-spacing:0;font-weight:500;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:11px 8px}
+tr.next td{background:var(--accent-soft)}
+.pill{border-radius:999px;padding:3px 10px}
+.pill.mute{background:var(--chip)}
+.bar{height:8px;background:var(--chip);border:0}
+.bar>i{border-radius:999px}
+.alert{border-radius:16px;padding:14px 16px}
+.upc .d{background:var(--chip);border-radius:12px}
+label.f input,label.f select,label.f textarea,#f-watch input,#f-watch select,select,input[name=confirm]{background:var(--card2)!important;border:1px solid var(--chip)!important;border-radius:12px!important;color:var(--text)}
+dialog{background:var(--card);border:1px solid var(--chip);border-radius:22px;padding:22px}
+dialog::backdrop{background:rgba(0,0,0,.6);backdrop-filter:blur(4px)}
+details summary{color:var(--text);font-weight:600}
+.flash{border-radius:14px}
+.legend li{font-size:14px}
+.donut-wrap svg path{stroke:var(--card)}
+/* Tarjeta principal */
+.hero{padding:22px 22px 18px}
+.hero-top{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px}
+.hero-top .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.hero-val{font-family:"DM Mono",ui-monospace,monospace;font-size:44px;font-weight:500;line-height:1.1;margin:8px 0 4px;letter-spacing:-.03em}
+.hero-val .cur{font-size:22px;margin-right:6px;vertical-align:.45em}
+.hero-val .dec{font-size:22px}
+.hero-sub{font-family:"DM Mono",ui-monospace,monospace;font-size:15px}
+.up{color:var(--ok)}.down{color:var(--bad)}
+.hero-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:18px}
+.hero-stats>div{background:var(--card2);border-radius:14px;padding:12px 14px}
+.hero-stats .lbl{font-size:12px;color:var(--muted)}
+.hero-stats .v{font-size:18px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.hero-stats .s{font-size:12px;color:var(--muted);margin-top:2px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips a{padding:6px 12px;border-radius:999px;color:var(--muted);text-decoration:none;font-weight:600;font-size:13px}
+.chips a.on{background:var(--chip);color:var(--text)}
+.banner{border-radius:18px;padding:22px;margin-bottom:16px;background:linear-gradient(135deg,#0d1730 0%,#14244d 100%);color:#fff}
+.banner h1{font-size:22px;line-height:1.25;margin:0 0 8px;font-weight:800}
+.banner p{margin:0;color:#b9c2d8;font-size:14px}
+@media (max-width:600px){
+  .hero-val{font-size:38px}
+  nav{background:rgba(22,22,22,.72)!important;border:1px solid rgba(255,255,255,.08)!important;box-shadow:0 10px 30px rgba(0,0,0,.5)!important}
+  :root[data-theme="light"] nav{background:rgba(255,255,255,.7)!important;border-color:rgba(0,0,0,.08)!important}
+  nav button.on{background:var(--chip)}
+}
+@media (max-width:600px){
+  nav button{padding:8px 2px;font-size:11px;border-radius:22px}
+  .hero-stats{grid-template-columns:1fr 1fr}
+  .hero-stats>div:last-child{grid-column:1/-1}
+  .hero-stats .v{font-size:16px}
+}
+
+.utabs button.on{border-bottom-color:var(--text)}
+.seg{background:var(--chip);border-radius:999px}.seg button{border-radius:999px}.seg button.on{background:var(--card)}
+#auth,#lock{background:var(--bg)}
+.icons button{background:var(--card2);border-color:var(--chip);border-radius:12px}
+.avatar{background:var(--chip);color:var(--text)}
+header .sync{display:inline;font-weight:500;letter-spacing:0}
+@media (max-width:600px){header .avatar{width:40px;height:40px}}
 </style>
 </head>
 <body>
@@ -167,7 +251,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:po
 </div></div>
 <div id="auth">
  <div class="auth-card">
-  <div style="text-align:center;margin-bottom:18px"><img src="icon-180.png" width="162" height="162" alt="" style="border-radius:32px;box-shadow:0 8px 24px rgba(0,0,0,.25)"><h1 style="margin:14px 0 4px;font-size:24px">Personal Balance</h1><p class="muted small" data-i="a_intro"></p></div>
+  <div class="banner" style="display:flex;gap:16px;align-items:center"><img src="icon-180.png" width="64" height="64" alt="" style="border-radius:16px;flex:none"><div><h1>Personal Balance</h1><p data-i="a_intro"></p></div></div>
   <div id="auth-load" class="card" style="text-align:center"><span data-i="a_loading"></span></div>
   <div id="auth-off" class="card hidden" style="text-align:center"><p data-i="a_offline"></p><button class="btn" id="a-retry" data-i="a_retry"></button></div>
   <div id="auth-box" class="card hidden">
@@ -204,11 +288,15 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:po
 
   <!-- RESUMEN -->
   <section id="tab-resumen">
-    <div class="grid kpis">
-      <div class="card kpi"><div class="lbl" data-i="k_mes"></div><div class="val" id="k-mes"></div><div class="sub" id="k-mes-sub"></div></div>
-      <div class="card kpi"><div class="lbl" data-i="k_anio"></div><div class="val" id="k-anio"></div><div class="sub" data-i="k_anio_sub"></div></div>
-      <div class="card kpi"><div class="lbl" data-i="k_deuda"></div><div class="val" id="k-deuda"></div><div class="sub" id="k-deuda-sub"></div></div>
-      <div class="card kpi"><div class="lbl" data-i="k_fin"></div><div class="val" id="k-fin"></div><div class="sub" id="k-fin-sub"></div></div>
+    <div class="card hero">
+      <div class="hero-top"><span class="dot"></span><span data-i="k_mes"></span></div>
+      <div class="hero-val" id="k-mes"></div>
+      <div class="hero-sub" id="k-mes-pq"></div>
+      <div class="hero-stats">
+        <div><div class="lbl" data-i="k_anio"></div><div class="v" id="k-anio"></div><div class="s" id="k-mes-sub"></div></div>
+        <div><div class="lbl" data-i="k_deuda"></div><div class="v" id="k-deuda"></div><div class="s" id="k-deuda-sub"></div></div>
+        <div><div class="lbl" data-i="k_fin"></div><div class="v" id="k-fin"></div><div class="s" id="k-fin-sub"></div></div>
+      </div>
     </div>
     <div class="grid two" style="margin-top:16px">
       <div class="card"><h2 data-i="h_donut"></h2><div class="donut-wrap" id="donut"></div></div>
@@ -346,7 +434,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:po
         <div class="card" style="margin-bottom:16px">
           <h2 data-i="h_ajustes"></h2>
           <label class="f"><span data-i="lbl_tema"></span>
-            <select id="theme"><option value="" data-i="tema_auto"></option><option value="light" data-i="tema_claro"></option><option value="dark" data-i="tema_oscuro"></option></select>
+            <select id="theme"><option value="" data-i="tema_oscuro"></option><option value="light" data-i="tema_claro"></option></select>
           </label>
           <label class="f"><span data-i="lbl_idioma"></span>
             <select id="lang"><option value="es">Español</option><option value="en">English</option><option value="bg">Български</option></select>
@@ -460,6 +548,7 @@ const mkFmt=()=>{eur=new Intl.NumberFormat(LANGS[lang].loc,{style:'currency',cur
 mkFmt();
 const dec=s=>String(s).replace('.',LANGS[lang].dec);
 const money=v=>eur.format(+v||0);
+const heroHTML=v=>{const p=new Intl.NumberFormat(LANGS[lang].loc,{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'}).format(r2(v)),d=LANGS[lang].dec,i=p.lastIndexOf(d);return`<span class="cur">€</span>${i<0?p:p.slice(0,i)}<span class="dec">${i<0?'':p.slice(i)}</span>`};
 const r2=v=>Math.round((+v||0)*100)/100;
 const pad=n=>String(n).padStart(2,'0');
 const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -519,7 +608,7 @@ function upcoming(days){
 }
 
 function renderResumen(){
-  const tm=totalMes();$('#k-mes').textContent=money(tm);$('#k-mes-sub').textContent=t('gastos_n',{n:S.gastos.length});
+  const tm=totalMes();$('#k-mes').innerHTML=heroHTML(tm);{const it=mesItems(0).items,tt=r2(it.reduce((a,i)=>a+i.importe,0)),pg=r2(it.filter(i=>i.pagado).reduce((a,i)=>a+i.importe,0));$('#k-mes-pq').innerHTML=`<span class="up">↗ ${t('pill_pagado',{x:money(pg)})}</span>&nbsp;&nbsp;<span class="muted">${t('pill_queda',{x:money(r2(tt-pg))})}</span>`}$('#k-mes-sub').textContent=t('gastos_n',{n:S.gastos.length});
   $('#k-anio').textContent=money(tm*12);
   let pend=0,cap=0,fin=null,paid=0;S.prestamos.forEach(l=>{const s=loanStats(l);pend+=s.pendiente;cap+=s.capital;paid+=s.pagado;if(s.fin&&(!fin||s.fin>fin))fin=s.fin});
   $('#k-deuda').textContent=money(pend);$('#k-deuda-sub').textContent=t('ya_pagado',{paid:money(paid),cap:money(cap)});
@@ -718,11 +807,14 @@ function renderInv(){
     <td class="n hide-sm">${c.ch!=null?sgn(c.ch,pctF):'<span class="muted">—</span>'}</td>
     <td class="n" style="white-space:nowrap"><button class="icon" data-ei="${i.id}" title="${t('editar')}">✏️</button><button class="icon" data-di="${i.id}" title="${t('borrar')}">🗑️</button></td></tr>`}).join('')||`<tr><td colspan="7" class="muted" style="text-align:center;padding:18px">${t('inv_vacio')}</td></tr>`;
   const gpp=C>0?GPc/C*100:null;
-  $('#inv-total').innerHTML=`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
-    <div><div class="muted small">${t('inv_valor')}</div><div style="font-size:26px;font-weight:700">${money(V)}</div></div>
-    <div><div class="muted small">${t('inv_invertido')}</div><div style="font-size:20px;font-weight:600">${C>0?money(C):'—'}</div></div>
-    <div><div class="muted small">${t('inv_gp')}</div><div style="font-size:20px;font-weight:600">${C>0?sgn(GPc,money):'—'}</div>${gpp!=null?'<div class="small">'+sgn(gpp,pctF)+'</div>':''}</div>
-    <div><div class="muted small">${t('inv_hoy')}</div><div style="font-size:20px;font-weight:600">${hasH?sgn(H,money):'—'}</div></div></div>`;
+  $('#inv-total').classList.add('hero');
+  $('#inv-total').innerHTML=`<div class="hero-top"><span class="dot"></span>${t('inv_valor')}</div>
+    <div class="hero-val">${V>0||!inv.length?heroHTML(V):'—'}</div>
+    <div class="hero-sub">${hasH?`<span class="${H>=0?'up':'down'}">${H>=0?'↗':'↘'} ${sgn(H,money)}</span> <span class="muted">${t('inv_hoy')}</span>`:''}</div>
+    <div class="hero-stats">
+      <div><div class="lbl">${t('inv_invertido')}</div><div class="v">${C>0?money(C):'—'}</div></div>
+      <div><div class="lbl">${t('inv_gp')}</div><div class="v">${C>0?sgn(GPc,money):'—'}</div>${gpp!=null?'<div class="s">'+sgn(gpp,pctF)+'</div>':''}</div>
+    </div>`;
   const bs=Object.entries(byB).sort((a,b)=>b[1]-a[1]);
   $('#inv-brokers').innerHTML=`<h2>${t('h_broker')}</h2>`+(bs.map(([b,v])=>`<div class="row" style="margin:6px 0"><span>${esc(b)}</span><span class="spacer"></span><b>${money(v)}</b><span class="muted small" style="width:52px;text-align:right">${V>0?Math.round(v/V*100):0} %</span></div>`).join('')||'<p class="muted small">—</p>');
   $('#brokers').innerHTML=[...new Set(inv.map(i=>i.broker).filter(Boolean))].map(b=>`<option value="${esc(b)}">`).join('');
@@ -812,7 +904,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='40';$('#ver').textContent='v'+APP_V;
+const APP_V='41';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 $('#upd-app').onclick=async()=>{try{if(window.caches)for(const k of await caches.keys())await caches.delete(k);if(navigator.serviceWorker)for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister()}catch(e){}location.reload()};
 const dI=$('#dlg-inv'),fI=$('#f-inv');let editI=null;
@@ -913,7 +1005,7 @@ const dP=$('#dlg-pegar');$('#pegar').onclick=()=>{$('#pegar-txt').value='';dP.sh
 dP.addEventListener('close',()=>{if(dP.returnValue==='ok')setTimeout(()=>importar($('#pegar-txt').value,t('orig_texto')),0)});
 $('#reset').onclick=()=>ask(t('ask_reset'),t('ask_reset_m'),t('restaurar'),false,true).then(ok=>{if(ok){S=seed();save()}});
 const applyTheme=v=>{if(v)document.documentElement.dataset.theme=v;else delete document.documentElement.dataset.theme};
-$('#theme').value=store.get(KEY_THEME)||'';applyTheme($('#theme').value);
+$('#theme').value=store.get(KEY_THEME)==='light'?'light':'';applyTheme($('#theme').value);
 $('#theme').onchange=e=>{store.set(KEY_THEME,e.target.value);applyTheme(e.target.value)};
 function applyStatic(){
   document.documentElement.lang=lang;
