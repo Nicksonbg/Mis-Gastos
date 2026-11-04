@@ -32,7 +32,7 @@ if (DEV) {
       if (page === 'wait') {
         const n = +(sessionStorage.getItem('pb-wait') || 0);
         if (n < 3) { sessionStorage.setItem('pb-wait', n + 1); setTok(await u.getIdToken(true)); location.reload() }
-        else { sessionStorage.removeItem('pb-wait'); await A.signOut(auth) }
+        else { sessionStorage.removeItem('pb-wait'); sessionStorage.setItem('pb-why', document.body.dataset.why || 'token'); await A.signOut(auth) }
       } else sessionStorage.removeItem('pb-wait');
     } else {
       clearTok();
@@ -44,6 +44,7 @@ if (DEV) {
 
   if (page === 'login') {
     const $ = s => document.querySelector(s), err = $('#auth-err');
+    const why = sessionStorage.getItem('pb-why'); if (why) { sessionStorage.removeItem('pb-why'); err.textContent = (tr.w_session || '') + ' (' + why + ')' }
     let mode = 'login';
     const E = c => ({ 'auth/invalid-credential': 'e_invalid', 'auth/wrong-password': 'e_invalid', 'auth/user-not-found': 'e_invalid', 'auth/invalid-email': 'e_email', 'auth/email-already-in-use': 'e_exists', 'auth/weak-password': 'e_weak', 'auth/network-request-failed': 'e_net', 'auth/too-many-requests': 'e_many', 'auth/popup-closed-by-user': 'e_popup', 'auth/popup-blocked': 'e_popup', 'auth/unauthorized-domain': 'e_domain' }[c] || 'e_generic');
     const showErr = k => { err.textContent = tr[k] || k; err.className = 'err' };
@@ -52,7 +53,7 @@ if (DEV) {
       $('#a-name-wrap').classList.toggle('hidden', m === 'login'); $('#a-hint').classList.toggle('hidden', m === 'login');
       $('#a-submit').textContent = tr[m === 'login' ? 'a_submit_login' : 'a_submit_reg']; err.textContent = '';
     };
-    $('#seg-login').onclick = () => setMode('login'); $('#seg-reg').onclick = () => setMode('reg'); setMode('login');
+    $('#seg-login').onclick = () => setMode('login'); $('#seg-reg').onclick = () => setMode('reg'); { const m = err.textContent; setMode('login'); err.textContent = m }
     $('#auth-form').onsubmit = async e => {
       e.preventDefault(); err.textContent = '';
       const email = $('#a-email').value.trim(), pass = $('#a-pass').value, name = $('#a-name').value.trim();

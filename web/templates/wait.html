@@ -1,5 +1,5 @@
 {% include "_head.html" %}
-<body data-page="wait" data-dev="{{ '1' if dev else '0' }}" data-fb='{{ fb_cfg }}'>
+<body data-page="wait" data-why="{{ g.get('auth_err', '') }}" data-dev="{{ '1' if dev else '0' }}" data-fb='{{ fb_cfg }}'>
 <div id="auth" style="position:static;min-height:100vh"><div class="auth-card card" style="text-align:center">{{ t('a_loading') }}</div></div>
 {% include "_i18n.html" %}
 </body></html>

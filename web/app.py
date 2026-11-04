@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-3"
+APP_VERSION = "web-4"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -54,6 +54,9 @@ TR.update({
     "e_domain": ["Esta dirección aún no está autorizada para entrar con Google. Prueba con correo y contraseña.", "This address is not yet authorised for Google sign-in. Try email and password.", "Този адрес още не е разрешен за вход с Google. Опитай с имейл и парола."],
     "show_pass": ["Mostrar contraseña", "Show password", "Покажи паролата"],
     "hide_pass": ["Ocultar contraseña", "Hide password", "Скрий паролата"],
+    "w_session": ["No se pudo abrir la sesión en la web.", "Could not open the session on the web.", "Неуспешно отваряне на сесията в уеб версията."],
+    "w_error": ["Algo ha fallado en el servidor.", "Something went wrong on the server.", "Нещо се обърка на сървъра."],
+    "w_retry": ["Volver a entrar", "Sign in again", "Влез отново"],
     "w_upd": ["Actualizar", "Refresh", "Обнови"],
 })
 LANGS = {"es": {"i": 0, "dec": ",", "grp": ".", "sep": "/", "cur": "suf"},
@@ -119,7 +122,9 @@ def verify(token):
     from firebase_admin import auth
     try:
         return auth.verify_id_token(token, clock_skew_seconds=10)
-    except Exception:
+    except Exception as e:  # el motivo se muestra en la pantalla de entrada
+        g.auth_err = f"{type(e).__name__}: {str(e)[:180]}"
+        print("verify_id_token:", g.auth_err, flush=True)
         return None
 
 
@@ -561,6 +566,15 @@ def cuenta_eliminar():
 def inversiones():
     load()
     return render_template("inversiones.html", **ctx("inversiones"))
+
+
+@app.errorhandler(500)
+def err500(e):
+    import traceback
+    orig = getattr(e, "original_exception", None) or e
+    traceback.print_exception(orig)
+    why = f"{type(orig).__name__}: {str(orig)[:200]}"
+    return render_template("error.html", **ctx(None, why=why)), 500
 
 
 @app.get("/healthz")

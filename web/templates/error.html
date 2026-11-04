@@ -1,0 +1,7 @@
+{% include "_head.html" %}
+<body data-page="error">
+<div id="auth" style="position:static;min-height:100vh"><div class="auth-card card" style="text-align:center">
+  <p><b>{{ t('w_error') }}</b></p><p class="muted small" style="word-break:break-word">{{ why }}</p>
+  <a class="btn" href="{{ url_for('salir') }}" style="text-decoration:none">{{ t('w_retry') }}</a>
+</div></div>
+</body></html>
