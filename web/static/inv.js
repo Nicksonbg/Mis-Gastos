@@ -8,7 +8,7 @@
   const money = v => eur.format(+v || 0);
   const pctF = v => new Intl.NumberFormat(L, { maximumFractionDigits: 2 }).format(v) + ' %';
   const qtyF = new Intl.NumberFormat(L, { maximumFractionDigits: 8 });
-  const fmtC = (v, c) => { try { return new Intl.NumberFormat(L, { style: 'currency', currency: c }).format(v) } catch (e) { return v.toFixed(2) + ' ' + c } };
+  const fmtC = (v, c) => { try { return new Intl.NumberFormat(L, { style: 'currency', currency: c }).format(v) } catch (e) { return v.toFixed(2) + ' ' + esc(c) } };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const sgn = (v, f) => v == null ? '<span class="muted">—</span>' : `<span style="color:var(--${v >= 0 ? 'ok' : 'bad'})">${v >= 0 ? '+' : ''}${f(v)}</span>`;
   const ls = { get(k) { try { return JSON.parse(localStorage.getItem(k)) } catch (e) { return null } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch (e) {} } };

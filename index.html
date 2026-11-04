@@ -1044,7 +1044,7 @@ function aIcon(tipo,sy){sy=String(sy||'').toUpperCase();const ini=esc(sy.replace
   if(tipo==='indice')return'<span class="ai" style="font-size:15px">📈</span>';
   const u=tipo==='cripto'?'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/'+encodeURIComponent(sy.toLowerCase())+'.png':'https://financialmodelingprep.com/image-stock/'+encodeURIComponent(sy)+'.png';
   return`<span class="ai">${ini}<img src="${u}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"></span>`}
-const fmtC=(v,c)=>{try{return new Intl.NumberFormat(LANGS[lang].loc,{style:'currency',currency:c}).format(v)}catch(e){return v.toFixed(2)+' '+c}};
+const fmtC=(v,c)=>{try{return new Intl.NumberFormat(LANGS[lang].loc,{style:'currency',currency:c}).format(v)}catch(e){return v.toFixed(2)+' '+esc(c)}};
 function natPx(i){const q=PX[pk(i)];
   if(i.tipo==='cripto'){if(!(q&&q.p>0))return null;const r=FX.r&&FX.r.USD;return r?{v:q.p*r,c:'USD'}:null}
   if(i.tipo==='accion'||i.tipo==='indice'){const c=(q&&q.cur)||i.moneda||'USD';
@@ -1121,7 +1121,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='55';$('#ver').textContent='v'+APP_V;
+const APP_V='56';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 /* ---------- Avisos de pagos (notificaciones push) ---------- */
 const PUSH_API='https://personal-balance-web-778378922815.europe-west1.run.app/api/push/';

@@ -91,6 +91,20 @@ def vapid(db):
     return d["priv"], d["pub"]
 
 
+# Solo servicios de notificaciones reales (evita que el servidor envíe peticiones a cualquier dirección)
+PUSH_HOSTS = ("web.push.apple.com", "fcm.googleapis.com", "updates.push.services.mozilla.com", "notify.windows.com")
+
+
+def valid_endpoint(ep):
+    from urllib.parse import urlparse
+    try:
+        u = urlparse(str(ep or ""))
+    except ValueError:
+        return False
+    h = (u.hostname or "").lower()
+    return u.scheme == "https" and any(h == x or h.endswith("." + x) for x in PUSH_HOSTS)
+
+
 def sub_id(endpoint):
     return hashlib.sha256(endpoint.encode()).hexdigest()[:40]
 

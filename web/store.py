@@ -94,6 +94,10 @@ class FirestoreStore:
     def delete_sub(self, sid):
         self.db.collection("push_subs").document(sid).delete()
 
+    def get_sub(self, sid):
+        d = self.db.collection("push_subs").document(sid).get()
+        return d.to_dict() if d.exists else None
+
     def list_subs(self):
         return [d.to_dict() | {"_id": d.id} for d in self.db.collection("push_subs").stream()]
 
@@ -192,6 +196,9 @@ class LocalStore:
 
     def delete_sub(self, sid):
         self._subs.pop(sid, None)
+
+    def get_sub(self, sid):
+        return self._subs.get(sid)
 
     def list_subs(self):
         return [v | {"_id": k} for k, v in self._subs.items()]

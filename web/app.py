@@ -10,6 +10,7 @@ import base64
 import html
 import io
 import json
+import re
 import os
 import secrets
 from datetime import date
@@ -25,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-30"
+APP_VERSION = "web-31"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -224,6 +225,11 @@ def set_csrf(resp):
         resp.headers["Access-Control-Max-Age"] = "3600"
         resp.headers["Vary"] = "Origin"
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'; base-uri 'self'; object-src 'none'")
+    resp.headers.setdefault("Permissions-Policy", "camera=(self), microphone=(), geolocation=()")
+    if not DEV:
+        resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     resp.headers.setdefault("Referrer-Policy", "same-origin")
     return resp
 
@@ -732,7 +738,11 @@ def ajustes():
 
 @app.post("/idioma")
 def idioma():
-    resp = redirect(request.form.get("next") or url_for("login"))
+    nxt = request.form.get("next") or ""
+    # Solo rutas de esta misma web (evita redirigir a otra página)
+    if not nxt.startswith("/") or nxt.startswith("//") or "\\" in nxt:
+        nxt = url_for("login")
+    resp = redirect(nxt)
     lg = request.form.get("lang")
     if lg in LANGS:
         resp.set_cookie("pb_lang", lg, max_age=31536000, samesite="Lax")
@@ -873,7 +883,7 @@ def ibkr_import():
         tipo = p.get("tipo") if p.get("tipo") in ("cripto", "accion", "divisa") else "accion"
         nuevas.append({"id": calc.uid(), "tipo": tipo, "simbolo": str(p.get("simbolo", "")).upper()[:20],
                        "cantidad": float(p.get("cantidad") or 0), "precioCompra": p.get("precioCompra"),
-                       "broker": "Interactive Brokers", "moneda": p.get("moneda") or ("USD" if tipo == "accion" else "EUR"),
+                       "broker": "Interactive Brokers", "moneda": (str(p.get("moneda") or "").upper() if re.fullmatch(r"[A-Za-z]{3}", str(p.get("moneda") or "")) else ("USD" if tipo == "accion" else "EUR")),
                        "precioManual": p.get("precioManual"), "fuente": "ibkr"})
     S["inversiones"] = keep + nuevas
     store.save(user["uid"], S)
@@ -885,8 +895,10 @@ def err500(e):
     import traceback
     orig = getattr(e, "original_exception", None) or e
     traceback.print_exception(orig)
-    why = f"{type(orig).__name__}: {str(orig)[:200]}"
-    return render_template("error.html", **ctx(None, why=why)), 500
+    try:
+        return render_template("error.html", **ctx(None, why=None)), 500
+    except Exception:
+        return "Error", 500
 
 
 @app.route("/api/agent", methods=["POST", "OPTIONS"])
@@ -920,7 +932,7 @@ def api_agent():
         return {"error": "busy"}, 429
     except Exception as e:  # error de la API de IA
         print("agent:", repr(e), flush=True)
-        return {"error": "ai", "detail": f"{type(e).__name__}: {str(e)[:200]}"}, 502
+        return {"error": "ai"}, 502
     if out.get("error"):
         return out, 503
     return out
@@ -958,7 +970,7 @@ def api_scan():
         if code in ("no_key", "busy", "unreadable"):
             return {"error": code}, 503 if code == "no_key" else 429 if code == "busy" else 422
         print("scan:", code, flush=True)
-        return {"error": "ai", "detail": code[:200]}, 502
+        return {"error": "ai"}, 502
     except Exception as e:
         print("scan:", repr(e), flush=True)
         return {"error": "bad"}, 400
@@ -1008,7 +1020,7 @@ def pago_token():
 @app.route("/api/pago", methods=["POST"])
 def api_pago():
     b = request.get_json(silent=True) or request.form.to_dict() or {}
-    tok = str(b.get("token") or request.args.get("token") or "").strip()
+    tok = str(b.get("token") or "").strip()[:100]
     uid = store.uid_for_token(tok) if tok else None
     if not uid:
         return {"error": "token"}, 403
@@ -1068,7 +1080,7 @@ def push_subscribe():
     import push
     b = request.get_json(silent=True) or {}
     sub = b.get("subscription") or {}
-    if not str(sub.get("endpoint", "")).startswith("https://") or not (sub.get("keys") or {}).get("p256dh"):
+    if not push.valid_endpoint(sub.get("endpoint")) or not (sub.get("keys") or {}).get("p256dh"):
         return {"error": "bad"}, 400
     lang = b.get("lang") if b.get("lang") in LANGS else "es"
     sid = push.sub_id(sub["endpoint"])
@@ -1091,9 +1103,13 @@ def push_unsubscribe():
     if not _api_user():
         return {"error": "auth"}, 401
     import push
+    user = _api_user()
     ep = (request.get_json(silent=True) or {}).get("endpoint", "")
     if ep:
-        store.delete_sub(push.sub_id(ep))
+        sid = push.sub_id(str(ep))
+        cur = store.get_sub(sid)
+        if cur and cur.get("uid") == user["uid"]:
+            store.delete_sub(sid)
     return {"ok": True}
 
 
