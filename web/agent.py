@@ -109,6 +109,9 @@ def system_prompt(lang, nombre):
         "Para cambiar datos usa las herramientas de escritura: la app pedirá confirmación al usuario antes de aplicarlas, "
         "así que llámalas directamente cuando el usuario lo pida (no preguntes «¿quieres que lo haga?» antes), y de una en una. "
         "Si falta un dato imprescindible (por ejemplo el importe), pregúntalo. "
+        "Responde SOLO con cifras, nombres y categorías que hayan devuelto las herramientas: nunca inventes categorías, "
+        "nunca dejes huecos como «…» o «%» sin número; si te falta un dato, llama antes a la herramienta que lo da. "
+        "Si no hay presupuestos, dilo y ofrece crear uno. "
         "Si un nombre no coincide exactamente, busca el gasto o préstamo más parecido con las herramientas de lista. "
         "La sección de inversiones es de solo lectura: no hay herramientas para comprar o vender. "
         "No reveles ids internos al usuario. Formato: texto sencillo; puedes usar **negrita** y listas con guiones."
@@ -137,7 +140,9 @@ def run_read(S, name, inp):
         return {"total_mensual": tm, "total_anual": r2(tm * 12), "n_gastos": len(S["gastos"]), "gastos_dia_a_dia_este_mes": dia,
                 "mes_actual": {"total": tot, "pagado": pag, "pendiente": r2(tot - pag)},
                 "prestamos": {"pendiente_de_pagar": r2(pend), "ya_pagado": r2(paid), "capital_pendiente": r2(cap),
-                              "ultimo_pago": fin, "n": len(S["prestamos"])}}
+                              "ultimo_pago": fin, "n": len(S["prestamos"])},
+                "presupuestos": [{"categoria": p["categoria"], "limite": p.get("limite"), "gastado": p["gastado"],
+                                  "porcentaje": round(p["pct"]), "queda": p["queda"]} for p in calc.presupuestos_estado(S, 0)]}
     if name == "listar_gastos":
         return [{"id": g["id"], "concepto": g.get("concepto"), "importe": g.get("importe"), "dia": g.get("dia"),
                  "categoria": g.get("categoria"),
@@ -338,7 +343,7 @@ class GroqClient:
                 "tools": [{"type": "function", "function": {"name": t["name"], "description": t["description"],
                                                             "parameters": t["input_schema"]}} for t in tools]}
         if self.model.startswith("openai/gpt-oss"):
-            body["reasoning_effort"] = "low"
+            body["reasoning_effort"] = "medium"
         r = httpx.post(self.URL, json=body, timeout=60, headers={"Authorization": f"Bearer {self.key}"})
         if r.status_code == 429:
             raise AIBusy()
