@@ -76,8 +76,8 @@
         body: JSON.stringify({ image, lang: L }) });
       const j = await r.json().catch(() => ({}));
       ov.remove();
-      if (!r.ok || j.error) return toast(t({ unreadable: 'bad', no_key: 'nokey', busy: 'busy', limit: 'limit' }[j.error] || 'err'));
+      if (!r.ok || j.error) return toast(t({ unreadable: 'bad', no_key: 'nokey', busy: 'busy', limit: 'limit' }[j.error] || 'err') + (j.detail ? ' (' + j.detail + ')' : (!j.error ? ' (HTTP ' + r.status + ')' : '')));
       C.open && C.open(j); note(j);
-    } catch (e) { ov.remove(); toast(t('err')) }
+    } catch (e) { ov.remove(); toast(t('err') + ' (' + ((e && e.message) || e) + ')') }
   };
 })();

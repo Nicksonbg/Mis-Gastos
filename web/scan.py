@@ -66,19 +66,34 @@ def read_receipt(data_url: str, cats, lang="es", key=None, post=None):
     key = key or os.environ.get("GROQ_API_KEY")
     if not key:
         raise ScanError("no_key")
-    body = {"model": VISION_MODEL, "temperature": 0, "max_completion_tokens": 1200,
-            "response_format": {"type": "json_object"},
-            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt(cats, lang)},
-                                                      {"type": "image_url", "image_url": {"url": data_url}}]}]}
+    msgs = [{"role": "user", "content": [{"type": "text", "text": prompt(cats, lang)},
+                                         {"type": "image_url", "image_url": {"url": data_url}}]}]
+    # 1º: modo JSON sin razonamiento visible (Groq exige reasoning_format parsed/hidden con JSON).
+    # 2º (si Groq rechaza esos parámetros): petición simple y se extrae el JSON del texto.
+    attempts = [
+        {"response_format": {"type": "json_object"}, "reasoning_format": "hidden", "reasoning_effort": "none"},
+        {},
+    ]
     if post is None:
         import httpx
         post = httpx.post
-    r = post(URL, json=body, timeout=90, headers={"Authorization": f"Bearer {key}"})
-    if r.status_code == 429:
-        raise ScanError("busy")
-    if r.status_code >= 400:
-        raise ScanError(f"Groq {r.status_code}: {r.text[:200]}")
+    last = ""
+    for extra in attempts:
+        body = {"model": VISION_MODEL, "temperature": 0, "max_completion_tokens": 3000, "messages": msgs, **extra}
+        r = post(URL, json=body, timeout=90, headers={"Authorization": f"Bearer {key}"})
+        if r.status_code == 429:
+            raise ScanError("busy")
+        if r.status_code >= 400:
+            last = f"Groq {r.status_code}: {r.text[:300]}"
+            print("scan intento fallido:", last, flush=True)
+            if r.status_code in (400, 422):
+                continue
+            raise ScanError(last)
+        break
+    else:
+        raise ScanError(last)
     txt = r.json()["choices"][0]["message"].get("content") or "{}"
+    txt = re.sub(r"<think>.*?</think>", "", txt, flags=re.S)
     m = re.search(r"\{.*\}", txt, re.S)
     try:
         d = json.loads(m.group(0) if m else txt)
