@@ -55,7 +55,7 @@ def normalize(S: dict) -> dict:
     base = seed()
     if isinstance(S, dict):
         base.update(S)
-    for k in ("gastos", "prestamos", "inversiones", "watch", "movimientos", "presupuestos"):
+    for k in ("gastos", "prestamos", "inversiones", "watch", "movimientos", "presupuestos", "pagos_pendientes"):
         if not isinstance(base.get(k), list):
             base[k] = []
     for l in base["prestamos"]:

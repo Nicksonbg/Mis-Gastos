@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-20"
+APP_VERSION = "web-21"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -881,6 +881,87 @@ def api_scan():
     except Exception as e:
         print("scan:", repr(e), flush=True)
         return {"error": "bad"}, 400
+
+
+# ---------- Pagos con el móvil (automatización "Transacción" de Atajos) ----------
+GUESS = [("Supermercado", "mercadona lidl carrefour aldi dia eroski hiperdino spar alcampo consum hipercor supermerc froiz ahorramas bonpreu"),
+         ("Restaurantes", "restaurante bar cafe café cafeteria mcdonald burger kfc telepizza domino glovo just eat uber eats starbucks pizzeria tasca"),
+         ("Transporte", "repsol cepsa shell bp disa galp gasolinera petrol uber cabify bolt renfe guaguas global metro taxi parking aparcamiento"),
+         ("Compras", "amazon zara primark mediamarkt media markt corte ingles decathlon ikea leroy aliexpress shein h&m fnac"),
+         ("Salud", "farmacia clinica clínica dental optica óptica"),
+         ("Ocio", "netflix spotify cine cinesa yelmo steam playstation disney hbo")]
+
+
+def guess_cat(merchant, lang="es"):
+    m = (merchant or "").lower()
+    cats = TR["cats_dia"][LANGS.get(lang, LANGS["es"])["i"]].split("|")
+    es = TR["cats_dia"][0].split("|")
+    for cat, words in GUESS:
+        if any(w in m for w in words.split()):
+            return cats[es.index(cat)] if cat in es else cat
+    return cats[-1]
+
+
+def pago_url():
+    return request.host_url.rstrip("/").replace("http://", "https://") + url_for("api_pago")
+
+
+@app.route("/api/pago/token", methods=["POST", "OPTIONS"])
+def pago_token():
+    if request.method == "OPTIONS":
+        return "", 204
+    user = _api_user()
+    if not user:
+        return {"error": "auth"}, 401
+    b = request.get_json(silent=True) or {}
+    if b.get("action") == "revoke":
+        store.set_token(user["uid"], None)
+        return {"ok": True, "token": None}
+    tok = store.token_for(user["uid"])
+    if not tok and b.get("action") == "create":
+        tok = secrets.token_urlsafe(24)
+        store.set_token(user["uid"], tok)
+    return {"token": tok, "url": pago_url()}
+
+
+@app.route("/api/pago", methods=["POST"])
+def api_pago():
+    b = request.get_json(silent=True) or request.form.to_dict() or {}
+    tok = str(b.get("token") or request.args.get("token") or "").strip()
+    uid = store.uid_for_token(tok) if tok else None
+    if not uid:
+        return {"error": "token"}, 403
+    import scan
+    imp = scan._num(b.get("importe"))
+    if imp is None or imp == 0:
+        return {"error": "importe"}, 400
+    imp = calc.r2(abs(imp))
+    comercio = str(b.get("comercio") or b.get("merchant") or "").strip()[:60] or "Pago con el móvil"
+    S = store.load(uid)
+    pend = S.setdefault("pagos_pendientes", [])
+    from push import local_today
+    from datetime import datetime as _dt
+    import push as _push
+    now = _dt.now(_push.TZ)
+    lang = "es"
+    subs = [x for x in store.list_subs() if x.get("uid") == uid]
+    if subs:
+        lang = subs[0].get("lang", "es")
+    pend.append({"id": calc.uid(), "importe": imp, "comercio": comercio, "fecha": local_today().isoformat(),
+                 "hora": now.strftime("%H:%M"), "tarjeta": str(b.get("tarjeta") or "")[:40],
+                 "categoria": guess_cat(comercio, lang)})
+    S["pagos_pendientes"] = pend[-20:]
+    store.save(uid, S)
+    try:
+        priv = _push.vapid(store.db)[0]
+        msg = {"title": _push.tx("pago_t", lang), "body": _push.tx("pago_b", lang, c=comercio, a=_push.money(imp, lang)),
+               "tag": "pb-pago", "url": "./"}
+        for sb in subs:
+            if not _push.send(sb, msg, priv):
+                store.delete_sub(sb["_id"])
+    except Exception as e:
+        print("pago push:", repr(e), flush=True)
+    return {"ok": True}
 
 
 # ---------- Notificaciones push (app del iPhone) ----------

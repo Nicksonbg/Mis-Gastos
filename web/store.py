@@ -97,6 +97,25 @@ class FirestoreStore:
     def list_subs(self):
         return [d.to_dict() | {"_id": d.id} for d in self.db.collection("push_subs").stream()]
 
+    # ---- Tokens del atajo de pagos (colección solo del servidor) ----
+    def token_for(self, uid):
+        d = self.db.collection("pago_tokens_uid").document(uid).get()
+        return (d.to_dict() or {}).get("token") if d.exists else None
+
+    def set_token(self, uid, token):
+        old = self.token_for(uid)
+        if old:
+            self.db.collection("pago_tokens").document(old).delete()
+        if token:
+            self.db.collection("pago_tokens").document(token).set({"uid": uid})
+            self.db.collection("pago_tokens_uid").document(uid).set({"token": token})
+        else:
+            self.db.collection("pago_tokens_uid").document(uid).delete()
+
+    def uid_for_token(self, token):
+        d = self.db.collection("pago_tokens").document(token).get()
+        return (d.to_dict() or {}).get("uid") if d.exists else None
+
     def get_alert_state(self, uid):
         d = self.db.collection("budget_alerts").document(uid).get()
         return d.to_dict() if d.exists else {}
@@ -154,6 +173,19 @@ class LocalStore:
         return [v | {"_id": k} for k, v in self._subs.items()]
 
     _alerts = {}
+    _tok = {}
+
+    def token_for(self, uid):
+        return next((k for k, v in self._tok.items() if v == uid), None)
+
+    def set_token(self, uid, token):
+        for k in [k for k, v in self._tok.items() if v == uid]:
+            self._tok.pop(k)
+        if token:
+            self._tok[token] = uid
+
+    def uid_for_token(self, token):
+        return self._tok.get(token)
 
     def get_alert_state(self, uid):
         return self._alerts.get(uid, {})

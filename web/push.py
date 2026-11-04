@@ -30,6 +30,8 @@ TXT = {
     "pres_t": ["Presupuesto", "Budget", "Бюджет"],
     "pres_warn": ["{c}: llevas el {p} del presupuesto ({g} de {l}).", "{c}: you have used {p} of the budget ({g} of {l}).", "{c}: използвал си {p} от бюджета ({g} от {l})."],
     "pres_bad": ["{c}: te has pasado del presupuesto ({g} de {l}).", "{c}: you are over budget ({g} of {l}).", "{c}: надвиши бюджета ({g} от {l})."],
+    "pago_t": ["¿Añadir este gasto?", "Add this expense?", "Да добавя ли този разход?"],
+    "pago_b": ["{c} · {a} — toca para añadirlo a tus gastos", "{c} · {a} — tap to add it to your expenses", "{c} · {a} — докосни, за да го добавиш"],
     "test_t": ["Avisos activados ✓", "Notifications on ✓", "Известията са включени ✓"],
     "test_b": ["Te avisaré el día antes de cada pago.", "I will remind you the day before each payment.", "Ще те напомням ден преди всяко плащане."],
 }
