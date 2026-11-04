@@ -37,9 +37,12 @@ def prompt(cats, lang):
         "Lee este ticket de compra o factura y devuelve SOLO un objeto JSON con estas claves:\n"
         '{"comercio": str, "fecha": "AAAA-MM-DD" o null, "total": número (importe final pagado, con impuestos), '
         '"moneda": código ISO (EUR por defecto), "categoria": una de ' + json.dumps(cats, ensure_ascii=False) + ", "
-        '"concepto": descripción corta (máx. 40 caracteres), "lineas": [{"desc": str, "importe": número}], '
-        '"legible": true/false}\n'
-        "Reglas: usa punto como separador decimal en los números; el total es el importe TOTAL/A PAGAR, no el subtotal "
+        '"concepto": descripción corta (máx. 40 caracteres), '
+        '"lineas": [{"desc": str, "cant": número, "importe": número}], "hora": "HH:MM" o null, "legible": true/false}\n'
+        "Reglas: en \"lineas\" pon TODAS las líneas de productos o servicios del ticket, en el mismo orden, con el texto tal cual, "
+        "la cantidad (1 si no aparece) y el importe de la línea; los descuentos y promociones van como líneas con importe negativo; "
+        "no incluyas como líneas el subtotal, el IVA, el total, la forma de pago ni el cambio. "
+        "Usa punto como separador decimal en los números; el total es el importe TOTAL/A PAGAR, no el subtotal "
         "ni la base imponible; si hay descuentos, el total ya los incluye; no inventes datos: si algo no se lee pon null. "
         f"Escribe comercio y concepto tal como aparecen; la categoría en {idioma}. Si la imagen no es un ticket o factura, "
         'devuelve {"legible": false}.'
@@ -79,7 +82,7 @@ def read_receipt(data_url: str, cats, lang="es", key=None, post=None):
         post = httpx.post
     last = ""
     for extra in attempts:
-        body = {"model": VISION_MODEL, "temperature": 0, "max_completion_tokens": 3000, "messages": msgs, **extra}
+        body = {"model": VISION_MODEL, "temperature": 0, "max_completion_tokens": 4000, "messages": msgs, **extra}
         r = post(URL, json=body, timeout=90, headers={"Authorization": f"Bearer {key}"})
         if r.status_code == 429:
             raise ScanError("busy")
@@ -118,11 +121,12 @@ def clean(d, cats):
     low = {c.lower(): c for c in cats}
     cat = low.get(cat.lower(), cats[-1])
     lineas = []
-    for li in (d.get("lineas") or [])[:60]:
+    for li in (d.get("lineas") or [])[:120]:
         if isinstance(li, dict):
             v = _num(li.get("importe"))
             if v is not None:
-                lineas.append({"desc": str(li.get("desc") or "")[:60], "importe": calc.r2(v)})
+                q = _num(li.get("cant"))
+                lineas.append({"desc": str(li.get("desc") or "")[:60], "cant": q if q and q != 1 else 1, "importe": calc.r2(v)})
     suma = calc.r2(sum(x["importe"] for x in lineas))
     comercio = str(d.get("comercio") or "").strip()[:60]
     concepto = str(d.get("concepto") or comercio).strip()[:60] or comercio

@@ -12,8 +12,9 @@
       <thead><tr><th>{{ t('f_fecha') }}</th><th>{{ t('th_concepto') }}</th><th class="hide-sm">{{ t('th_categoria') }}</th><th class="n">{{ t('th_importe') }}</th><th></th></tr></thead>
       <tbody>
       {% for m in movs %}
-        <tr><td>{{ fmt_d(m.fecha)[:5] }}</td><td>{{ m.concepto or '—' }}<div class="muted small" style="display:none" data-sm>{{ m.categoria }}</div></td><td class="hide-sm muted">{{ m.categoria }}</td><td class="n">{{ money(m.importe) }}</td>
+        <tr><td>{{ fmt_d(m.fecha)[:5] }}</td><td>{{ m.concepto or '—' }}{% if m.lineas %} <button class="icon" type="button" title="{{ m.lineas|length }}" onclick="this.closest('tr').nextElementSibling.classList.toggle('hidden')">🧾</button>{% endif %}</td><td class="hide-sm muted">{{ m.categoria }}</td><td class="n">{{ money(m.importe) }}</td>
           <td class="n" style="white-space:nowrap"><button class="icon" type="button" onclick="openMov('{{ m.id }}')" title="{{ t('editar') }}">✏️</button><form class="inline" method="post" action="{{ url_for('mov_delete') }}" data-confirm="{{ t('ask_borrar_mov', n=(m.concepto or m.categoria)) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ m.id }}"><input type="hidden" name="m" value="{{ off }}"><button class="icon" title="{{ t('borrar') }}">🗑️</button></form></td></tr>
+        {% if m.lineas %}<tr class="hidden"><td></td><td colspan="4"><table class="small" style="margin:0">{% for l in m.lineas %}<tr><td class="muted" style="border:0;padding:2px 0">{{ l.desc }}{% if l.cant and l.cant != 1 %} ×{{ l.cant }}{% endif %}</td><td class="n muted" style="border:0;padding:2px 0">{{ money(l.importe) }}</td></tr>{% endfor %}</table></td></tr>{% endif %}
       {% else %}<tr><td colspan="5" class="muted">{{ t('mov_empty') }}</td></tr>{% endfor %}
       </tbody>
       <tfoot><tr><td></td><td>{{ t('mov_total') }}</td><td class="hide-sm"></td><td class="n">{{ money(mov_total) }}</td><td></td></tr></tfoot>
@@ -36,7 +37,7 @@
 {% block dialogs %}
 <datalist id="cats">{% for c in cats %}<option value="{{ c }}">{% endfor %}</datalist>
 <dialog id="dlg-mov"><form method="post" action="{{ url_for('mov_save') }}" id="f-mov">
-  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id"><input type="hidden" name="m" value="{{ off }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id"><input type="hidden" name="m" value="{{ off }}"><input type="hidden" name="lineas">
   <h3 id="dlg-mov-t"></h3>
   <div class="fgrid">
     <label class="f"><span>{{ t('f_importe') }}</span><input name="importe" type="number" step="0.01" min="0" required inputmode="decimal"></label>
@@ -55,11 +56,11 @@
 </form></dialog>
 <script>
 window.PB_SCAN={api:'{{ url_for('api_scan') }}',getToken:async()=>{try{await window.pbFresh?.()}catch(e){}return null},
-  open:d=>{openMov();const f=document.getElementById('f-mov');f.importe.value=d.importe;f.fecha.value=d.fecha;f.categoria.value=d.categoria;f.concepto.value=d.concepto}};
+  open:d=>{openMov();const f=document.getElementById('f-mov');f.importe.value=d.importe;f.fecha.value=d.fecha;f.categoria.value=d.categoria;f.concepto.value=d.concepto;f.lineas.value=JSON.stringify(d.lineas||[])}};
 const MOVS={{ movs|tojson }},PRES={{ pres|tojson }};
 function openMov(id){const m=MOVS.find(x=>x.id===id),f=document.getElementById('f-mov');
   document.getElementById('dlg-mov-t').textContent=m?{{ t('mov_edit')|tojson }}:{{ t('mov_new')|tojson }};
-  f.elements.namedItem('id').value=m?m.id:'';f.importe.value=m?.importe??'';f.fecha.value=m?.fecha||{{ today|tojson }};f.categoria.value=m?.categoria||'';f.concepto.value=m?.concepto||'';
+  f.elements.namedItem('id').value=m?m.id:'';f.lineas.value=m&&m.lineas?JSON.stringify(m.lineas):'';f.importe.value=m?.importe??'';f.fecha.value=m?.fecha||{{ today|tojson }};f.categoria.value=m?.categoria||'';f.concepto.value=m?.concepto||'';
   document.getElementById('dlg-mov').showModal();setTimeout(()=>f.importe.focus(),50)}
 function openPres(id){const p=PRES.find(x=>x.id===id),f=document.getElementById('f-pres');
   f.elements.namedItem('id').value=p?p.id:'';f.categoria.value=p?.categoria||'';f.limite.value=p?.limite??'';document.getElementById('dlg-pres').showModal()}

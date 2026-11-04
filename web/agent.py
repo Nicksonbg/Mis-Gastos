@@ -172,7 +172,8 @@ def run_read(S, name, inp):
     if name == "listar_gastos_dia":
         ms = calc.movimientos_mes(S, int(inp.get("offset") or 0))
         return {"mes": calc.month_key(int(inp.get("offset") or 0)), "total": r2(sum(float(m.get("importe") or 0) for m in ms)),
-                "gastos": [{k: m.get(k) for k in ("id", "fecha", "importe", "categoria", "concepto")} for m in ms[:150]]}
+                "gastos": [{**{k: m.get(k) for k in ("id", "fecha", "importe", "categoria", "concepto")},
+                            "lineas_ticket": [f"{x.get('desc')}: {x.get('importe')}" for x in (m.get("lineas") or [])][:40]} for m in ms[:150]]}
     if name == "listar_inversiones":
         return [{"simbolo": i.get("simbolo"), "tipo": i.get("tipo"), "cantidad": i.get("cantidad"),
                  "precio_compra_eur": i.get("precioCompra"), "broker": i.get("broker")} for i in S.get("inversiones", [])]

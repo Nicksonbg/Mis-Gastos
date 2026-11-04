@@ -1,12 +1,20 @@
 // Escáner de tickets y facturas — compartido por la web y la app.
+// 1) Cámara o galería · 2) detección de bordes con esquinas ajustables, enderezado y contraste · 3) lectura con IA.
 // La página define window.PB_SCAN = { api, getToken: async () => token|null, open: datos => abre el formulario relleno }
+// El último resultado queda en window.pbLastScan (para guardar las líneas con el gasto).
 (() => {
   if (window.pbScan) return;
   const L = (document.documentElement.lang || 'es').slice(0, 2), I = { es: 0, en: 1, bg: 2 }[L] ?? 0;
   const TX = {
+    camera: ['📷 Hacer foto', '📷 Take photo', '📷 Направи снимка'],
+    gallery: ['🖼️ Elegir de la galería', '🖼️ Choose from gallery', '🖼️ Избери от галерията'],
+    cancel: ['Cancelar', 'Cancel', 'Отказ'],
+    adjust: ['Ajusta las esquinas al borde del ticket', 'Drag the corners to the edges of the receipt', 'Нагласи ъглите по ръба на бележката'],
+    retake: ['Repetir', 'Retake', 'Отново'], whole: ['Toda la foto', 'Whole photo', 'Цялата снимка'], go: ['Escanear ✓', 'Scan ✓', 'Сканирай ✓'],
     reading: ['Leyendo el ticket…', 'Reading the receipt…', 'Чета касовата бележка…'],
     check: ['Revisa los datos antes de guardar.', 'Check the details before saving.', 'Провери данните преди да запазиш.'],
     sum: ['Ojo: las líneas suman {s} y el total leído es {t}. Comprueba el importe.', 'Note: the lines add up to {s} and the total read is {t}. Check the amount.', 'Внимание: редовете са {s}, а прочетената сума е {t}. Провери сумата.'],
+    sumok: ['Las {n} líneas suman exactamente el total ✓', 'The {n} lines add up exactly to the total ✓', '{n} реда дават точно общата сума ✓'],
     date: ['No se leía la fecha: he puesto la de hoy.', 'The date was not readable: I used today.', 'Датата не се чете: сложих днешната.'],
     cur: ['El ticket está en {m}: pon el importe en euros.', 'The receipt is in {m}: enter the amount in euros.', 'Бележката е в {m}: въведи сумата в евро.'],
     lines: ['Ver las {n} líneas del ticket', 'See the {n} receipt lines', 'Виж {n} реда от бележката'],
@@ -23,61 +31,161 @@
   const css = document.createElement('style');
   css.textContent = `.pbs-ov{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.6);display:grid;place-items:center;backdrop-filter:blur(4px)}
   .pbs-box{background:var(--card,#161616);color:var(--text,#fff);border:1px solid var(--chip,#262626);border-radius:20px;padding:22px 26px;text-align:center;max-width:320px;font:15px/1.4 Inter,system-ui,sans-serif}
+  .pbs-sheet{position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--card,#161616);border-radius:22px 22px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));display:grid;gap:10px;box-shadow:0 -10px 40px rgba(0,0,0,.5)}
+  .pbs-sheet button,.pbs-bar button{border:0;border-radius:999px;padding:14px 18px;font:600 16px Inter,system-ui,sans-serif;cursor:pointer;background:var(--chip,#262626);color:var(--text,#fff)}
+  .pbs-sheet button.main,.pbs-bar button.main{background:var(--text,#fff);color:var(--bg,#000)}
   .pbs-spin{width:34px;height:34px;margin:0 auto 12px;border-radius:50%;border:3px solid var(--chip,#333);border-top-color:var(--accent,#5ad37a);animation:pbs 0.8s linear infinite}
   @keyframes pbs{to{transform:rotate(360deg)}}
+  .pbs-crop{position:fixed;inset:0;z-index:71;background:#000;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+  .pbs-crop p{color:#fff;text-align:center;margin:10px 16px;font:500 14px Inter,system-ui,sans-serif}
+  .pbs-stage{flex:1;position:relative;touch-action:none;overflow:hidden}
+  .pbs-stage canvas{position:absolute;inset:0;width:100%;height:100%}
+  .pbs-bar{display:flex;gap:8px;justify-content:center;padding:12px 12px calc(12px + env(safe-area-inset-bottom,0px))}
   .pbs-note{border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:13px;background:var(--accent-soft,rgba(90,211,122,.14));color:var(--text,#fff)}
-  .pbs-note .w{color:var(--warn,#f5a524);display:block;margin-top:4px}
+  .pbs-note .w{color:var(--warn,#f5a524);display:block;margin-top:4px}.pbs-note .ok{color:var(--ok,#5ad37a);display:block;margin-top:4px}
   .pbs-note details{margin-top:6px}.pbs-note summary{color:var(--muted,#8e8e93);font-weight:500;font-size:13px}
   .pbs-note table{width:100%;margin-top:6px;font-size:12px}.pbs-note td{padding:3px 0;border-bottom:1px solid var(--line,#262626)}`;
   document.head.appendChild(css);
 
-  function overlay(html) { const o = document.createElement('div'); o.className = 'pbs-ov'; o.innerHTML = `<div class="pbs-box">${html}</div>`; document.body.appendChild(o); return o }
-  function toast(msg) { const o = overlay(esc(msg) + '<div style="margin-top:14px"><button class="btn" type="button">OK</button></div>'); o.querySelector('button').onclick = () => o.remove() }
+  const overlay = html => { const o = document.createElement('div'); o.className = 'pbs-ov'; o.innerHTML = `<div class="pbs-box">${html}</div>`; document.body.appendChild(o); return o };
+  const toast = msg => { const o = overlay(esc(msg) + '<div style="margin-top:14px"><button class="btn" type="button">OK</button></div>'); o.querySelector('button').onclick = () => o.remove() };
 
-  function pick() {
+  // ---------- 1. Cámara o galería ----------
+  const chooser = () => new Promise(res => {
+    const sh = document.createElement('div'); sh.className = 'pbs-sheet';
+    sh.innerHTML = `<button class="main" data-k="cam">${t('camera')}</button><button data-k="gal">${t('gallery')}</button><button data-k="no">${t('cancel')}</button>`;
+    const bg = document.createElement('div'); bg.className = 'pbs-ov'; bg.style.background = 'rgba(0,0,0,.45)';
+    document.body.append(bg, sh);
+    const done = v => { sh.remove(); bg.remove(); res(v) };
+    bg.onclick = () => done(null);
+    sh.onclick = e => { const b = e.target.closest('button'); if (b) done(b.dataset.k === 'no' ? null : b.dataset.k) };
+  });
+  const pick = camera => new Promise(res => {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; if (camera) inp.setAttribute('capture', 'environment');
+    inp.style.display = 'none'; inp.onchange = () => { res(inp.files[0] || null); inp.remove() };
+    document.body.appendChild(inp); inp.click();
+  });
+  const loadImg = file => new Promise((ok, ko) => { const u = URL.createObjectURL(file), i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = u });
+
+  // ---------- 2. Detección de bordes ----------
+  function detect(img) {
+    const k = 360 / Math.max(img.naturalWidth, img.naturalHeight), w = Math.max(8, Math.round(img.naturalWidth * k)), h = Math.max(8, Math.round(img.naturalHeight * k));
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, w, h);
+    const d = x.getImageData(0, 0, w, h).data, g = new Float32Array(w * h), hist = new Array(256).fill(0);
+    for (let i = 0; i < w * h; i++) { const v = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]; g[i] = v; hist[v | 0]++ }
+    // Umbral de Otsu: el papel es la zona clara
+    let sum = 0, sumB = 0, wB = 0, best = 0, th = 128; for (let i = 0; i < 256; i++) sum += i * hist[i];
+    for (let i = 0; i < 256; i++) { wB += hist[i]; if (!wB) continue; const wF = w * h - wB; if (!wF) break; sumB += i * hist[i]; const mB = sumB / wB, mF = (sum - sumB) / wF, v = wB * wF * (mB - mF) ** 2; if (v > best) { best = v; th = i } }
+    const lab = new Int32Array(w * h).fill(-1); let bestLab = -1, bestN = 0, n = 0; const stack = [];
+    for (let s = 0; s < w * h; s++) {
+      if (lab[s] !== -1 || g[s] <= th) continue; let cnt = 0; stack.push(s); lab[s] = n;
+      while (stack.length) { const p = stack.pop(); cnt++; const px = p % w, py = (p / w) | 0;
+        for (const q of [px > 0 ? p - 1 : -1, px < w - 1 ? p + 1 : -1, py > 0 ? p - w : -1, py < h - 1 ? p + w : -1]) if (q >= 0 && lab[q] === -1 && g[q] > th) { lab[q] = n; stack.push(q) } }
+      if (cnt > bestN) { bestN = cnt; bestLab = n } n++;
+    }
+    const W = img.naturalWidth, H = img.naturalHeight, inset = [[.05, .05], [.95, .05], [.95, .95], [.05, .95]].map(([a, b]) => [a * W, b * H]);
+    if (bestN < w * h * 0.06 || bestN > w * h * 0.97) return inset;
+    let tl = [0, 0, 1e9], tr = [0, 0, -1e9], br = [0, 0, -1e9], bl = [0, 0, 1e9];
+    for (let p = 0; p < w * h; p++) if (lab[p] === bestLab) { const px = p % w, py = (p / w) | 0;
+      if (px + py < tl[2]) tl = [px, py, px + py]; if (px + py > br[2]) br = [px, py, px + py];
+      if (px - py > tr[2]) tr = [px, py, px - py]; if (px - py < bl[2]) bl = [px, py, px - py] }
+    return [tl, tr, br, bl].map(([a, b]) => [a / k, b / k]);
+  }
+
+  // ---------- Editor de esquinas ----------
+  function cropUI(img) {
     return new Promise(res => {
-      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.style.display = 'none';
-      inp.onchange = () => { res(inp.files[0] || null); inp.remove() };
-      document.body.appendChild(inp); inp.click();
+      const ui = document.createElement('div'); ui.className = 'pbs-crop';
+      ui.innerHTML = `<p>${t('adjust')}</p><div class="pbs-stage"><canvas></canvas></div><div class="pbs-bar"><button data-k="retake">${t('retake')}</button><button data-k="whole">${t('whole')}</button><button class="main" data-k="go">${t('go')}</button></div>`;
+      document.body.appendChild(ui);
+      const stage = ui.querySelector('.pbs-stage'), cv = ui.querySelector('canvas'), cx = cv.getContext('2d');
+      let pts = detect(img), sc = 1, ox = 0, oy = 0, drag = -1;
+      const W = img.naturalWidth, H = img.naturalHeight;
+      function layout() { const r = stage.getBoundingClientRect(), dpr = window.devicePixelRatio || 1; cv.width = r.width * dpr; cv.height = r.height * dpr;
+        sc = Math.min((r.width - 40) / W, (r.height - 40) / H); ox = (r.width - W * sc) / 2; oy = (r.height - H * sc) / 2; cx.setTransform(dpr, 0, 0, dpr, 0, 0); draw() }
+      const toS = ([x, y]) => [ox + x * sc, oy + y * sc];
+      function draw() { const r = stage.getBoundingClientRect(); cx.clearRect(0, 0, r.width, r.height); cx.drawImage(img, ox, oy, W * sc, H * sc);
+        const s = pts.map(toS); cx.fillStyle = 'rgba(0,0,0,.5)'; cx.beginPath(); cx.rect(0, 0, r.width, r.height); cx.moveTo(...s[0]); for (let i = 3; i >= 0; i--) cx.lineTo(...s[i]); cx.closePath(); cx.fill('evenodd');
+        cx.strokeStyle = '#5ad37a'; cx.lineWidth = 2.5; cx.beginPath(); cx.moveTo(...s[0]); s.slice(1).forEach(p => cx.lineTo(...p)); cx.closePath(); cx.stroke();
+        s.forEach(([a, b]) => { cx.beginPath(); cx.arc(a, b, 13, 0, 7); cx.fillStyle = 'rgba(90,211,122,.35)'; cx.fill(); cx.lineWidth = 3; cx.strokeStyle = '#fff'; cx.stroke() }) }
+      const pos = e => { const r = stage.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top] };
+      stage.addEventListener('pointerdown', e => { const [a, b] = pos(e); let m = 1e9; pts.forEach((p, i) => { const [x, y] = toS(p), d = Math.hypot(x - a, y - b); if (d < m) { m = d; drag = i } }); if (m > 60) drag = -1; else stage.setPointerCapture(e.pointerId) });
+      stage.addEventListener('pointermove', e => { if (drag < 0) return; const [a, b] = pos(e); pts[drag] = [Math.min(W, Math.max(0, (a - ox) / sc)), Math.min(H, Math.max(0, (b - oy) / sc))]; draw() });
+      stage.addEventListener('pointerup', () => drag = -1);
+      ui.querySelector('.pbs-bar').onclick = e => { const b = e.target.closest('button'); if (!b) return;
+        if (b.dataset.k === 'whole') { pts = [[0, 0], [W, 0], [W, H], [0, H]]; draw(); return }
+        removeEventListener('resize', layout); ui.remove(); res(b.dataset.k === 'go' ? pts : null) };
+      addEventListener('resize', layout); requestAnimationFrame(layout);
     });
   }
-  async function shrink(file) {
-    const url = URL.createObjectURL(file);
-    try {
-      const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = url });
-      const k = Math.min(1, 1800 / Math.max(img.naturalWidth, img.naturalHeight));
-      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      return c.toDataURL('image/jpeg', 0.88);
-    } finally { URL.revokeObjectURL(url) }
+
+  // ---------- Enderezar (perspectiva) y mejorar contraste ----------
+  function homography(src, dst) { // matriz que lleva dst -> src
+    const A = [], B = [];
+    for (let i = 0; i < 4; i++) { const [x, y] = dst[i], [u, v] = src[i];
+      A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); B.push(u); A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); B.push(v) }
+    for (let c = 0; c < 8; c++) { let p = c; for (let r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+      [A[c], A[p]] = [A[p], A[c]]; [B[c], B[p]] = [B[p], B[c]];
+      for (let r = 0; r < 8; r++) if (r !== c) { const f = A[r][c] / A[c][c]; for (let k = c; k < 8; k++) A[r][k] -= f * A[c][k]; B[r] -= f * B[c] } }
+    return B.map((b, i) => b / A[i][i]).concat(1);
   }
+  function warp(img, q) {
+    const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    let ow = Math.max(dist(q[0], q[1]), dist(q[3], q[2])), oh = Math.max(dist(q[0], q[3]), dist(q[1], q[2]));
+    const k = Math.min(1, 2000 / Math.max(ow, oh)); ow = Math.max(50, Math.round(ow * k)); oh = Math.max(50, Math.round(oh * k));
+    const sc = document.createElement('canvas'); sc.width = img.naturalWidth; sc.height = img.naturalHeight; const sx = sc.getContext('2d', { willReadFrequently: true }); sx.drawImage(img, 0, 0);
+    const sd = sx.getImageData(0, 0, sc.width, sc.height).data, SW = sc.width, SH = sc.height;
+    const m = homography(q, [[0, 0], [ow, 0], [ow, oh], [0, oh]]);
+    const out = document.createElement('canvas'); out.width = ow; out.height = oh; const ox = out.getContext('2d'), od = ox.createImageData(ow, oh), o = od.data;
+    const gray = new Uint8ClampedArray(ow * oh), hist = new Array(256).fill(0);
+    for (let y = 0; y < oh; y++) for (let x = 0; x < ow; x++) {
+      const z = m[6] * x + m[7] * y + m[8], u = Math.min(SW - 1, Math.max(0, Math.round((m[0] * x + m[1] * y + m[2]) / z))), v = Math.min(SH - 1, Math.max(0, Math.round((m[3] * x + m[4] * y + m[5]) / z)));
+      const s = (v * SW + u) * 4, gv = (0.299 * sd[s] + 0.587 * sd[s + 1] + 0.114 * sd[s + 2]) | 0; gray[y * ow + x] = gv; hist[gv]++ }
+    let lo = 0, hi = 255, acc = 0; const N = ow * oh;
+    for (let i = 0; i < 256; i++) { acc += hist[i]; if (acc > N * 0.02) { lo = i; break } } acc = 0;
+    for (let i = 255; i >= 0; i--) { acc += hist[i]; if (acc > N * 0.02) { hi = i; break } }
+    const span = Math.max(30, hi - lo);
+    for (let i = 0; i < N; i++) { const v = Math.max(0, Math.min(255, (gray[i] - lo) * 255 / span)); o[i * 4] = o[i * 4 + 1] = o[i * 4 + 2] = v; o[i * 4 + 3] = 255 }
+    ox.putImageData(od, 0, 0);
+    return out.toDataURL('image/jpeg', 0.9);
+  }
+
+  // ---------- 3. Resultado en el formulario ----------
   function note(d) {
     const f = document.getElementById('f-mov'); if (!f) return;
     f.querySelector('.pbs-note')?.remove();
     let h = `<b>${esc(t('check'))}</b>`;
     if (d.avisos.includes('suma')) h += `<span class="w">⚠️ ${esc(t('sum', { s: eur(d.suma_lineas), t: eur(d.importe) }))}</span>`;
+    else if (d.lineas.length) h += `<span class="ok">${esc(t('sumok', { n: d.lineas.length }))}</span>`;
     if (d.avisos.includes('fecha')) h += `<span class="w">⚠️ ${esc(t('date'))}</span>`;
     if (d.avisos.includes('moneda')) h += `<span class="w">⚠️ ${esc(t('cur', { m: d.moneda }))}</span>`;
-    if (d.lineas.length) h += `<details><summary>${esc(t('lines', { n: d.lineas.length }))}</summary><table>${d.lineas.map(x => `<tr><td>${esc(x.desc)}</td><td style="text-align:right">${eur(x.importe)}</td></tr>`).join('')}</table></details>`;
+    if (d.lineas.length) h += `<details open><summary>${esc(t('lines', { n: d.lineas.length }))}</summary><table>${d.lineas.map(x => `<tr><td>${esc(x.desc)}${x.cant && x.cant !== 1 ? ` <span style="opacity:.6">×${esc(x.cant)}</span>` : ''}</td><td style="text-align:right">${eur(x.importe)}</td></tr>`).join('')}</table></details>`;
     const n = document.createElement('div'); n.className = 'pbs-note'; n.innerHTML = h;
     f.querySelector('h3').after(n);
-    const dlg = f.closest('dialog'); dlg?.addEventListener('close', () => n.remove(), { once: true });
+    f.closest('dialog')?.addEventListener('close', () => { n.remove(); setTimeout(() => { window.pbLastScan = null }, 0) }, { once: true });
   }
 
   window.pbScan = async () => {
     const C = window.PB_SCAN || {};
-    const file = await pick(); if (!file) return;
-    const ov = overlay(`<div class="pbs-spin"></div>${esc(t('reading'))}`);
-    try {
-      const image = await shrink(file);
-      const tok = C.getToken ? await C.getToken() : null;
-      const r = await fetch(C.api || '/api/scan', { method: 'POST', credentials: 'same-origin',
-        headers: Object.assign({ 'Content-Type': 'application/json' }, tok ? { Authorization: 'Bearer ' + tok } : {}),
-        body: JSON.stringify({ image, lang: L }) });
-      const j = await r.json().catch(() => ({}));
-      ov.remove();
-      if (!r.ok || j.error) return toast(t({ unreadable: 'bad', no_key: 'nokey', busy: 'busy', limit: 'limit' }[j.error] || 'err') + (j.detail ? ' (' + j.detail + ')' : (!j.error ? ' (HTTP ' + r.status + ')' : '')));
-      C.open && C.open(j); note(j);
-    } catch (e) { ov.remove(); toast(t('err') + ' (' + ((e && e.message) || e) + ')') }
+    for (;;) {
+      const how = await chooser(); if (!how) return;
+      const file = await pick(how === 'cam'); if (!file) return;
+      let img; try { img = await loadImg(file) } catch (e) { return toast(t('err')) }
+      const q = await cropUI(img); URL.revokeObjectURL(img.src);
+      if (!q) continue; // Repetir
+      const ov = overlay(`<div class="pbs-spin"></div>${esc(t('reading'))}`);
+      try {
+        const image = warp(img, q);
+        const tok = C.getToken ? await C.getToken() : null;
+        const r = await fetch(C.api || '/api/scan', { method: 'POST', credentials: 'same-origin',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, tok ? { Authorization: 'Bearer ' + tok } : {}),
+          body: JSON.stringify({ image, lang: L }) });
+        const j = await r.json().catch(() => ({}));
+        ov.remove();
+        if (!r.ok || j.error) return toast(t({ unreadable: 'bad', no_key: 'nokey', busy: 'busy', limit: 'limit' }[j.error] || 'err') + (j.detail ? ' (' + j.detail + ')' : (!j.error ? ' (HTTP ' + r.status + ')' : '')));
+        C.open && C.open(j); window.pbLastScan = j; note(j);
+      } catch (e) { ov.remove(); toast(t('err') + ' (' + ((e && e.message) || e) + ')') }
+      return;
+    }
   };
 })();
