@@ -23,9 +23,14 @@ jobs:
         env:
           GK: ${{ secrets.GROQ_API_KEY }}
         run: |
-          EXTRA=""
-          if [ -n "$GK" ]; then EXTRA="--update-env-vars=GROQ_API_KEY=$GK"; else echo "::warning::Falta el secreto GROQ_API_KEY: el asistente de IA no funcionará"; fi
-          EXTRA="$EXTRA --remove-env-vars=ANTHROPIC_API_KEY"
+          # Clave para la tarea diaria de recordatorios: se reutiliza la existente o se crea una nueva
+          CK=$(gcloud run services describe $SERVICE --region $REGION --project $PROJECT --format=json 2>/dev/null \
+            | jq -r '[.spec.template.spec.containers[0].env[]? | select(.name=="CRON_KEY") | .value][0] // empty' || true)
+          [ -z "$CK" ] && CK=$(openssl rand -hex 24)
+          echo "::add-mask::$CK"; echo "CK=$CK" >> $GITHUB_ENV
+          VARS="CRON_KEY=$CK"
+          if [ -n "$GK" ]; then VARS="$VARS,GROQ_API_KEY=$GK"; else echo "::warning::Falta el secreto GROQ_API_KEY: el asistente de IA no funcionará"; fi
+          EXTRA="--update-env-vars=$VARS --remove-env-vars=ANTHROPIC_API_KEY"
           gcloud run deploy $SERVICE --source web --region $REGION --project $PROJECT \
             --allow-unauthenticated --memory 512Mi --min-instances 0 --max-instances 2 --timeout 120 --quiet $EXTRA
           URL=$(gcloud run services describe $SERVICE --region $REGION --project $PROJECT --format='value(status.url)')
@@ -45,4 +50,14 @@ jobs:
           if [ "$NEW" != "$CUR" ]; then
             curl -sf -X PATCH -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJECT" -H "Content-Type: application/json" \
               "$API?updateMask=authorizedDomains" -d "{\"authorizedDomains\":$NEW}" >/dev/null
+          fi
+      - name: Programar los recordatorios diarios (10:00 hora de Canarias)
+        run: |
+          gcloud services enable cloudscheduler.googleapis.com --project $PROJECT
+          COMMON=(--location $REGION --project $PROJECT --schedule "0 10 * * *" --time-zone "Atlantic/Canary" \
+            --uri "$URL/cron/recordatorios" --http-method POST --attempt-deadline 300s)
+          if gcloud scheduler jobs describe pb-recordatorios --location $REGION --project $PROJECT >/dev/null 2>&1; then
+            gcloud scheduler jobs update http pb-recordatorios "${COMMON[@]}" --update-headers "X-Cron-Key=$CK"
+          else
+            gcloud scheduler jobs create http pb-recordatorios "${COMMON[@]}" --headers "X-Cron-Key=$CK"
           fi

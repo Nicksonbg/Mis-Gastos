@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-10"
+APP_VERSION = "web-11"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -168,6 +168,8 @@ def check_csrf():
     if request.method == "POST" and request.path.startswith("/api/") and (
             request.headers.get("Authorization", "").startswith("Bearer ") or request.is_json):
         return
+    if request.path.startswith("/cron/"):
+        return
     if request.method == "POST" and not csrf_ok():
         abort(400, "CSRF")
 
@@ -179,7 +181,7 @@ def set_csrf(resp):
     if request.path.startswith("/api/") and request.headers.get("Origin") in CORS_ORIGINS:
         resp.headers["Access-Control-Allow-Origin"] = request.headers["Origin"]
         resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
-        resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
         resp.headers["Access-Control-Max-Age"] = "3600"
         resp.headers["Vary"] = "Origin"
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
@@ -636,6 +638,91 @@ def api_agent():
     if out.get("error"):
         return out, 503
     return out
+
+
+# ---------- Notificaciones push (app del iPhone) ----------
+def _api_user():
+    h = request.headers.get("Authorization", "")
+    tok = h[7:] if h.startswith("Bearer ") else request.cookies.get("pb_token")
+    return verify(tok) if tok else None
+
+
+@app.route("/api/push/key", methods=["GET", "OPTIONS"])
+def push_key():
+    import push
+    return {"key": push.vapid(store.db)[1]}
+
+
+@app.route("/api/push/subscribe", methods=["POST", "OPTIONS"])
+def push_subscribe():
+    if request.method == "OPTIONS":
+        return "", 204
+    user = _api_user()
+    if not user:
+        return {"error": "auth"}, 401
+    import push
+    b = request.get_json(silent=True) or {}
+    sub = b.get("subscription") or {}
+    if not str(sub.get("endpoint", "")).startswith("https://") or not (sub.get("keys") or {}).get("p256dh"):
+        return {"error": "bad"}, 400
+    lang = b.get("lang") if b.get("lang") in LANGS else "es"
+    sid = push.sub_id(sub["endpoint"])
+    store.save_sub(sid, {"uid": user["uid"], "endpoint": sub["endpoint"], "keys": sub["keys"], "lang": lang,
+                         "creado": calc.iso(calc.today())})
+    if b.get("test"):
+        try:
+            push.send(sub, {"title": push.tx("test_t", lang), "body": push.tx("test_b", lang), "tag": "pb-test", "url": "./"},
+                      push.vapid(store.db)[0])
+        except Exception as e:
+            print("push test:", repr(e), flush=True)
+            return {"ok": True, "test": False}
+    return {"ok": True}
+
+
+@app.route("/api/push/unsubscribe", methods=["POST", "OPTIONS"])
+def push_unsubscribe():
+    if request.method == "OPTIONS":
+        return "", 204
+    if not _api_user():
+        return {"error": "auth"}, 401
+    import push
+    ep = (request.get_json(silent=True) or {}).get("endpoint", "")
+    if ep:
+        store.delete_sub(push.sub_id(ep))
+    return {"ok": True}
+
+
+@app.post("/cron/recordatorios")
+def cron_recordatorios():
+    key = os.environ.get("CRON_KEY", "")
+    if not key or not secrets.compare_digest(request.headers.get("X-Cron-Key", ""), key):
+        abort(403)
+    import push
+    priv = push.vapid(store.db)[0]
+    subs = store.list_subs()
+    by_uid = {}
+    for sb in subs:
+        by_uid.setdefault(sb["uid"], []).append(sb)
+    sent = removed = users = 0
+    for uid, lst in by_uid.items():
+        try:
+            items = push.due_tomorrow(store.load(uid))
+        except Exception as e:
+            print("cron load:", uid, repr(e), flush=True)
+            continue
+        if not items:
+            continue
+        users += 1
+        for sb in lst:
+            try:
+                if push.send(sb, push.message(items, sb.get("lang", "es")), priv):
+                    sent += 1
+                else:
+                    store.delete_sub(sb["_id"]); removed += 1
+            except Exception as e:
+                print("cron send:", repr(e), flush=True)
+    print(f"recordatorios: usuarios={users} enviados={sent} borrados={removed}", flush=True)
+    return {"users": users, "sent": sent, "removed": removed, "subs": len(subs)}
 
 
 @app.get("/healthz")

@@ -87,6 +87,17 @@ class FirestoreStore:
         return tx(self.db.transaction())
 
 
+    # ---- Suscripciones push (colección solo del servidor) ----
+    def save_sub(self, sid, data):
+        self.db.collection("push_subs").document(sid).set(data)
+
+    def delete_sub(self, sid):
+        self.db.collection("push_subs").document(sid).delete()
+
+    def list_subs(self):
+        return [d.to_dict() | {"_id": d.id} for d in self.db.collection("push_subs").stream()]
+
+
 class LocalStore:
     """Solo para desarrollo: guarda en un archivo JSON."""
 
@@ -123,6 +134,17 @@ class LocalStore:
         self._write(d)
 
     _uso = {}
+    db = None
+    _subs = {}
+
+    def save_sub(self, sid, data):
+        self._subs[sid] = data
+
+    def delete_sub(self, sid):
+        self._subs.pop(sid, None)
+
+    def list_subs(self):
+        return [v | {"_id": k} for k, v in self._subs.items()]
 
     def ia_quota(self, uid, limit):
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
