@@ -1,4 +1,4 @@
-"""Asistente de IA de Personal Balance (Claude con herramientas).
+"""Asistente de IA de Personal Balance (Groq, plan gratuito, con herramientas).
 
 - Las herramientas de lectura se ejecutan directamente.
 - Las de escritura NO se ejecutan hasta que el usuario pulsa "Confirmar":
@@ -14,7 +14,7 @@ from datetime import date
 import calc
 from calc import r2
 
-MODEL = os.environ.get("AGENT_MODEL", "claude-sonnet-5-5")
+MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 MAX_STEPS = 8
 MAX_HISTORY = 30
 
@@ -50,7 +50,7 @@ WRITE_TOOLS = [
      "description": "Cambia campos de un gasto existente (solo los que se indiquen).",
      "input_schema": {"type": "object", "properties": {
          "id": {"type": "string"}, "concepto": {"type": "string"}, "importe": {"type": "number"},
-         "dia": {"type": ["integer", "null"]}, "categoria": {"type": "string"}}, "required": ["id"]}},
+         "dia": {"type": "integer", "description": "Día de cobro 1-31; 0 para quitarlo"}, "categoria": {"type": "string"}}, "required": ["id"]}},
     {"name": "borrar_gasto",
      "description": "Borra un gasto mensual.",
      "input_schema": {"type": "object", "properties": {"id": {"type": "string"}}, "required": ["id"]}},
@@ -228,16 +228,92 @@ def run_write(S, name, inp, cats_loans="Préstamos"):
     return {"error": "herramienta desconocida"}
 
 
-# ---------- Bucle del agente ----------
+# ---------- Proveedor de IA: Groq (gratuito, compatible con OpenAI) ----------
+class AIBusy(Exception):
+    """Límite gratuito de Groq alcanzado (HTTP 429)."""
+
+
+class GroqClient:
+    URL = "https://api.groq.com/openai/v1/chat/completions"
+
+    def __init__(self, key, model):
+        self.key, self.model = key, model
+
+    @staticmethod
+    def _to_openai(system, messages):
+        out = [{"role": "system", "content": system}]
+        for m in messages:
+            c = m["content"]
+            if isinstance(c, str):
+                out.append({"role": m["role"], "content": c})
+                continue
+            if m["role"] == "assistant":
+                text = "\n".join(b["text"] for b in c if b["type"] == "text")
+                calls = [{"id": b["id"], "type": "function",
+                          "function": {"name": b["name"], "arguments": json.dumps(b["input"], ensure_ascii=False)}}
+                         for b in c if b["type"] == "tool_use"]
+                msg = {"role": "assistant", "content": text or None}
+                if calls:
+                    msg["tool_calls"] = calls
+                out.append(msg)
+            else:
+                for b in c:
+                    if b["type"] == "tool_result":
+                        out.append({"role": "tool", "tool_call_id": b["tool_use_id"], "content": str(b.get("content", ""))})
+                    elif b["type"] == "text":
+                        out.append({"role": "user", "content": b["text"]})
+        return out
+
+    def complete(self, system, tools, messages):
+        import httpx
+        body = {"model": self.model, "messages": self._to_openai(system, messages), "temperature": 0.3,
+                "max_completion_tokens": 1500, "tool_choice": "auto",
+                "tools": [{"type": "function", "function": {"name": t["name"], "description": t["description"],
+                                                            "parameters": t["input_schema"]}} for t in tools]}
+        if self.model.startswith("openai/gpt-oss"):
+            body["reasoning_effort"] = "low"
+        r = httpx.post(self.URL, json=body, timeout=60, headers={"Authorization": f"Bearer {self.key}"})
+        if r.status_code == 429:
+            raise AIBusy()
+        if r.status_code >= 400:
+            raise RuntimeError(f"Groq {r.status_code}: {r.text[:200]}")
+        msg = r.json()["choices"][0]["message"]
+        blocks = []
+        if (msg.get("content") or "").strip():
+            blocks.append({"type": "text", "text": msg["content"].strip()})
+        for tc in msg.get("tool_calls") or []:
+            try:
+                args = json.loads(tc["function"].get("arguments") or "{}")
+            except ValueError:
+                args = {}
+            blocks.append({"type": "tool_use", "id": tc["id"], "name": tc["function"]["name"], "input": args})
+        stop = "tool_use" if any(b["type"] == "tool_use" for b in blocks) else "end_turn"
+        return blocks, stop
+
+
+class _FakeAdapter:
+    def __init__(self, fake):
+        self.fake = fake
+
+    def complete(self, system, tools, messages):
+        resp = self.fake.messages.create(model="fake", max_tokens=0, system=system, tools=tools, messages=messages)
+        blocks = []
+        for b in resp.content:
+            if b.type == "text":
+                blocks.append({"type": "text", "text": b.text})
+            else:
+                blocks.append({"type": "tool_use", "id": b.id, "name": b.name, "input": b.input})
+        return blocks, resp.stop_reason
+
+
 def _client():
     if os.environ.get("PB_DEV") == "1" and os.environ.get("PB_FAKE_AI") == "1":
         from fake_ai import FakeClient  # solo para pruebas locales
-        return FakeClient()
-    import anthropic
-    key = os.environ.get("ANTHROPIC_API_KEY")
+        return _FakeAdapter(FakeClient())
+    key = os.environ.get("GROQ_API_KEY")
     if not key:
         return None
-    return anthropic.Anthropic(api_key=key)
+    return GroqClient(key, MODEL)
 
 
 def _clean_history(messages):
@@ -257,16 +333,6 @@ def _clean_history(messages):
     while ok and not (ok[0]["role"] == "user" and isinstance(ok[0]["content"], str)):
         ok.pop(0)
     return ok
-
-
-def _blocks_to_dicts(content):
-    out = []
-    for b in content:
-        if b.type == "text":
-            out.append({"type": "text", "text": b.text})
-        elif b.type == "tool_use":
-            out.append({"type": "tool_use", "id": b.id, "name": b.name, "input": b.input})
-    return out
 
 
 def run(S, messages, lang, nombre, decision=None, client=None, save=None, loans_cat="Préstamos"):
@@ -304,12 +370,11 @@ def run(S, messages, lang, nombre, decision=None, client=None, save=None, loans_
 
     system = system_prompt(lang, nombre)
     for _ in range(MAX_STEPS):
-        resp = client.messages.create(model=MODEL, max_tokens=1500, system=system, tools=TOOLS, messages=messages)
-        content = _blocks_to_dicts(resp.content)
+        content, stop = client.complete(system, TOOLS, messages)
         messages.append({"role": "assistant", "content": content})
         uses = [b for b in content if b["type"] == "tool_use"]
         text = "\n".join(b["text"] for b in content if b["type"] == "text").strip()
-        if resp.stop_reason != "tool_use" or not uses:
+        if stop != "tool_use" or not uses:
             return {"messages": messages, "reply": text, "pending": None, "changed": changed}
         writes = [b for b in uses if b["name"] in WRITE_NAMES]
         if writes:

@@ -16,7 +16,8 @@
     s4: ['Añade Netflix 12,99 € el día 5', 'Add Netflix €12.99 on day 5', 'Добави Netflix 12,99 € на 5-о число'],
     ok: ['Confirmar', 'Confirm', 'Потвърди'], no: ['Cancelar', 'Cancel', 'Отказ'],
     done: ['Hecho ✓', 'Done ✓', 'Готово ✓'], cancelled: ['Cancelado', 'Cancelled', 'Отказано'],
-    nokey: ['El asistente aún no está activado: falta la clave de Claude en el servidor.', 'The assistant is not enabled yet: the Claude key is missing on the server.', 'Асистентът още не е активиран: липсва ключът за Claude на сървъра.'],
+    nokey: ['El asistente aún no está activado: falta la clave de la IA en el servidor.', 'The assistant is not enabled yet: the AI key is missing on the server.', 'Асистентът още не е активиран: липсва ключът за ИИ на сървъра.'],
+    busy: ['La IA gratuita está saturada ahora mismo. Inténtalo en unos minutos.', 'The free AI is busy right now. Try again in a few minutes.', 'Безплатният ИИ е претоварен в момента. Опитай след няколко минути.'],
     err: ['No se pudo contactar con el asistente. Inténtalo de nuevo.', 'Could not reach the assistant. Try again.', 'Няма връзка с асистента. Опитай отново.'],
     auth: ['Tu sesión ha caducado. Recarga la página.', 'Your session expired. Reload the page.', 'Сесията изтече. Презареди страницата.'],
     limit: ['Has llegado al límite de mensajes de hoy. Vuelve mañana.', 'You have reached today\'s message limit. Come back tomorrow.', 'Достигна дневния лимит на съобщения. Опитай утре.'],
@@ -111,6 +112,7 @@
       if (r.status === 401) st.view.push({ k: 'e', text: t('auth') });
       else if (j.error === 'no_key') st.view.push({ k: 'e', text: t('nokey') });
       else if (j.error === 'limit') st.view.push({ k: 'e', text: t('limit') });
+      else if (j.error === 'busy') st.view.push({ k: 'e', text: t('busy') });
       else if (!r.ok || j.error) st.view.push({ k: 'e', text: t('err') + (j.detail ? ' (' + j.detail + ')' : '') });
       else {
         st.messages = j.messages || st.messages;

@@ -25,7 +25,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-7"
+APP_VERSION = "web-8"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -628,6 +628,8 @@ def api_agent():
         out = agent.run(S, body.get("messages") or [], lang, P.get("nombre") or user.get("name", ""),
                         decision=body.get("decision"), save=lambda s: store.save(g.uid, s),
                         loans_cat=TR["cats"][LANGS[lang]["i"]].split("|")[1])
+    except agent.AIBusy:
+        return {"error": "busy"}, 429
     except Exception as e:  # error de la API de IA
         print("agent:", repr(e), flush=True)
         return {"error": "ai", "detail": f"{type(e).__name__}: {str(e)[:200]}"}, 502
