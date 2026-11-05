@@ -1152,7 +1152,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='58';$('#ver').textContent='v'+APP_V;
+const APP_V='59';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 /* ---------- Avisos de pagos (notificaciones push) ---------- */
 const PUSH_API='https://personal-balance-web-778378922815.europe-west1.run.app/api/push/';
@@ -1584,5 +1584,75 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(
 <script>window.PB_AGENT={api:'https://personal-balance-web-778378922815.europe-west1.run.app/api/agent',getToken:()=>window.__pbTok?window.__pbTok():null}</script>
 <script src="https://personal-balance-web-778378922815.europe-west1.run.app/static/agent.js" defer></script>
 <script src="https://personal-balance-web-778378922815.europe-west1.run.app/static/scan.js" defer></script>
+<div id="inst" class="inst hidden" role="dialog" aria-live="polite">
+  <button class="inst-x" id="inst-x" aria-label="Cerrar">×</button>
+  <div class="inst-row"><img src="icon-192.png" alt="" class="inst-ic"><div><b id="inst-t"></b><div class="inst-b" id="inst-b"></div></div></div>
+  <div class="inst-act" id="inst-act"></div>
+</div>
+<div id="inst-arrow" class="inst-arrow hidden" aria-hidden="true">⬇</div>
+<style>
+.inst{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:60;max-width:460px;margin:0 auto;background:var(--card,#1b1b1b);color:var(--text,#fff);border:1px solid var(--line,#333);border-radius:18px;padding:14px 16px 14px;box-shadow:0 14px 40px rgba(0,0,0,.45);animation:instIn .35s ease}
+.inst.up{bottom:calc(46px + env(safe-area-inset-bottom,0px))}
+.inst.top{bottom:auto;top:calc(12px + env(safe-area-inset-top,0px))}
+.inst-row{display:flex;gap:12px;align-items:flex-start;padding-right:22px}
+.inst-ic{width:44px;height:44px;border-radius:11px;flex:none}
+.inst-b{font-size:14px;line-height:1.45;margin-top:3px;color:var(--muted,#aaa)}
+.inst-b b{color:var(--text,#fff)}
+.inst-b .k{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:6px;background:var(--line,#333);color:var(--text,#fff);font-size:13px;vertical-align:-3px}
+.inst-act{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.inst-act:empty{display:none}
+.inst-x{position:absolute;top:6px;right:8px;background:none;border:0;color:var(--muted,#aaa);font-size:22px;line-height:1;padding:6px;cursor:pointer}
+.inst-arrow{position:fixed;left:50%;bottom:calc(2px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:61;font-size:30px;color:var(--accent,#2f6f5e);animation:instBob 1s ease-in-out infinite;text-shadow:0 2px 8px rgba(0,0,0,.4)}
+.inst-arrow.tr{left:auto;right:18px;bottom:auto;top:4px;transform:none;animation:instBobUp 1s ease-in-out infinite}
+@keyframes instIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes instBob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,7px)}}
+@keyframes instBobUp{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+</style>
+<script>
+/* ---------- Instalar la app (Android: un toque · iPhone: guía hasta Compartir) ---------- */
+(()=>{
+const T={
+ t:["Instala Personal Balance","Install Personal Balance","Инсталирай Personal Balance"],
+ and:["Tenla en tu pantalla de inicio como una app más, sin tiendas.","Keep it on your home screen like any other app, no store needed.","Дръж я на началния екран като всяко приложение, без магазин."],
+ btn:["Instalar","Install","Инсталирай"],
+ later:["Ahora no","Not now","Не сега"],
+ andm:["Pulsa el menú <span class='k'>⋮</span> del navegador y elige <b>Instalar app</b> o <b>Añadir a pantalla de inicio</b>.","Tap the browser menu <span class='k'>⋮</span> and choose <b>Install app</b> or <b>Add to Home screen</b>.","Натисни менюто <span class='k'>⋮</span> на браузъра и избери <b>Инсталирай приложението</b> или <b>Добави към началния екран</b>."],
+ ios:["Pulsa <b>Compartir</b> <span class='k'><svg width='13' height='15' viewBox='0 0 13 15' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M6.5 1v8.5M3.5 4l3-3 3 3M4 6.5H2.5v7h8v-7H9'/></svg></span> abajo, baja y elige <b>Añadir a pantalla de inicio</b>. Luego ábrela desde su icono.","Tap <b>Share</b> <span class='k'><svg width='13' height='15' viewBox='0 0 13 15' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M6.5 1v8.5M3.5 4l3-3 3 3M4 6.5H2.5v7h8v-7H9'/></svg></span> below, scroll down and choose <b>Add to Home Screen</b>. Then open it from its icon.","Натисни <b>Сподели</b> <span class='k'><svg width='13' height='15' viewBox='0 0 13 15' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M6.5 1v8.5M3.5 4l3-3 3 3M4 6.5H2.5v7h8v-7H9'/></svg></span> долу, превърти и избери <b>Добави към началния екран</b>. После я отвори от иконата."],
+ ipad:["Pulsa <b>Compartir</b> <span class='k'><svg width='13' height='15' viewBox='0 0 13 15' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M6.5 1v8.5M3.5 4l3-3 3 3M4 6.5H2.5v7h8v-7H9'/></svg></span> arriba a la derecha y elige <b>Añadir a pantalla de inicio</b>.","Tap <b>Share</b> <span class='k'><svg width='13' height='15' viewBox='0 0 13 15' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M6.5 1v8.5M3.5 4l3-3 3 3M4 6.5H2.5v7h8v-7H9'/></svg></span> at the top right and choose <b>Add to Home Screen</b>.","Натисни <b>Сподели</b> <span class='k'><svg width='13' height='15' viewBox='0 0 13 15' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M6.5 1v8.5M3.5 4l3-3 3 3M4 6.5H2.5v7h8v-7H9'/></svg></span> горе вдясно и избери <b>Добави към началния екран</b>."],
+ iosx:["Para instalarla, abre este enlace en <b>Safari</b> y pulsa <b>Compartir → Añadir a pantalla de inicio</b>.","To install it, open this link in <b>Safari</b> and tap <b>Share → Add to Home Screen</b>.","За да я инсталираш, отвори връзката в <b>Safari</b> и натисни <b>Сподели → Добави към началния екран</b>."],
+ copy:["Copiar enlace","Copy link","Копирай връзката"],
+ copied:["Enlace copiado ✓","Link copied ✓","Връзката е копирана ✓"]};
+const LK='mis-gastos-inst-hide';
+const li=()=>{let l=(document.documentElement.lang||'es').slice(0,2);try{const v=(localStorage.getItem('mis-gastos-lang')||'').replace(/"/g,'');if(v)l=v}catch(e){}return({es:0,en:1,bg:2})[l]??0};
+const tx=k=>T[k][li()];
+const ua=navigator.userAgent||'';
+const standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+const isIPad=/iPad/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+const isIOS=/iPhone|iPod/.test(ua)||isIPad;
+const isAndroid=/Android/.test(ua);
+const iosSafari=isIOS&&/Safari/.test(ua)&&!/CriOS|FxiOS|EdgiOS|OPiOS|GSA|Instagram|FBAN|FBAV|Line\//.test(ua);
+const force=/[?&]instalar\b/.test(location.search);
+let hidden=false;try{const h=+localStorage.getItem(LK)||0;hidden=Date.now()<h}catch(e){}
+let deferred=null;
+const box=document.getElementById('inst'),arrow=document.getElementById('inst-arrow');
+function close(days){box.classList.add('hidden');arrow.classList.add('hidden');try{localStorage.setItem(LK,String(Date.now()+days*864e5))}catch(e){}}
+document.getElementById('inst-x').onclick=()=>close(3);
+function btn(label,cls,fn){const b=document.createElement('button');b.className='btn'+(cls?' '+cls:'');b.type='button';b.textContent=label;b.onclick=fn;document.getElementById('inst-act').appendChild(b);return b}
+function show(body,{actions=true,arrowPos=null,top=false}={}){
+ if(standalone||(hidden&&!force))return;
+ document.getElementById('inst-t').textContent=tx('t');document.getElementById('inst-b').innerHTML=body;
+ document.getElementById('inst-act').innerHTML='';box.classList.toggle('top',top);box.classList.remove('hidden');
+ box.classList.toggle('up',arrowPos==='b');if(arrowPos){arrow.classList.toggle('tr',arrowPos==='tr');arrow.textContent=arrowPos==='tr'?'⬆':'⬇';arrow.classList.remove('hidden')}
+ return actions}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;
+ if(show(tx('and'))){btn(tx('later'),'ghost',()=>close(3));btn(tx('btn'),'',async()=>{try{deferred.prompt();const r=await deferred.userChoice;if(r&&r.outcome==='accepted')close(3650)}catch(_){}deferred=null;box.classList.add('hidden')})}});
+window.addEventListener('appinstalled',()=>close(3650));
+setTimeout(()=>{if(deferred||standalone||!box.classList.contains('hidden'))return;
+ if(iosSafari){show(isIPad?tx('ipad'):tx('ios'),{arrowPos:isIPad?'tr':'b',top:isIPad})}
+ else if(isIOS){if(show(tx('iosx')))btn(tx('copy'),'',async e=>{try{await navigator.clipboard.writeText(location.origin+location.pathname);e.target.textContent=tx('copied')}catch(_){}})}
+ else if(isAndroid){show(tx('andm'))}
+},2500);
+})();
+</script>
 </body>
 </html>
