@@ -123,7 +123,7 @@ def due_tomorrow(S, today=None):
                 if c.get("fecha") == tiso and c.get("pagada") is not True:
                     out.append((g.get("concepto") or l.get("nombre", ""), float(c.get("cuota") or 0)))
             continue
-        if not g.get("dia"):
+        if not g.get("dia") or not calc.cobra_en(g, tm.month):
             continue
         last = calendar.monthrange(tm.year, tm.month)[1]
         if min(int(g["dia"]), last) == tm.day and (g.get("pagos") or {}).get(mk) is not True:

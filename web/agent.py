@@ -63,16 +63,18 @@ WRITE_TOOLS = [
      "description": "Borra el presupuesto de una categoría.",
      "input_schema": {"type": "object", "properties": {"categoria": {"type": "string"}}, "required": ["categoria"]}},
     {"name": "anadir_gasto",
-     "description": "Añade un gasto mensual fijo.",
+     "description": "Añade un gasto fijo (recibo). Si no se cobra todos los meses, indica en meses los meses en que se cobra.",
      "input_schema": {"type": "object", "properties": {
-         "concepto": {"type": "string"}, "importe": {"type": "number", "description": "Euros al mes"},
+         "concepto": {"type": "string"}, "importe": {"type": "number", "description": "Euros de cada cobro"},
          "dia": {"type": "integer", "description": "Día de cobro 1-31 (opcional)"},
+         "meses": {"type": "array", "items": {"type": "integer"}, "description": "Meses (1-12) en que se cobra, si no es todos los meses; vacío = todos los meses"},
          "categoria": {"type": "string"}}, "required": ["concepto", "importe"]}},
     {"name": "editar_gasto",
      "description": "Cambia campos de un gasto existente (solo los que se indiquen).",
      "input_schema": {"type": "object", "properties": {
          "id": {"type": "string"}, "concepto": {"type": "string"}, "importe": {"type": "number"},
-         "dia": {"type": "integer", "description": "Día de cobro 1-31; 0 para quitarlo"}, "categoria": {"type": "string"}}, "required": ["id"]}},
+         "dia": {"type": "integer", "description": "Día de cobro 1-31; 0 para quitarlo"}, "categoria": {"type": "string"},
+         "meses": {"type": "array", "items": {"type": "integer"}, "description": "Meses (1-12) en que se cobra, si no es todos los meses; vacío = todos los meses"}}, "required": ["id"]}},
     {"name": "borrar_gasto",
      "description": "Borra un gasto mensual.",
      "input_schema": {"type": "object", "properties": {"id": {"type": "string"}}, "required": ["id"]}},
@@ -171,6 +173,7 @@ def _run_read(S, name, inp):
                                   "porcentaje": round(p["pct"]), "queda": p["queda"]} for p in calc.presupuestos_estado(S, 0)]}
     if name == "listar_gastos":
         return [{"id": g["id"], "concepto": g.get("concepto"), "importe": g.get("importe"), "dia": g.get("dia"),
+                 "meses_de_cobro": calc.meses_de(g) or "todos", "media_al_mes": r2(calc.mensual(g)),
                  "categoria": g.get("categoria"),
                  "prestamo": (calc.loan_by_id(S, g["prestamoId"]) or {}).get("nombre") if g.get("prestamoId") else None}
                 for g in S["gastos"]]
@@ -211,11 +214,16 @@ def _run_read(S, name, inp):
     return {"error": "herramienta desconocida"}
 
 
+MESES = "enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre".split()
+
+
 def describe(S, name, inp):
     """Texto de la acción para el botón de confirmar."""
     g = lambda gid: next((x for x in S["gastos"] if x["id"] == gid), None)  # noqa: E731
     if name == "anadir_gasto":
-        s = f"Añadir gasto «{inp.get('concepto')}» de {_money(inp.get('importe'))} al mes"
+        ms = calc.meses_de(inp)
+        s = f"Añadir gasto «{inp.get('concepto')}» de {_money(inp.get('importe'))} " + (
+            "en " + ", ".join(MESES[m - 1] for m in ms) if ms else "al mes")
         if inp.get("dia"):
             s += f", día {inp['dia']}"
         if inp.get("categoria"):
@@ -223,7 +231,8 @@ def describe(S, name, inp):
         return s
     if name == "editar_gasto":
         x = g(inp.get("id"))
-        cambios = ", ".join(f"{k}: {_money(v) if k == 'importe' else v}" for k, v in inp.items() if k != "id")
+        cambios = ", ".join(f"{k}: {_money(v) if k == 'importe' else (', '.join(MESES[m - 1] for m in calc.meses_de(inp)) or 'todos') if k == 'meses' else v}"
+                            for k, v in inp.items() if k != "id")
         return f"Editar «{(x or {}).get('concepto', '?')}» → {cambios}"
     if name == "borrar_gasto":
         return f"Borrar el gasto «{(g(inp.get('id')) or {}).get('concepto', '?')}»"
@@ -258,7 +267,7 @@ def run_write(S, name, inp, cats_loans="Préstamos"):
         dia = inp.get("dia")
         S["gastos"].append({"id": calc.uid(), "concepto": str(inp.get("concepto", "")).strip(), "importe": r2(inp.get("importe")),
                             "dia": max(1, min(31, int(dia))) if dia else None, "categoria": inp.get("categoria") or "",
-                            "prestamoId": ""})
+                            "meses": calc.meses_de(inp), "prestamoId": ""})
         return {"ok": True}
     if name == "editar_gasto":
         x = next((x for x in S["gastos"] if x["id"] == inp.get("id")), None)
@@ -271,6 +280,8 @@ def run_write(S, name, inp, cats_loans="Préstamos"):
             x["importe"] = r2(inp["importe"])
         if "dia" in inp:
             x["dia"] = max(1, min(31, int(inp["dia"]))) if inp["dia"] else None
+        if "meses" in inp:
+            x["meses"] = calc.meses_de(inp)
         return {"ok": True}
     if name == "borrar_gasto":
         n = len(S["gastos"])

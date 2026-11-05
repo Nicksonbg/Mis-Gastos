@@ -96,8 +96,29 @@ def loan_stats(l: dict) -> dict:
     }
 
 
+def meses_de(g: dict) -> list:
+    """Meses (1-12) en los que se cobra un gasto fijo. Lista vacía = todos los meses."""
+    try:
+        m = sorted({int(x) for x in (g.get("meses") or []) if 1 <= int(x) <= 12})
+    except (TypeError, ValueError):
+        return []
+    return [] if len(m) == 12 else m
+
+
+def cobra_en(g: dict, month: int) -> bool:
+    m = meses_de(g)
+    return not m or month in m
+
+
+def mensual(g: dict) -> float:
+    """Lo que supone el gasto de media al mes (un recibo de 3 meses al año cuenta 3/12)."""
+    imp = float(g.get("importe") or 0)
+    m = [] if g.get("prestamoId") else meses_de(g)
+    return imp * len(m) / 12 if m else imp
+
+
 def total_mes(S) -> float:
-    return r2(sum(float(g.get("importe") or 0) for g in S["gastos"]))
+    return r2(sum(mensual(g) for g in S["gastos"]))
 
 
 def loan_by_id(S, lid):
@@ -133,6 +154,8 @@ def mes_items(S, off: int = 0):
                     "pagado": is_paid(c, t), "manual": c.get("pagada") is not None,
                     "auto": c["fecha"] <= t,
                 })
+            continue
+        if not cobra_en(g, m0.month):
             continue
         fecha = None
         if g.get("dia"):
@@ -195,9 +218,9 @@ def upcoming(S, days: int):
     for g in S["gastos"]:
         if not g.get("dia") or (g.get("prestamoId") and g["prestamoId"] in linked):
             continue
-        for k in range(3):
+        for k in range(13 if meses_de(g) else 3):
             f = add_months(iso(date(n.year, n.month, 1)), k, int(g["dia"]))
-            if t <= f <= lim:
+            if t <= f <= lim and cobra_en(g, parse(f).month):
                 items.append({"fecha": f, "nombre": g.get("concepto", ""), "importe": float(g.get("importe") or 0)})
     return sorted(items, key=lambda i: i["fecha"])
 
@@ -223,13 +246,12 @@ def build_loan(nombre, entidad, importe, tin, n, inicio):
 # ---------- Gráficos (SVG) ----------
 def donut_svg(S, money, t, esc):
     tm = total_mes(S)
-    items = sorted([g for g in S["gastos"] if float(g.get("importe") or 0) > 0],
-                   key=lambda g: -float(g["importe"]))
+    items = sorted([g for g in S["gastos"] if mensual(g) > 0], key=lambda g: -mensual(g))
     R, r, C = 70, 44, 90
     a0 = -math.pi / 2
     svg = ""
     for i, g in enumerate(items):
-        imp = float(g["importe"])
+        imp = mensual(g)
         frac = imp / tm if tm else 0
         a1 = a0 + frac * 2 * math.pi
         large = 1 if frac > .5 else 0
@@ -248,8 +270,8 @@ def donut_svg(S, money, t, esc):
         a0 = a1
     svg += (f'<text x="{C}" y="{C - 4}" text-anchor="middle" style="font-size:12px;fill:var(--muted)">{t("al_mes")}</text>'
             f'<text x="{C}" y="{C + 14}" text-anchor="middle" style="font-size:15px;font-weight:650;fill:var(--text)">{money(tm)}</text>')
-    legend = [{"concepto": g.get("concepto", ""), "importe": float(g["importe"]),
-               "pct": float(g["importe"]) / tm * 100 if tm else 0, "color": f"var(--c{i % 8 + 1})"}
+    legend = [{"concepto": g.get("concepto", ""), "importe": mensual(g),
+               "pct": mensual(g) / tm * 100 if tm else 0, "color": f"var(--c{i % 8 + 1})"}
               for i, g in enumerate(items)]
     return f'<svg width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="{t("aria_donut")}">{svg}</svg>', legend
 
@@ -339,7 +361,7 @@ def gasto_por_categoria(S, mk):
         if l:
             v = sum(float(c.get("cuota") or 0) for c in l.get("cuotas", []) if (c.get("fecha") or "")[:7] == mk)
         else:
-            v = float(g.get("importe") or 0)
+            v = float(g.get("importe") or 0) if cobra_en(g, int(mk[5:7])) else 0
         out[cat.lower()] = out.get(cat.lower(), 0) + v
     for m in S.get("movimientos", []):
         if (m.get("fecha") or "")[:7] == mk:

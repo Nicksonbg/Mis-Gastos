@@ -458,7 +458,9 @@ def gastos():
     for gst in S["gastos"]:
         l = gst.get("prestamoId") and calc.loan_by_id(S, gst["prestamoId"])
         st = calc.loan_stats(l) if l else None
-        rows.append({**gst, "pct": float(gst.get("importe") or 0) / tm * 100 if tm else 0,
+        ms = calc.meses_de(gst)
+        rows.append({**gst, "pct": calc.mensual(gst) / tm * 100 if tm else 0,
+                     "meses_lbl": ", ".join(t("meses_c").split("|")[m - 1] for m in ms) if ms and not gst.get("prestamoId") else "",
                      "hasta": st["fin"] if st else None})
     return render_template("gastos.html", **ctx("gastos", S=S, tabn="fijos", rows=rows, tm=tm, cats=t("cats").split("|"),
                                                    gastos_json=json.dumps(S["gastos"])))
@@ -471,6 +473,7 @@ def gasto_save():
     v = {"concepto": request.form.get("concepto", "").strip(), "importe": r2(fnum("importe", 0)),
          "dia": int(fnum("dia")) if fnum("dia") else None,
          "categoria": request.form.get("categoria", "").strip(), "prestamoId": request.form.get("prestamoId", "")}
+    v["meses"] = calc.meses_de({"meses": request.form.getlist("meses")})
     if v["dia"] is not None:
         v["dia"] = max(1, min(31, v["dia"]))
     gid = request.form.get("id")

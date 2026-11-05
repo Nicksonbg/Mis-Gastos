@@ -9,14 +9,14 @@
       <thead><tr><th>{{ t('th_concepto') }}</th><th class="hide-sm">{{ t('th_categoria') }}</th><th class="n hide-sm">{{ t('th_dia_cobro') }}</th><th class="n">{{ t('th_importe') }}</th><th class="n hide-sm">{{ t('th_pct') }}</th><th class="hide-sm">{{ t('th_hasta') }}</th><th></th></tr></thead>
       <tbody>
       {% for g in rows %}
-        <tr><td>{{ g.concepto }}</td><td class="hide-sm muted">{{ g.categoria or '' }}</td><td class="n hide-sm">{{ g.dia or '—' }}</td><td class="n">{{ money(g.importe) }}</td><td class="n hide-sm muted">{{ dec1(g.pct) }} %</td><td class="hide-sm small">{{ fmt_d(g.hasta) if g.hasta }}</td>
+        <tr><td>{{ g.concepto }}{% if g.meses_lbl %}<div class="small muted">{{ t('solo_meses', m=g.meses_lbl) }}</div>{% endif %}</td><td class="hide-sm muted">{{ g.categoria or '' }}</td><td class="n hide-sm">{{ g.dia or '—' }}</td><td class="n">{{ money(g.importe) }}</td><td class="n hide-sm muted">{{ dec1(g.pct) }} %</td><td class="hide-sm small">{{ fmt_d(g.hasta) if g.hasta }}</td>
           <td class="n" style="white-space:nowrap"><button class="icon" type="button" onclick="openGasto('{{ g.id }}')" title="{{ t('editar') }}">✏️</button><form class="inline" method="post" action="{{ url_for('gasto_delete') }}" data-confirm="{{ t('ask_borrar', n=g.concepto) }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ g.id }}"><button class="icon" title="{{ t('borrar') }}">🗑️</button></form></td></tr>
       {% else %}<tr><td colspan="7" class="muted">{{ t('aun_no_gastos') }}</td></tr>{% endfor %}
       </tbody>
       <tfoot><tr><td>{{ t('k_mes') }}</td><td class="hide-sm"></td><td class="hide-sm"></td><td class="n">{{ money(tm) }}</td><td class="n hide-sm">100 %</td><td class="hide-sm"></td><td></td></tr>
       <tr><td class="muted">{{ t('k_anio') }}</td><td class="hide-sm"></td><td class="hide-sm"></td><td class="n muted">{{ money(tm*12) }}</td><td class="hide-sm"></td><td class="hide-sm"></td><td></td></tr></tfoot>
     </table></div>
-    <p class="muted small">{{ t('gastos_nota') }}</p>
+    <p class="muted small">{{ t('gastos_nota') }} {{ t('gastos_nota_meses') }}</p>
   </div>
 </section>
 {% endblock %}
@@ -29,6 +29,9 @@
     <label class="f"><span>{{ t('f_importe_m') }}</span><input name="importe" type="number" step="0.01" min="0" required></label>
     <label class="f"><span>{{ t('f_dia_cobro') }}</span><input name="dia" type="number" min="1" max="31"></label>
   </div>
+  <div class="f"><span>{{ t('f_meses_cobro') }}</span>
+    <div class="mchips">{% for mc in t('meses_c').split('|') %}<label><input type="checkbox" name="meses" value="{{ loop.index }}"><span>{{ mc }}</span></label>{% endfor %}</div>
+    <span class="small muted">{{ t('meses_nota') }}</span></div>
   <div class="fgrid">
     <label class="f"><span>{{ t('f_categoria') }}</span><input name="categoria" list="cats"></label>
     <label class="f"><span>{{ t('f_prestamo') }}</span><select name="prestamoId"><option value="">{{ t('ninguno') }}</option>{% for l in S.prestamos %}<option value="{{ l.id }}">{{ l.nombre }}</option>{% endfor %}</select></label>
@@ -41,6 +44,7 @@ const GASTOS={{ S.gastos|tojson }};
 function openGasto(id){const g=GASTOS.find(x=>x.id===id),f=document.getElementById('f-gasto');
   document.getElementById('dlg-gasto-t').textContent=g?{{ t('gasto_edit')|tojson }}:{{ t('gasto_new')|tojson }};
   f.elements.namedItem('id').value=g?g.id:'';f.concepto.value=g?.concepto||'';f.importe.value=g?.importe??'';f.dia.value=g?.dia||'';f.categoria.value=g?.categoria||'';f.prestamoId.value=g?.prestamoId||'';
+  const ms=(g&&g.meses)||[];f.querySelectorAll('input[name=meses]').forEach(c=>c.checked=ms.includes(+c.value));
   document.getElementById('dlg-gasto').showModal()}
 </script>
 {% endblock %}
