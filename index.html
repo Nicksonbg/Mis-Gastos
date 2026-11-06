@@ -1152,7 +1152,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='59';$('#ver').textContent='v'+APP_V;
+const APP_V='60';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 /* ---------- Avisos de pagos (notificaciones push) ---------- */
 const PUSH_API='https://personal-balance-web-778378922815.europe-west1.run.app/api/push/';
@@ -1446,7 +1446,7 @@ async function onLogin(u){
   offerBio(u.uid);
 }
 async function offerBio(uid){
-  if(!bioOk||lockOn()||curUid!==uid||store.get('mis-gastos-biooffer-'+uid)||$('#dlg-ok').open)return;
+  if(!bioOk||!isMobileDev||lockOn()||curUid!==uid||store.get('mis-gastos-biooffer-'+uid)||$('#dlg-ok').open)return;
   store.set('mis-gastos-biooffer-'+uid,'1');
   const ok=await ask(t('l_offer_t'),t('l_offer_m'),t('l_offer_yes'));
   if(ok&&curUid===uid){try{await lockEnable();renderProfile()}catch(e){}}
@@ -1488,12 +1488,19 @@ async function doPush(){if(!fb||!curUid)return;if(pushing){pushAgain=true;return
 
 /* ---------- Bloqueo con Face ID (WebAuthn, solo en este dispositivo) ---------- */
 const LOCK_KEY='mis-gastos-lock-';
+/* ¿Es un móvil/tablet (con huella o Face ID) o un PC? En el PC no usamos Face ID. */
+const isMobileDev=(()=>{const ua=navigator.userAgent||'';
+  if(/Android|iPhone|iPad|iPod|Mobile/i.test(ua))return true;
+  if((navigator.maxTouchPoints||0)>1&&/Macintosh/.test(ua))return true; /* iPad moderno */
+  try{return matchMedia('(pointer:coarse)').matches&&matchMedia('(max-width:820px)').matches}catch(e){return false}})();
+const isDesktop=!isMobileDev;
 const b64=buf=>btoa(String.fromCharCode(...new Uint8Array(buf)));
 const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-const lockOn=()=>!!(curUid&&store.get(LOCK_KEY+curUid));
+const lockStored=()=>!!(curUid&&store.get(LOCK_KEY+curUid));
+const lockOn=()=>lockStored()&&isMobileDev;
 let bioOk=false;
 async function bioCheck(){try{bioOk=!!(window.PublicKeyCredential&&navigator.credentials&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())}catch(e){bioOk=false}
-  $('#sec-card').classList.toggle('hidden',!bioOk)}
+  $('#sec-card').classList.toggle('hidden',!(bioOk&&isMobileDev))}
 const rnd=n=>crypto.getRandomValues(new Uint8Array(n));
 async function lockEnable(){
   const cred=await navigator.credentials.create({publicKey:{challenge:rnd(32),rp:{name:'Personal Balance',id:location.hostname},
