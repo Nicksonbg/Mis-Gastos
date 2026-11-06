@@ -1174,7 +1174,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='61';$('#ver').textContent='v'+APP_V;
+const APP_V='62';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 /* ---------- Avisos de pagos (notificaciones push) ---------- */
 const PUSH_API='https://personal-balance-web-778378922815.europe-west1.run.app/api/push/';
@@ -1641,7 +1641,16 @@ applyStatic();
 render();
 bioCheck();
 initAuth();
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator){
+  const hadCtrl=!!navigator.serviceWorker.controller;let reloaded=false;
+  // Cuando el nuevo service worker toma el control, recarga una vez para estrenar la versión
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadCtrl&&!reloaded){reloaded=true;location.reload()}});
+  navigator.serviceWorker.register('sw.js').then(reg=>{
+    const check=()=>{reg.update().catch(()=>{})};
+    check();setInterval(check,30*60*1000);                                  // cada 30 min
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)check()}); // al volver a la app
+  }).catch(()=>{});
+}
 })();
 </script>
 <script>window.PB_AGENT={api:'https://personal-balance-web-778378922815.europe-west1.run.app/api/agent',getToken:()=>window.__pbTok?window.__pbTok():null}</script>
