@@ -1753,5 +1753,55 @@
     "Solo recuentos de actividad. No se muestran importes ni el detalle económico de la persona.",
     "Activity counts only. No amounts or personal financial detail are shown.",
     "Само брой активности. Не се показват суми или лични финансови данни."
+  ],
+  "pa_donde": [
+    "Desde dónde la usa",
+    "Where they use it",
+    "Откъде я ползва"
+  ],
+  "pa_surface": [
+    "App o navegador",
+    "App or browser",
+    "Приложение или браузър"
+  ],
+  "pa_pais": [
+    "País (aprox.)",
+    "Country (approx.)",
+    "Държава (прибл.)"
+  ],
+  "pa_idioma": [
+    "Idioma",
+    "Language",
+    "Език"
+  ],
+  "pa_frecuencia": [
+    "Desde cuándo y con qué frecuencia",
+    "Since when and how often",
+    "Откога и колко често"
+  ],
+  "pa_desde": [
+    "Usa la app desde",
+    "Using the app since",
+    "Ползва от"
+  ],
+  "pa_act_7": [
+    "Días activos (7)",
+    "Active days (7)",
+    "Активни дни (7)"
+  ],
+  "pa_act_30": [
+    "Días activos (30)",
+    "Active days (30)",
+    "Активни дни (30)"
+  ],
+  "pa_total_dias": [
+    "Días en total",
+    "Total days",
+    "Общо дни"
+  ],
+  "pa_frecuencia_nota": [
+    "«Días activos» = días distintos que ha abierto la app en ese periodo. Empieza a contar desde ahora.",
+    "“Active days” = distinct days they opened the app in that period. Starts counting now.",
+    "«Активни дни» = различните дни, в които е отваряла приложението. Броенето започва отсега."
   ]
 }

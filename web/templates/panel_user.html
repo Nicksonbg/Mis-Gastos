@@ -8,21 +8,41 @@
     <div class="hero-val" style="font-size:28px">{{ cuenta.nombre }}</div>
     <div class="hero-sub"><span class="muted">{{ cuenta.email }}</span>{% if not cuenta.verif %} · <span style="color:var(--warn)">{{ t('pa_sin_verif') }}</span>{% endif %}</div>
     <div class="hero-stats">
-      <div><div class="lbl">{{ t('pa_metodo') }}</div><div class="v" style="font-size:16px">{{ cuenta.prov }}</div><div class="s">{{ cuenta.plat }}</div></div>
-      <div><div class="lbl">{{ t('pa_registro') }}</div><div class="v" style="font-size:16px">{{ cuenta.alta }}</div></div>
+      <div><div class="lbl">{{ t('pa_metodo') }}</div><div class="v" style="font-size:16px">{{ cuenta.prov }}</div></div>
       <div><div class="lbl">{{ t('pa_ult_acceso') }}</div><div class="v" style="font-size:16px">{{ cuenta.acceso }}</div></div>
+      <div><div class="lbl">{{ t('pa_registro') }}</div><div class="v" style="font-size:16px">{{ cuenta.alta }}</div></div>
     </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2 style="margin:0 0 10px">{{ t('pa_donde') }}</h2>
+    <div class="loan-stats">
+      <div><div class="lbl">{{ t('pa_surface') }}</div><div class="v" style="font-size:16px">{{ cuenta.plat }}</div></div>
+      <div><div class="lbl">{{ t('pa_pais') }}</div><div class="v" style="font-size:16px">{{ cuenta.pais }}</div><div class="s">{{ cuenta.tz }}</div></div>
+      <div><div class="lbl">{{ t('pa_idioma') }}</div><div class="v" style="font-size:16px">{{ cuenta.lang }}</div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2 style="margin:0 0 10px">{{ t('pa_frecuencia') }}</h2>
+    <div class="loan-stats">
+      <div><div class="lbl">{{ t('pa_desde') }}</div><div class="v" style="font-size:16px">{{ cuenta.desde }}</div>{% if cuenta.dias_app is not none %}<div class="s">{{ t('pa_hace_d', d=cuenta.dias_app) }}</div>{% endif %}</div>
+      <div><div class="lbl">{{ t('pa_act_7') }}</div><div class="v">{{ uso.act7 }} <span class="muted" style="font-size:13px">/ 7</span></div></div>
+      <div><div class="lbl">{{ t('pa_act_30') }}</div><div class="v">{{ uso.act30 }} <span class="muted" style="font-size:13px">/ 30</span></div></div>
+      <div><div class="lbl">{{ t('pa_total_dias') }}</div><div class="v">{{ uso.total_dias }}</div></div>
+    </div>
+    <p class="muted small" style="margin-top:6px">{{ t('pa_frecuencia_nota') }}</p>
   </div>
 
   <div class="card" style="margin-top:16px">
     <h2 style="margin:0 0 4px">{{ t('pa_uso') }}</h2>
     <p class="muted small" style="margin:0 0 10px">{{ t('pa_uso_nota') }}</p>
     <div class="loan-stats">
-      <div><div class="lbl">{{ t('g_t_fijos') }}</div><div class="v">{{ resumen.n_gastos }}</div></div>
-      <div><div class="lbl">{{ t('g_t_dia') }}</div><div class="v">{{ resumen.n_mov }}</div></div>
-      <div><div class="lbl">{{ t('h_prestamos') }}</div><div class="v">{{ resumen.n_prest }}</div></div>
-      <div><div class="lbl">{{ t('h_pres') }}</div><div class="v">{{ resumen.n_pres }}</div></div>
-      <div><div class="lbl">{{ t('tab_inv') }}</div><div class="v">{{ resumen.n_inv }}</div></div>
+      <div><div class="lbl">{{ t('g_t_fijos') }}</div><div class="v">{{ uso.n_gastos }}</div></div>
+      <div><div class="lbl">{{ t('g_t_dia') }}</div><div class="v">{{ uso.n_mov }}</div></div>
+      <div><div class="lbl">{{ t('h_prestamos') }}</div><div class="v">{{ uso.n_prest }}</div></div>
+      <div><div class="lbl">{{ t('h_pres') }}</div><div class="v">{{ uso.n_pres }}</div></div>
+      <div><div class="lbl">{{ t('tab_inv') }}</div><div class="v">{{ uso.n_inv }}</div></div>
     </div>
   </div>
 </section>

@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-44"
+APP_VERSION = "web-45"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -366,11 +366,20 @@ def resumen():
     try:
         ua = request.headers.get("User-Agent", "")
         pl = "nav-movil" if any(x in ua for x in ("iPhone", "iPad", "Android", "Mobile")) else "nav-pc"
+        hoy = calc.iso(calc.today())
+        lang_h = (request.headers.get("Accept-Language", "").split(",")[0].strip())[:20]
+        dias = g.P.get("dias") if isinstance(g.P.get("dias"), list) else []
+        changed = False
         if (g.P.get("plat") or "") != pl:
-            g.P["plat"] = pl
+            g.P["plat"] = pl; changed = True
+        if hoy not in dias:
+            dias.append(hoy); g.P["dias"] = dias; changed = True
+        if lang_h and g.P.get("lang") != lang_h:
+            g.P["lang"] = lang_h; changed = True
+        if changed:
             store.save_profile(g.uid, g.P)
     except Exception as e:
-        print("plat web:", repr(e), flush=True)
+        print("uso web:", repr(e), flush=True)
     off = request.args.get("m", 0, type=int)
     tm = calc.total_mes(S)
     mr = calc.mes_real(S, 0)
@@ -1496,7 +1505,7 @@ def panel():
 def panel_user(uid):
     if not is_admin(g.user):
         abort(404)
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, date as _date
     from firebase_admin import auth
     try:
         u = auth.get_user(uid)
@@ -1513,25 +1522,59 @@ def panel_user(uid):
         except (TypeError, ValueError, OSError):
             return "—"
 
+    def ms_date(ms):
+        try:
+            return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).date() if ms else None
+        except (TypeError, ValueError, OSError):
+            return None
+
     provs = {p.provider_id for p in (u.provider_data or [])}
     prov = "Google" if "google.com" in provs else "Apple" if "apple.com" in provs else t("pa_correo") if "password" in provs else t("pa_otro")
     plat_labels = {"app-ios": t("pa_app_ios"), "app-android": t("pa_app_android"), "app-otro": t("pa_app_otro"),
                    "nav-movil": t("pa_nav_movil"), "nav-pc": t("pa_nav_pc"), "": t("pa_plat_nd")}
 
+    # País aproximado a partir del idioma (región) o la zona horaria
+    PAISES = {"ES": "España", "GB": "Reino Unido", "US": "EE. UU.", "FR": "Francia", "DE": "Alemania",
+              "IT": "Italia", "PT": "Portugal", "BG": "Bulgaria", "MA": "Marruecos", "MX": "México",
+              "AR": "Argentina", "CO": "Colombia", "RO": "Rumanía", "NL": "Países Bajos", "BE": "Bélgica",
+              "CH": "Suiza", "IE": "Irlanda", "US": "EE. UU.", "BR": "Brasil", "EC": "Ecuador", "PE": "Perú"}
+    lang = prof.get("lang") or ""
+    tz = prof.get("tz") or ""
+    region = ""
+    for sep in ("-", "_"):
+        if sep in lang:
+            region = lang.split(sep)[1][:2].upper()
+            break
+    pais = PAISES.get(region) or (tz.split("/")[-1].replace("_", " ") if tz else "—")
+
+    # Frecuencia de uso a partir de los días de actividad registrados
+    hoy = calc.today()
+    def _d(s):
+        try:
+            return _date.fromisoformat(s)
+        except (TypeError, ValueError):
+            return None
+    ds = sorted({x for x in (_d(s) for s in (prof.get("dias") or [])) if x})
+    act7 = sum(1 for x in ds if 0 <= (hoy - x).days < 7)
+    act30 = sum(1 for x in ds if 0 <= (hoy - x).days < 30)
+    alta_d = ms_date(getattr(u.user_metadata, "creation_timestamp", None))
+    desde_ini = min([d for d in (alta_d, ds[0] if ds else None) if d], default=None)
+    dias_app = (hoy - desde_ini).days if desde_ini else None
+
     cuenta = {
         "uid": uid, "email": u.email or "—", "nombre": u.display_name or prof.get("nombre") or "—",
         "verif": bool(u.email_verified), "prov": prov,
         "plat": plat_labels.get(prof.get("plat") or "", t("pa_plat_nd")),
+        "pais": pais, "tz": tz or "—", "lang": lang or "—",
         "alta": ms_dt(getattr(u.user_metadata, "creation_timestamp", None)),
         "acceso": ms_dt(getattr(u.user_metadata, "last_sign_in_timestamp", None)),
+        "desde": desde_ini.strftime("%d/%m/%Y") if desde_ini else "—", "dias_app": dias_app,
     }
-    # Solo recuentos de uso (engagement). Sin importes ni detalle económico, por privacidad (RGPD).
-    resumen = {
-        "n_gastos": len(S.get("gastos", [])), "n_mov": len(S.get("movimientos", [])),
-        "n_prest": len(S.get("prestamos", [])),
-        "n_pres": len(S.get("presupuestos", [])), "n_inv": len(S.get("inversiones", [])),
-    }
-    return render_template("panel_user.html", **ctx("perfil", cuenta=cuenta, resumen=resumen))
+    uso = {"act7": act7, "act30": act30, "total_dias": len(ds),
+           "n_gastos": len(S.get("gastos", [])), "n_mov": len(S.get("movimientos", [])),
+           "n_prest": len(S.get("prestamos", [])),
+           "n_pres": len(S.get("presupuestos", [])), "n_inv": len(S.get("inversiones", []))}
+    return render_template("panel_user.html", **ctx("perfil", cuenta=cuenta, uso=uso))
 
 
 @app.get("/healthz")

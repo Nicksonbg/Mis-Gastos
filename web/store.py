@@ -41,6 +41,16 @@ def clean_profile(P: dict) -> dict:
     out = {"nombre": str(P.get("nombre", ""))[:80], "foto": foto, "icono": str(P.get("icono", ""))[:8]}
     if P.get("plat") in ("app-ios", "app-android", "app-otro", "nav-movil", "nav-pc"):
         out["plat"] = P["plat"]
+    # Métricas de uso (no económicas): días de actividad, zona horaria e idioma.
+    dias = P.get("dias")
+    if isinstance(dias, list):
+        ds = sorted({d for d in dias if isinstance(d, str) and len(d) == 10 and d[4] == "-" and d[7] == "-"})
+        if ds:
+            out["dias"] = ds[-120:]
+    if isinstance(P.get("tz"), str) and P.get("tz"):
+        out["tz"] = P["tz"][:64]
+    if isinstance(P.get("lang"), str) and P.get("lang"):
+        out["lang"] = P["lang"][:20]
     return out
 
 
