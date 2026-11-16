@@ -30,7 +30,7 @@ jobs:
       - name: Crear copia semanal (retención 14 semanas)
         run: |
           gcloud firestore backups schedules create --database='(default)' \
-            --recurrence=weekly --retention=14w --project "$PROJECT" \
+            --recurrence=weekly --day-of-week=SUN --retention=14w --project "$PROJECT" \
             || echo "Aviso: la copia semanal ya existía o hubo un error (mirar el mensaje de arriba)."
 
       - name: Resumen de copias programadas
