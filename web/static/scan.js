@@ -26,6 +26,7 @@
     tk_total: ['TOTAL', 'TOTAL', 'ОБЩО'], tk_disc: ['Descuentos', 'Discounts', 'Отстъпки'], tk_items: ['{n} artículos', '{n} items', '{n} артикула'], tk_item1: ['1 artículo', '1 item', '1 артикул'],
     tk_pay: ['Pago', 'Payment', 'Плащане'], tk_thanks: ['Ticket electrónico · Personal Balance', 'E-receipt · Personal Balance', 'Електронна бележка · Personal Balance'],
     tk_close: ['Cerrar', 'Close', 'Затвори'], tk_cat: ['Categoría', 'Category', 'Категория'],
+    queued: ['Sin conexión: guardé la foto, la leeré cuando vuelva el internet.', 'Offline: I saved the photo, I\'ll read it when the internet is back.', 'Без връзка: запазих снимката, ще я прочета при интернет.'],
   };
   const t = (k, p) => { let s = TX[k][I]; for (const a in (p || {})) s = s.replace('{' + a + '}', p[a]); return s };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -243,7 +244,8 @@
       if (!q) continue; // Repetir
       const ov = overlay(`<div class="pbs-spin"></div>${esc(t('reading'))}`);
       try {
-        const image = warp(img, q);
+        const image = warp(img, q); window.__pbLastImage = image;
+        if (!navigator.onLine && C.queue) { ov.remove(); const okq = await C.queue(image).catch(() => false); return toast(t(okq ? 'queued' : 'err')); }
         const tok = C.getToken ? await C.getToken() : null;
         const r = await fetch(C.api || '/api/scan', { method: 'POST', credentials: 'same-origin',
           headers: Object.assign({ 'Content-Type': 'application/json' }, tok ? { Authorization: 'Bearer ' + tok } : {}),
@@ -252,7 +254,7 @@
         ov.remove();
         if (!r.ok || j.error) return toast(t({ unreadable: 'bad', no_key: 'nokey', busy: 'busy', limit: 'limit' }[j.error] || 'err') + (j.detail ? ' (' + j.detail + ')' : (!j.error ? ' (HTTP ' + r.status + ')' : '')));
         C.open && C.open(j); window.pbLastScan = j; note(j);
-      } catch (e) { ov.remove(); toast(t('err') + ' (' + ((e && e.message) || e) + ')') }
+      } catch (e) { ov.remove(); if (C.queue) { const okq = await C.queue(window.__pbLastImage).catch(() => false); if (okq) return toast(t('queued')); } toast(t('err') + ' (' + ((e && e.message) || e) + ')') }
       return;
     }
   };
