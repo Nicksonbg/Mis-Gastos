@@ -1678,5 +1678,25 @@
     "Sin dato aún",
     "No data yet",
     "Все още няма данни"
+  ],
+  "al_dia": [
+    "Al día",
+    "Up to date",
+    "Изрядно"
+  ],
+  "poner_al_dia": [
+    "Poner al día",
+    "Mark up to date",
+    "Изравни"
+  ],
+  "al_dia_ask": [
+    "¿Marcar como pagadas las {n} cuotas que ya han vencido?",
+    "Mark the {n} past-due instalments as paid?",
+    "Да отбележа ли {n}-те падежирали вноски като платени?"
+  ],
+  "al_dia_ask_m": [
+    "Quedarán como pagadas; podrás desmarcar cualquiera en el cuadro de amortización.",
+    "They'll be set as paid; you can untick any in the schedule.",
+    "Ще станат платени; можеш да размаркираш всяка в графика."
   ]
 }

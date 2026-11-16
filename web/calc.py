@@ -180,7 +180,10 @@ def normalize(S: dict) -> dict:
                 c["capitalAntes"] = _nz_num(c.get("capitalAntes"), 0.0, -1e12, 1e12)
             if "nota" in c:
                 c["nota"] = _nz_str(c.get("nota"), 120)
-            c["pagada"] = c.get("pagada") is True
+            # pagada tiene TRES estados: True (pagada), False (no pagada a mano) o ausente
+            # (automática por fecha). Forzarla a bool rompía el auto-pago de cuotas pasadas.
+            if not isinstance(c.get("pagada"), bool):
+                c.pop("pagada", None)
 
     for i in base["inversiones"]:
         i["tipo"] = i.get("tipo") if i.get("tipo") in ("cripto", "accion", "divisa") else "cripto"

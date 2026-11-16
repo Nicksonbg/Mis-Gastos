@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-41"
+APP_VERSION = "web-42"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -594,11 +594,11 @@ def prestamos():
         tot += s["total"]; pag += s["pagado"]; pen += s["pendiente"]
         if s["fin"] and (not fin or s["fin"] > fin):
             fin = s["fin"]
-        status = ("ok", t("terminado")) if s["nPend"] == 0 else ("bad", t("cuota_venc")) if s["overdue"] else ("mute", t("en_curso"))
+        status = ("ok", "✓ " + t("terminado")) if s["nPend"] == 0 else ("bad", t("cuota_venc")) if s["overdue"] else ("ok", "✓ " + t("al_dia"))
         rows = [{**c, "paid": calc.is_paid(c), "next": bool(s["next"] and c["id"] == s["next"]["id"]),
                  "manual": c.get("pagada") is not None} for c in s["cs"]]
         loans.append({"l": l, "s": s, "pct": s["pagado"] / s["total"] * 100 if s["total"] else 0,
-                      "status": status, "rows": rows})
+                      "status": status, "rows": rows, "overdue": len(s["overdue"])})
     return render_template("prestamos.html", **ctx("prestamos", loans=loans, tot=tot, pag=pag, pen=pen, fin=fin,
                                                        today=calc.iso(calc.today())))
 
@@ -668,6 +668,20 @@ def cuota_toggle():
     calc.toggle_cuota(S, request.form["lid"], request.form["cid"], request.form.get("on") == "1")
     store.save(g.uid, S)
     return redirect(url_for("prestamos") + "#l-" + request.form["lid"])
+
+
+@app.post("/prestamos/aldia")
+@login_required
+def loan_aldia():
+    S = load()
+    lid = request.form["id"]
+    l = calc.loan_by_id(S, lid)
+    if l:
+        for c in l["cuotas"]:
+            if c.get("pagada") is False:
+                c.pop("pagada", None)
+        store.save(g.uid, S)
+    return redirect(url_for("prestamos") + "#l-" + lid)
 
 
 @app.get("/datos")

@@ -12,6 +12,7 @@
   {% for x in loans %}{% set l=x.l %}{% set s=x.s %}
     <div class="card" id="l-{{ l.id }}">
       <div class="row"><h2 style="margin:0">{{ l.nombre }}</h2><span class="pill {{ x.status[0] }}">{{ x.status[1] }}</span><span class="spacer"></span>
+        {% if x.overdue %}<form class="inline" method="post" action="{{ url_for('loan_aldia') }}" data-confirm="{{ t('al_dia_ask', n=x.overdue) }}" data-confirm-msg="{{ t('al_dia_ask_m') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ l.id }}"><button class="btn ghost sm">{{ t('poner_al_dia') }}</button></form>{% endif %}
         <button class="btn ghost sm" type="button" onclick="openCuota('{{ l.id }}')">{{ t('add_cuota') }}</button>
         <form class="inline" method="post" action="{{ url_for('loan_delete') }}" data-confirm="{{ t('ask_borrar_loan', n=l.nombre) }}" data-confirm-msg="{{ t('ask_borrar_loan_m') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ l.id }}"><button class="btn danger sm">{{ t('borrar') }}</button></form></div>
       <div class="muted small" style="margin:4px 0 10px">{{ l.entidad or '' }}</div>
