@@ -1698,5 +1698,50 @@
     "Quedarán como pagadas; podrás desmarcar cualquiera en el cuadro de amortización.",
     "They'll be set as paid; you can untick any in the schedule.",
     "Ще станат платени; можеш да размаркираш всяка в графика."
+  ],
+  "h_prestamos": [
+    "Préstamos",
+    "Loans",
+    "Заеми"
+  ],
+  "pa_volver": [
+    "Usuarios",
+    "Users",
+    "Потребители"
+  ],
+  "pa_cuenta": [
+    "Cuenta",
+    "Account",
+    "Профил"
+  ],
+  "pa_metodo": [
+    "Entra con",
+    "Signs in with",
+    "Вход чрез"
+  ],
+  "pa_registro": [
+    "Registro",
+    "Registered",
+    "Регистрация"
+  ],
+  "pa_ult_acceso": [
+    "Último acceso",
+    "Last sign-in",
+    "Последен вход"
+  ],
+  "pa_resumen": [
+    "Resumen del cliente",
+    "Client summary",
+    "Обобщение"
+  ],
+  "pa_sin_gastos": [
+    "Sin gastos fijos.",
+    "No fixed expenses.",
+    "Няма фиксирани разходи."
+  ],
+  "pa_sin_prest": [
+    "Sin préstamos.",
+    "No loans.",
+    "Няма заеми."
   ]
 }

@@ -32,10 +32,10 @@
       <thead><tr><th>{{ t('pa_user') }}</th><th class="hide-sm">{{ t('pa_alta') }}</th><th>{{ t('pa_ult') }}</th></tr></thead>
       <tbody>
       {% for r in rows %}
-        <tr>
-          <td>{% if r.nombre %}<b>{{ r.nombre }}</b><br>{% endif %}<span class="muted small">{{ r.email }}{% if not r.verif %} · <span style="color:var(--warn)">{{ t('pa_sin_verif') }}</span>{% endif %}</span></td>
+        <tr style="cursor:pointer" onclick="location.href='{{ url_for('panel_user', uid=r.uid) }}'">
+          <td><a href="{{ url_for('panel_user', uid=r.uid) }}" style="color:inherit;text-decoration:none">{% if r.nombre %}<b>{{ r.nombre }}</b><br>{% endif %}<span class="muted small">{{ r.email }}{% if not r.verif %} · <span style="color:var(--warn)">{{ t('pa_sin_verif') }}</span>{% endif %}</span></a></td>
           <td class="hide-sm muted">{{ r.alta }}</td>
-          <td>{{ r.ult }}</td>
+          <td>{{ r.ult }} ›</td>
         </tr>
       {% else %}<tr><td colspan="3" class="muted">{{ t('pa_ninguno') }}</td></tr>{% endfor %}
       </tbody>

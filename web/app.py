@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-42"
+APP_VERSION = "web-43"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -1421,6 +1421,7 @@ def panel():
             provs = {p.provider_id for p in (u.provider_data or [])}
             prov = "google" if "google.com" in provs else "apple" if "apple.com" in provs else "correo" if "password" in provs else "otro"
             users.append({
+                "uid": u.uid,
                 "nombre": u.display_name or "",
                 "email": u.email or "",
                 "verif": bool(u.email_verified),
@@ -1454,7 +1455,7 @@ def panel():
             return t("pa_hace_d", d=days)
         return dt.strftime("%d/%m/%Y")
 
-    rows = [{"nombre": u["nombre"], "email": u["email"], "verif": u["verif"],
+    rows = [{"uid": u["uid"], "nombre": u["nombre"], "email": u["email"], "verif": u["verif"],
              "alta": u["created"].strftime("%d/%m/%Y") if u["created"] else "—",
              "ult": fmt_dt(u["last"])} for u in users]
 
@@ -1488,6 +1489,60 @@ def panel():
 
     return render_template("panel.html", **ctx("perfil", stats=stats, rows=rows,
                                                meses=meses, altas_max=altas_max, prov_bd=prov_bd, plat_bd=plat_bd))
+
+
+@app.get("/panel/u/<uid>")
+@login_required
+def panel_user(uid):
+    if not is_admin(g.user):
+        abort(404)
+    from datetime import datetime, timezone
+    from firebase_admin import auth
+    try:
+        u = auth.get_user(uid)
+    except Exception as e:
+        print("panel_user:", repr(e), flush=True)
+        abort(404)
+
+    prof = store.load_profile(uid)
+    S = store.load(uid)
+
+    def ms_dt(ms):
+        try:
+            return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).strftime("%d/%m/%Y %H:%M") if ms else "—"
+        except (TypeError, ValueError, OSError):
+            return "—"
+
+    provs = {p.provider_id for p in (u.provider_data or [])}
+    prov = "Google" if "google.com" in provs else "Apple" if "apple.com" in provs else t("pa_correo") if "password" in provs else t("pa_otro")
+    plat_labels = {"app-ios": t("pa_app_ios"), "app-android": t("pa_app_android"), "app-otro": t("pa_app_otro"),
+                   "nav-movil": t("pa_nav_movil"), "nav-pc": t("pa_nav_pc"), "": t("pa_plat_nd")}
+
+    mr = calc.mes_real(S, 0)
+    deuda = r2(sum(calc.loan_stats(l)["pendiente"] for l in S.get("prestamos", [])))
+    cuenta = {
+        "uid": uid, "email": u.email or "—", "nombre": u.display_name or prof.get("nombre") or "—",
+        "verif": bool(u.email_verified), "prov": prov,
+        "plat": plat_labels.get(prof.get("plat") or "", t("pa_plat_nd")),
+        "alta": ms_dt(getattr(u.user_metadata, "creation_timestamp", None)),
+        "acceso": ms_dt(getattr(u.user_metadata, "last_sign_in_timestamp", None)),
+    }
+    resumen = {
+        "fijos_mes": mr["f"], "dia_mes": mr["d"], "anio": calc.anio_real(S, calc.today().year),
+        "n_gastos": len(S.get("gastos", [])), "n_mov": len(S.get("movimientos", [])),
+        "n_prest": len(S.get("prestamos", [])), "deuda": deuda,
+        "n_pres": len(S.get("presupuestos", [])), "n_inv": len(S.get("inversiones", [])),
+    }
+    gastos = [{"concepto": gg.get("concepto", ""), "categoria": gg.get("categoria", ""),
+               "importe": r2(calc.mensual(gg)), "dia": gg.get("dia")} for gg in S.get("gastos", []) if not gg.get("prestamoId")]
+    prestamos = []
+    for l in S.get("prestamos", []):
+        s = calc.loan_stats(l)
+        estado = ("ok", "✓ " + t("terminado")) if s["nPend"] == 0 else ("bad", t("cuota_venc")) if s["overdue"] else ("ok", "✓ " + t("al_dia"))
+        prestamos.append({"nombre": l.get("nombre", ""), "entidad": l.get("entidad", ""),
+                          "pendiente": s["pendiente"], "total": s["total"], "estado": estado,
+                          "pagadas": s["nPaid"], "n": s["n"]})
+    return render_template("panel_user.html", **ctx("perfil", cuenta=cuenta, resumen=resumen, gastos=gastos, prestamos=prestamos))
 
 
 @app.get("/healthz")
