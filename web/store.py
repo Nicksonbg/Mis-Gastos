@@ -38,7 +38,10 @@ def clean_profile(P: dict) -> dict:
         foto = foto if len(foto) <= 2000 else ""
     else:
         foto = ""
-    return {"nombre": str(P.get("nombre", ""))[:80], "foto": foto, "icono": str(P.get("icono", ""))[:8]}
+    out = {"nombre": str(P.get("nombre", ""))[:80], "foto": foto, "icono": str(P.get("icono", ""))[:8]}
+    if P.get("plat") in ("app-ios", "app-android", "app-otro", "nav-movil", "nav-pc"):
+        out["plat"] = P["plat"]
+    return out
 
 
 class FirestoreStore:
@@ -169,13 +172,16 @@ class FirestoreStore:
         self.db.collection("opiniones").document(oid).delete()
 
     def usage(self):
-        """{uid: {'actualizado': ISO|None}} con la última actividad (guardado de datos) de cada usuario."""
+        """{uid: {'actualizado': ISO|None, 'plat': str}} con la última actividad y el dispositivo de cada usuario."""
         out = {}
         for d in self.db.collection_group("data").stream():
-            if d.id != "estado":
-                continue
             uid = d.reference.parent.parent.id
-            out[uid] = {"actualizado": (d.to_dict() or {}).get("actualizado")}
+            rec = out.setdefault(uid, {})
+            doc = d.to_dict() or {}
+            if d.id == "estado":
+                rec["actualizado"] = doc.get("actualizado")
+            elif d.id == "perfil":
+                rec["plat"] = doc.get("plat") or ""
         return out
 
 
@@ -289,7 +295,9 @@ class LocalStore:
         self._write(d)
 
     def usage(self):
-        return {uid: {"actualizado": (v.get("estado") or {}).get("_actualizado")} for uid, v in self._all().items()}
+        return {uid: {"actualizado": (v.get("estado") or {}).get("_actualizado"),
+                      "plat": (v.get("perfil") or {}).get("plat", "")}
+                for uid, v in self._all().items()}
 
 
 store = LocalStore() if DEV else FirestoreStore()

@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-40"
+APP_VERSION = "web-41"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -363,6 +363,14 @@ def salir():
 @login_required
 def resumen():
     S = load()
+    try:
+        ua = request.headers.get("User-Agent", "")
+        pl = "nav-movil" if any(x in ua for x in ("iPhone", "iPad", "Android", "Mobile")) else "nav-pc"
+        if (g.P.get("plat") or "") != pl:
+            g.P["plat"] = pl
+            store.save_profile(g.uid, g.P)
+    except Exception as e:
+        print("plat web:", repr(e), flush=True)
     off = request.args.get("m", 0, type=int)
     tm = calc.total_mes(S)
     mr = calc.mes_real(S, 0)
@@ -1396,11 +1404,14 @@ def panel():
             signed = ms_dt(getattr(md, "last_sign_in_timestamp", None))
             act = iso_dt((usage.get(u.uid) or {}).get("actualizado"))
             last = max([x for x in (signed, act) if x], default=None)
+            provs = {p.provider_id for p in (u.provider_data or [])}
+            prov = "google" if "google.com" in provs else "apple" if "apple.com" in provs else "correo" if "password" in provs else "otro"
             users.append({
                 "nombre": u.display_name or "",
                 "email": u.email or "",
                 "verif": bool(u.email_verified),
                 "created": created, "last": last,
+                "prov": prov, "plat": (usage.get(u.uid) or {}).get("plat") or "",
             })
     except Exception as e:
         print("panel list_users:", repr(e), flush=True)
@@ -1432,7 +1443,37 @@ def panel():
     rows = [{"nombre": u["nombre"], "email": u["email"], "verif": u["verif"],
              "alta": u["created"].strftime("%d/%m/%Y") if u["created"] else "—",
              "ult": fmt_dt(u["last"])} for u in users]
-    return render_template("panel.html", **ctx("perfil", stats=stats, rows=rows))
+
+    # Altas por mes (últimos 12 meses)
+    mes_c = t("meses_c").split("|")
+    meses = []
+    for k in range(11, -1, -1):
+        y, m = divmod(now.year * 12 + now.month - 1 - k, 12)
+        meses.append({"key": f"{y}-{m+1:02d}", "lbl": f"{mes_c[m]} {str(y)[2:]}", "n": 0})
+    idx = {x["key"]: x for x in meses}
+    for u in users:
+        if u["created"]:
+            x = idx.get(u["created"].strftime("%Y-%m"))
+            if x:
+                x["n"] += 1
+    altas_max = max([x["n"] for x in meses] or [0])
+
+    # Cómo entran (proveedor) y dispositivo
+    def breakdown(key, labels):
+        c = {}
+        for u in users:
+            c[u[key]] = c.get(u[key], 0) + 1
+        tot = sum(c.values()) or 1
+        return [{"lbl": labels.get(k, k), "n": n, "pct": round(n / tot * 100)}
+                for k, n in sorted(c.items(), key=lambda kv: -kv[1]) if n]
+
+    prov_bd = breakdown("prov", {"google": "Google", "apple": "Apple", "correo": t("pa_correo"), "otro": t("pa_otro")})
+    plat_labels = {"app-ios": t("pa_app_ios"), "app-android": t("pa_app_android"), "app-otro": t("pa_app_otro"),
+                   "nav-movil": t("pa_nav_movil"), "nav-pc": t("pa_nav_pc"), "": t("pa_plat_nd")}
+    plat_bd = breakdown("plat", plat_labels)
+
+    return render_template("panel.html", **ctx("perfil", stats=stats, rows=rows,
+                                               meses=meses, altas_max=altas_max, prov_bd=prov_bd, plat_bd=plat_bd))
 
 
 @app.get("/healthz")

@@ -754,6 +754,7 @@ const fmtD=s=>{if(!s)return'';const[y,m,d]=s.split('-');const p=LANGS[lang].sep;
 const parse=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
 const todayISO=()=>iso(new Date());
 const uid=()=>Math.random().toString(36).slice(2,10);
+function pbPlat(){try{const ua=navigator.userAgent||'',ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),android=/Android/.test(ua),standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true,mobile=ios||android||/Mobi/.test(ua);return standalone?(ios?'app-ios':android?'app-android':'app-otro'):(mobile?'nav-movil':'nav-pc')}catch(e){return''}}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}}};
 
@@ -1271,7 +1272,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='71';$('#ver').textContent='v'+APP_V;
+const APP_V='72';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 /* ---------- Avisos de pagos (notificaciones push) ---------- */
 const PUSH_API='https://personal-balance-web-778378922815.europe-west1.run.app/api/push/';
@@ -1626,6 +1627,7 @@ async function onLogin(u){
   if(!hasLocal){try{tourMaybe()}catch(e){}}
   offerBio(u.uid);
   setTimeout(()=>{if(navigator.onLine)pbProcessPending()},3000);
+  setTimeout(()=>{const pl=pbPlat();if(pl&&P.plat!==pl){P.plat=pl;saveProfile()}},3500);
 }
 async function offerBio(uid){
   if(!bioOk||!isMobileDev||lockOn()||curUid!==uid||store.get('mis-gastos-biooffer-'+uid)||$('#dlg-ok').open)return;
@@ -1643,7 +1645,7 @@ async function syncStart(u,hasLocal){
   const[es,ps]=await Promise.all([F.getDoc(r.e),F.getDoc(r.p)]);
   if(curUid!==u.uid)return;
   if(ps.exists()){const d=ps.data();P.nombre=d.nombre??P.nombre;P.foto=d.foto||'';P.icono=d.icono||'';
-    store.set('mis-gastos-perfil-'+u.uid,JSON.stringify({nombre:P.nombre,foto:P.foto,icono:P.icono}));renderProfile()}
+    store.set('mis-gastos-perfil-'+u.uid,JSON.stringify({nombre:P.nombre,foto:P.foto,icono:P.icono,plat:P.plat||''}));renderProfile()}
   else saveProfile();
   const lts=store.get(tsKey(u.uid))||'';
   if(es.exists()){const d=es.data();
@@ -1866,9 +1868,9 @@ function renderProfile(){
   $('#p-icons').innerHTML=ICONS.map(c=>`<button type="button" data-ic="${c}" class="${P.icono===c&&!validPhoto(P.foto)?'on':''}">${c}</button>`).join('');
 }
 function profMsg(k){const m=$('#p-msg');m.textContent=t(k);clearTimeout(profMsg.t);profMsg.t=setTimeout(()=>{m.textContent=''},3500)}
-async function saveProfile(){if(!fb||!curUid)return;
-  store.set('mis-gastos-perfil-'+curUid,JSON.stringify({nombre:P.nombre,foto:P.foto,icono:P.icono}));
-  try{await fb.Fs.setDoc(refs(curUid).p,{nombre:P.nombre,foto:P.foto,icono:P.icono,actualizado:new Date().toISOString()});
+async function saveProfile(){if(!fb||!curUid)return;const plat=P.plat||pbPlat();P.plat=plat;
+  store.set('mis-gastos-perfil-'+curUid,JSON.stringify({nombre:P.nombre,foto:P.foto,icono:P.icono,plat}));
+  try{await fb.Fs.setDoc(refs(curUid).p,{nombre:P.nombre,foto:P.foto,icono:P.icono,plat,actualizado:new Date().toISOString()});
     const cu=fb.auth.currentUser;if(cu&&cu.displayName!==P.nombre)await fb.Au.updateProfile(cu,{displayName:P.nombre})}catch(e){}}
 async function refreshVerified(){try{const cu=fb&&fb.auth.currentUser;if(!cu)return;await cu.reload();P.verified=!!cu.emailVerified;renderProfile()}catch(e){}}
 const CV=260;let crop=null;
@@ -1930,7 +1932,7 @@ if('serviceWorker' in navigator){
 </script>
 <script>window.PB_AGENT={api:'https://personal-balance-web-778378922815.europe-west1.run.app/api/agent',getToken:()=>window.__pbTok?window.__pbTok():null}</script>
 <script src="https://personal-balance-web-778378922815.europe-west1.run.app/static/agent.js" defer></script>
-<script src="https://personal-balance-web-778378922815.europe-west1.run.app/static/scan.js?v=71" defer></script>
+<script src="https://personal-balance-web-778378922815.europe-west1.run.app/static/scan.js?v=72" defer></script>
 <div id="inst" class="inst hidden" role="dialog" aria-live="polite">
   <button class="inst-x" id="inst-x" aria-label="Cerrar">×</button>
   <div class="inst-row"><img src="icon-192.png" alt="" class="inst-ic"><div><b id="inst-t"></b><div class="inst-b" id="inst-b"></div></div></div>

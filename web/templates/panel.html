@@ -12,6 +12,21 @@
     </div>
   </div>
   <div class="card" style="margin-top:16px">
+    <h2 style="margin:0 0 10px">{{ t('pa_altas_mes') }}</h2>
+    {% for m in meses %}<div class="hist-row"><span class="hist-m">{{ m.lbl }}</span><span class="hist-bar"><i style="width:{{ (m.n/altas_max*100)|round if altas_max else 0 }}%"></i></span><span class="hist-v">{{ m.n }}</span></div>{% endfor %}
+  </div>
+  <div class="grid two" style="margin-top:16px">
+    <div class="card">
+      <h2 style="margin:0 0 10px">{{ t('pa_como') }}</h2>
+      {% for b in prov_bd %}<div class="hist-row"><span class="hist-m" style="flex:0 0 96px">{{ b.lbl }}</span><span class="hist-bar"><i style="width:{{ b.pct }}%"></i></span><span class="hist-v">{{ b.n }} · {{ b.pct }} %</span></div>{% else %}<p class="muted">—</p>{% endfor %}
+    </div>
+    <div class="card">
+      <h2 style="margin:0 0 10px">{{ t('pa_disp') }}</h2>
+      {% for b in plat_bd %}<div class="hist-row"><span class="hist-m" style="flex:0 0 120px">{{ b.lbl }}</span><span class="hist-bar"><i style="width:{{ b.pct }}%"></i></span><span class="hist-v">{{ b.n }} · {{ b.pct }} %</span></div>{% else %}<p class="muted">—</p>{% endfor %}
+      <p class="muted small" style="margin-top:8px">{{ t('pa_disp_nota') }}</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
     <div class="row" style="margin-bottom:10px"><h2 style="margin:0">{{ t('pa_lista') }}</h2><span class="spacer"></span><span class="small muted">{{ stats.total }}</span></div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>{{ t('pa_user') }}</th><th class="hide-sm">{{ t('pa_alta') }}</th><th>{{ t('pa_ult') }}</th></tr></thead>

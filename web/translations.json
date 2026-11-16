@@ -1618,5 +1618,65 @@
     "Uso de la app",
     "App usage",
     "Употреба"
+  ],
+  "pa_altas_mes": [
+    "Altas por mes",
+    "Sign-ups per month",
+    "Регистрации по месеци"
+  ],
+  "pa_como": [
+    "Cómo entran",
+    "Sign-in method",
+    "Начин на вход"
+  ],
+  "pa_disp": [
+    "Dispositivo",
+    "Device",
+    "Устройство"
+  ],
+  "pa_disp_nota": [
+    "Se va rellenando a medida que la gente abre la app o la web.",
+    "Fills in as people open the app or website.",
+    "Попълва се, когато хората отварят приложението или сайта."
+  ],
+  "pa_correo": [
+    "Correo",
+    "Email",
+    "Имейл"
+  ],
+  "pa_otro": [
+    "Otro",
+    "Other",
+    "Друго"
+  ],
+  "pa_app_ios": [
+    "App iPhone",
+    "iPhone app",
+    "iPhone приложение"
+  ],
+  "pa_app_android": [
+    "App Android",
+    "Android app",
+    "Android приложение"
+  ],
+  "pa_app_otro": [
+    "App (otro)",
+    "App (other)",
+    "Приложение (друго)"
+  ],
+  "pa_nav_movil": [
+    "Navegador móvil",
+    "Mobile browser",
+    "Мобилен браузър"
+  ],
+  "pa_nav_pc": [
+    "Navegador PC",
+    "Desktop browser",
+    "Браузър на компютър"
+  ],
+  "pa_plat_nd": [
+    "Sin dato aún",
+    "No data yet",
+    "Все още няма данни"
   ]
 }
