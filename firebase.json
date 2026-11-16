@@ -1,3 +1,4 @@
 {
-  "functions": [{ "source": "functions", "codebase": "default", "ignore": ["node_modules", ".git"] }]
+  "functions": [{ "source": "functions", "codebase": "default", "ignore": ["node_modules", ".git"] }],
+  "firestore": { "rules": "firestore.rules" }
 }

@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Cada usuario solo puede leer y escribir SUS propios datos (aislamiento por usuario).
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // El resto de colecciones (opiniones, tokens de pago, suscripciones push,
+    // uso de IA, alertas de presupuesto, configuración del servidor…) quedan
+    // DENEGADAS por defecto para los clientes: solo el servidor (Firebase Admin
+    // SDK, que se salta estas reglas) puede leerlas o escribirlas.
+  }
+}

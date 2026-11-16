@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-34"
+APP_VERSION = "web-35"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -787,10 +787,10 @@ def ajustes():
     resp = redirect(url_for("perfil", ok="w_saved"))
     lg = request.form.get("lang")
     if lg in LANGS:
-        resp.set_cookie("pb_lang", lg, max_age=31536000, samesite="Lax")
+        resp.set_cookie("pb_lang", lg, max_age=31536000, samesite="Lax", secure=not DEV)
     th = request.form.get("theme", "")
     if th in ("", "light", "dark"):
-        resp.set_cookie("pb_theme", th, max_age=31536000, samesite="Lax")
+        resp.set_cookie("pb_theme", th, max_age=31536000, samesite="Lax", secure=not DEV)
     if request.form.get("adv_present"):
         S = load()
         if not isinstance(S.get("ajustes"), dict):
@@ -809,7 +809,7 @@ def idioma():
     resp = redirect(nxt)
     lg = request.form.get("lang")
     if lg in LANGS:
-        resp.set_cookie("pb_lang", lg, max_age=31536000, samesite="Lax")
+        resp.set_cookie("pb_lang", lg, max_age=31536000, samesite="Lax", secure=not DEV)
     return resp
 
 
