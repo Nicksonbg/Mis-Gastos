@@ -526,6 +526,36 @@ def movimientos_mes(S, off=0):
                   key=lambda m: (m.get("fecha") or "", m.get("id") or ""), reverse=True)
 
 
+def mes_real(S, off=0):
+    """Gasto real de un mes: fijos que tocan ese mes + día a día (sin pendientes)."""
+    mk = month_key(off)
+    _, items = mes_items(S, off)
+    f = r2(sum(i["importe"] for i in items))
+    d = r2(sum(float(m.get("importe") or 0) for m in S.get("movimientos", [])
+              if not m.get("pendiente") and (m.get("fecha") or "")[:7] == mk))
+    return {"mk": mk, "f": f, "d": d, "total": r2(f + d)}
+
+
+def anio_real(S, y):
+    """Gastado en el año y hasta hoy (ene..mes actual si es el año en curso; todo el año si es pasado)."""
+    n = today()
+    last = 12 if y < n.year else (0 if y > n.year else n.month)
+    tot = sum(mes_real(S, (y - n.year) * 12 + (mo - n.month))["total"] for mo in range(1, last + 1))
+    return r2(tot)
+
+
+def historial_anio(S, y):
+    """12 filas (mo, off, future, total) con el gasto real de cada mes del año y."""
+    n = today()
+    rows = []
+    for mo in range(1, 13):
+        off = (y - n.year) * 12 + (mo - n.month)
+        future = y > n.year or (y == n.year and mo > n.month)
+        rows.append({"mo": mo, "off": off, "future": future,
+                     "total": None if future else mes_real(S, off)["total"]})
+    return rows
+
+
 # ---------- Datos de ejemplo (solo cuentas de prueba) ----------
 def is_test_email(email: str) -> bool:
     e = (email or "").lower()

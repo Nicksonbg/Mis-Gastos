@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-38"
+APP_VERSION = "web-39"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -365,6 +365,12 @@ def resumen():
     S = load()
     off = request.args.get("m", 0, type=int)
     tm = calc.total_mes(S)
+    mr = calc.mes_real(S, 0)
+    anio_g = calc.anio_real(S, calc.today().year)
+    hist_y = request.args.get("y", calc.today().year, type=int)
+    hist = calc.historial_anio(S, hist_y)
+    hist_tot = r2(sum(r["total"] for r in hist if r["total"]))
+    hist_max = max([r["total"] for r in hist if r["total"]] or [0])
     pend = cap = paid = 0
     fin = None
     for l in S["prestamos"]:
@@ -413,6 +419,7 @@ def resumen():
         up.append({**u, "dia": d.day, "mes": mes_c[d.month - 1], "pill": pill})
     # Gastos del mes
     m0, items = calc.mes_items(S, off)
+    mes_dia = calc.mes_real(S, off)["d"]
     for i in items:
         if i["pagado"]:
             i["st"] = ("ok", t("st_pagado"))
@@ -435,7 +442,8 @@ def resumen():
         "resumen.html", **ctx("resumen", S=S, tm=tm, n_gastos=len(S["gastos"]), pend=pend, cap=cap, paid=paid,
                                fin=fin, fin_sub=fin_sub, alerts=alerts, up=up, up_total=sum(u["importe"] for u in up),
                                off=off, mes_lbl=t("meses").split("|")[m0.month - 1] + " " + str(m0.year),
-                               items=items, pres=pres, msum=msum, mes_tot=tot, mes_pag=pag, mes_tot0=mes_tot0, mes_pag0=mes_pag0, donut=donut, legend=legend, debt=debt))
+                               items=items, pres=pres, msum=msum, mes_tot=tot, mes_pag=pag, mes_tot0=mes_tot0, mes_pag0=mes_pag0, donut=donut, legend=legend, debt=debt,
+                               mr=mr, anio_g=anio_g, hist=hist, hist_y=hist_y, hist_tot=hist_tot, hist_max=hist_max, mes_dia=mes_dia))
 
 
 @app.post("/mes/toggle")

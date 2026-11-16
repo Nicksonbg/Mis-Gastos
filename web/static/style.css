@@ -59,6 +59,14 @@ tfoot td{font-weight:650;border-bottom:0}
 .pill.mute{background:var(--bg);color:var(--muted)}
 .bar{height:10px;background:var(--bg);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
 .bar>i{display:block;height:100%;background:var(--accent)}
+.hist-row{display:flex;align-items:center;gap:10px;padding:7px 2px;border-radius:8px;color:var(--text);text-decoration:none}
+.hist-row+.hist-row{border-top:1px solid var(--line)}
+a.hist-row.on{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.hist-row .hist-m{flex:0 0 68px;font-size:14px}
+.hist-row .hist-bar{flex:1;height:8px;background:var(--bg);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.hist-row .hist-bar>i{display:block;height:100%;background:var(--accent)}
+.hist-row .hist-v{flex:0 0 auto;min-width:76px;text-align:right;font-variant-numeric:tabular-nums;font-size:14px}
+.hist-row.muted .hist-v{opacity:.5}
 .muted{color:var(--muted)}
 .small{font-size:13px}
 .alert{border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start}

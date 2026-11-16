@@ -2,13 +2,13 @@
 {% block main %}
 <div id="alerts">{% for cls,ic,txt in alerts %}<div class="alert {{ cls }}">{{ ic }} <div>{{ txt|safe }}</div></div>{% endfor %}</div>
 <section>
-  {% set h = hero(tm) %}
+  {% set h = hero(mr.total) %}
   <div class="card hero">
     <div class="hero-top"><span class="dot"></span>{{ t('k_mes') }}</div>
     <div class="hero-val"><span class="cur">€</span>{{ h[0] }}<span class="dec">{{ h[1] }}</span></div>
-    <div class="hero-sub"><span class="up">↗ {{ t('pill_pagado', x=money(mes_pag0)) }}</span>&nbsp;&nbsp;<span class="muted">{{ t('pill_queda', x=money(mes_tot0-mes_pag0)) }}</span></div>
+    <div class="hero-sub"><span class="up">{{ t('g_t_fijos') }}: {{ money(mr.f) }}</span>&nbsp;&nbsp;<span class="muted">{{ t('g_t_dia') }}: {{ money(mr.d) }}</span></div>
     <div class="hero-stats">
-      <div><div class="lbl">{{ t('k_anio') }}</div><div class="v">{{ money(tm*12) }}</div><div class="s">{{ t('gastos_n', n=n_gastos) }}</div></div>
+      <div><div class="lbl">{{ t('k_este_anio') }}</div><div class="v">{{ money(anio_g) }}</div><div class="s">{{ t('gastos_n', n=n_gastos) }}</div></div>
       <div><div class="lbl">{{ t('k_deuda') }}</div><div class="v">{{ money(pend) }}</div><div class="s">{{ t('ya_pagado', paid=money(paid), cap=money(cap)) }}</div></div>
       <div><div class="lbl">{{ t('k_fin') }}</div><div class="v">{{ fmt_d(fin) if fin else '—' }}</div><div class="s">{{ fin_sub }}</div></div>
     </div>
@@ -46,6 +46,13 @@
       </ul>
     </div>
   </div>
+  {% set MES = t('meses').split('|') %}
+  <div class="card" style="margin-top:16px" id="hist">
+    <div class="row" style="margin-bottom:10px"><h2 style="margin:0">{{ t('h_hist') }}</h2>
+      <span class="chips"><a href="{{ url_for('resumen', y=hist_y-1) }}#hist" title="{{ t('anio_prev') }}">‹</a><a class="on" href="{{ url_for('resumen', y=hist_y) }}#hist">{{ hist_y }}</a><a href="{{ url_for('resumen', y=hist_y+1) }}#hist" title="{{ t('anio_next') }}">›</a></span>
+      <span class="spacer"></span><span class="small muted">{{ t('hist_total', x=money(hist_tot)) }}</span></div>
+    {% for r in hist %}{% if r.future %}<div class="hist-row muted"><span class="hist-m">{{ MES[r.mo-1] }}</span><span class="hist-bar"></span><span class="hist-v">—</span></div>{% else %}<a class="hist-row{{ ' on' if r.off == 0 }}" href="{{ url_for('resumen', m=r.off) }}#mes"><span class="hist-m">{{ MES[r.mo-1] }}</span><span class="hist-bar"><i style="width:{{ (r.total/hist_max*100)|round(1) if hist_max else 0 }}%"></i></span><span class="hist-v">{{ money(r.total) }}</span></a>{% endif %}{% endfor %}
+  </div>
   <div class="card" style="margin-top:16px" id="mes">
     <div class="row" style="margin-bottom:10px"><h2 style="margin:0">{{ t('h_mes') }}</h2>
       <span class="chips"><a href="{{ url_for('resumen', m=off-1) }}#mes" title="{{ t('mes_prev') }}">‹</a><a class="on" href="{{ url_for('resumen', m=0) }}#mes">{{ mes_lbl }}</a><a href="{{ url_for('resumen', m=off+1) }}#mes" title="{{ t('mes_next') }}">›</a></span>
@@ -57,9 +64,10 @@
       {% for i in items %}
         <tr class="{{ 'paid' if i.pagado }}"><td><form class="chk-form" method="post" action="{{ url_for('mes_toggle') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="ref" value="{{ i.tipo }}|{{ i.ref }}"><input type="hidden" name="m" value="{{ off }}"><input type="hidden" name="on" value=""><input type="checkbox" data-autosubmit {{ 'checked' if i.pagado }}></form>{% if i.manual %} <span class="small muted" title="{{ t('marcado_mano') }}">✋</span>{% endif %}</td>
           <td>{{ i.concepto }}</td><td>{{ fmt_d(i.fecha) if i.fecha else '—' }}</td><td class="n">{{ money(i.importe) }}</td><td class="hide-sm"><span class="pill {{ i.st[0] }}">{{ i.st[1] }}</span></td></tr>
-      {% else %}<tr><td colspan="5" class="muted">{{ t('no_gastos_mes') }}</td></tr>{% endfor %}
+      {% else %}{% if not mes_dia %}<tr><td colspan="5" class="muted">{{ t('no_gastos_mes') }}</td></tr>{% endif %}{% endfor %}
+      {% if mes_dia %}<tr><td></td><td><b>{{ t('g_t_dia') }}</b></td><td class="muted">{{ t('mov_total') }}</td><td class="n">{{ money(mes_dia) }}</td><td class="hide-sm"></td></tr>{% endif %}
       </tbody>
-      <tfoot><tr><td></td><td>{{ t('total_mes') }}</td><td></td><td class="n">{{ money(mes_tot) }}</td><td class="hide-sm"></td></tr></tfoot>
+      <tfoot><tr><td></td><td>{{ t('total_mes') }}</td><td></td><td class="n">{{ money(mes_tot + mes_dia) }}</td><td class="hide-sm"></td></tr></tfoot>
     </table></div>
     <p class="muted small">{{ t('mes_nota') }}</p>
   </div>
