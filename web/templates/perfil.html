@@ -40,8 +40,7 @@
         <h2>{{ t('op_t') }}</h2>
         <p class="muted small">{{ t('op_intro') }}</p>
         <div class="row"><a class="btn" href="{{ url_for('opinion') }}" style="text-decoration:none">{{ t('op_btn') }}</a>
-        {% if admin %}<a class="btn ghost" href="{{ url_for('opiniones') }}" style="text-decoration:none">{{ t('op_admin') }}{% if op_nuevas %} · {{ op_nuevas }}{% endif %}</a>
-        <a class="btn ghost" href="{{ url_for('panel') }}" style="text-decoration:none">{{ t('pa_admin') }}</a>{% endif %}</div>
+        {% if admin %}<a class="btn ghost" href="{{ url_for('opiniones') }}" style="text-decoration:none">{{ t('op_admin') }}{% if op_nuevas %} · {{ op_nuevas }}{% endif %}</a>{% endif %}</div>
       </div>
       <div class="card">
         <h2>{{ t('h_cuenta') }}</h2>

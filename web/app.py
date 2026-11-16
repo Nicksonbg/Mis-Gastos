@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-45"
+APP_VERSION = "web-46"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -319,6 +319,7 @@ def ctx(tab, **kw):
     else:
         av = {"txt": P.get("icono") or (nombre or user.get("email") or "?").strip()[:1].upper()}
     kw.setdefault("show_inv", inv_on(g.get("S")))
+    kw.setdefault("admin", is_admin(user))
     return dict(t=t, money=money, hero=hero, fmt_d=fmt_d, dec1=dec1, num=num, tab=tab, lang=cur_lang(),
                 theme=request.cookies.get("pb_theme", ""), csrf=csrf_token(), fb_cfg=json.dumps(FB_CFG),
                 dev=DEV, avatar=av, user=user, msg=request.args.get("ok"), err=request.args.get("err"),
@@ -1496,7 +1497,7 @@ def panel():
                    "nav-movil": t("pa_nav_movil"), "nav-pc": t("pa_nav_pc"), "": t("pa_plat_nd")}
     plat_bd = breakdown("plat", plat_labels)
 
-    return render_template("panel.html", **ctx("perfil", stats=stats, rows=rows,
+    return render_template("panel.html", **ctx("admin", stats=stats, rows=rows,
                                                meses=meses, altas_max=altas_max, prov_bd=prov_bd, plat_bd=plat_bd))
 
 
@@ -1574,7 +1575,7 @@ def panel_user(uid):
            "n_gastos": len(S.get("gastos", [])), "n_mov": len(S.get("movimientos", [])),
            "n_prest": len(S.get("prestamos", [])),
            "n_pres": len(S.get("presupuestos", [])), "n_inv": len(S.get("inversiones", []))}
-    return render_template("panel_user.html", **ctx("perfil", cuenta=cuenta, uso=uso))
+    return render_template("panel_user.html", **ctx("admin", cuenta=cuenta, uso=uso))
 
 
 @app.get("/healthz")
