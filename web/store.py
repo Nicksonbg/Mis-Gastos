@@ -168,6 +168,16 @@ class FirestoreStore:
     def delete_opinion(self, oid):
         self.db.collection("opiniones").document(oid).delete()
 
+    def usage(self):
+        """{uid: {'actualizado': ISO|None}} con la última actividad (guardado de datos) de cada usuario."""
+        out = {}
+        for d in self.db.collection_group("data").stream():
+            if d.id != "estado":
+                continue
+            uid = d.reference.parent.parent.id
+            out[uid] = {"actualizado": (d.to_dict() or {}).get("actualizado")}
+        return out
+
 
 class LocalStore:
     """Solo para desarrollo: guarda en un archivo JSON."""
@@ -277,6 +287,9 @@ class LocalStore:
         d = self._all()
         d.pop(uid, None)
         self._write(d)
+
+    def usage(self):
+        return {uid: {"actualizado": (v.get("estado") or {}).get("_actualizado")} for uid, v in self._all().items()}
 
 
 store = LocalStore() if DEV else FirestoreStore()

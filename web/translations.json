@@ -1528,5 +1528,95 @@
     "Año siguiente",
     "Next year",
     "Следваща година"
+  ],
+  "pa_title": [
+    "Personas usando la app",
+    "People using the app",
+    "Хора, които ползват приложението"
+  ],
+  "pa_total": [
+    "Registrados",
+    "Registered",
+    "Регистрирани"
+  ],
+  "pa_verif": [
+    "{n} verificados",
+    "{n} verified",
+    "{n} потвърдени"
+  ],
+  "pa_act7": [
+    "Activos (7 días)",
+    "Active (7 days)",
+    "Активни (7 дни)"
+  ],
+  "pa_act30": [
+    "{n} en 30 días",
+    "{n} in 30 days",
+    "{n} за 30 дни"
+  ],
+  "pa_new7": [
+    "Altas (7 días)",
+    "New (7 days)",
+    "Нови (7 дни)"
+  ],
+  "pa_new30": [
+    "{n} en 30 días",
+    "{n} in 30 days",
+    "{n} за 30 дни"
+  ],
+  "pa_lista": [
+    "Usuarios",
+    "Users",
+    "Потребители"
+  ],
+  "pa_user": [
+    "Usuario",
+    "User",
+    "Потребител"
+  ],
+  "pa_alta": [
+    "Alta",
+    "Joined",
+    "Регистриран"
+  ],
+  "pa_ult": [
+    "Último uso",
+    "Last use",
+    "Последна употреба"
+  ],
+  "pa_sin_verif": [
+    "sin verificar",
+    "unverified",
+    "непотвърден"
+  ],
+  "pa_ninguno": [
+    "Todavía no hay usuarios.",
+    "No users yet.",
+    "Още няма потребители."
+  ],
+  "pa_nota": [
+    "«Último uso» es la última vez que esa persona añadió o cambió algo, o inició sesión.",
+    "“Last use” is the last time that person added or changed something, or signed in.",
+    "«Последна употреба» е последният път, когато човекът е добавил/променил нещо или е влязъл."
+  ],
+  "pa_hoy": [
+    "hoy",
+    "today",
+    "днес"
+  ],
+  "pa_ayer": [
+    "ayer",
+    "yesterday",
+    "вчера"
+  ],
+  "pa_hace_d": [
+    "hace {d} días",
+    "{d} days ago",
+    "преди {d} дни"
+  ],
+  "pa_admin": [
+    "Uso de la app",
+    "App usage",
+    "Употреба"
   ]
 }

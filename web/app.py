@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-39"
+APP_VERSION = "web-40"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -1358,6 +1358,81 @@ def opiniones_marcar():
     else:
         store.set_opinion(oid, leida=request.form.get("leida") == "1")
     return redirect(url_for("opiniones", f=request.form.get("f", "")))
+
+
+@app.get("/panel")
+@login_required
+def panel():
+    if not is_admin(g.user):
+        abort(404)
+    from datetime import datetime, timezone, timedelta
+
+    def ms_dt(ms):
+        try:
+            return datetime.fromtimestamp(ms / 1000, tz=timezone.utc) if ms else None
+        except (TypeError, ValueError, OSError):
+            return None
+
+    def iso_dt(s):
+        if not s:
+            return None
+        try:
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    usage = {}
+    try:
+        usage = store.usage()
+    except Exception as e:
+        print("panel usage:", repr(e), flush=True)
+
+    users = []
+    try:
+        from firebase_admin import auth
+        for u in auth.list_users().iterate_all():
+            md = u.user_metadata
+            created = ms_dt(getattr(md, "creation_timestamp", None))
+            signed = ms_dt(getattr(md, "last_sign_in_timestamp", None))
+            act = iso_dt((usage.get(u.uid) or {}).get("actualizado"))
+            last = max([x for x in (signed, act) if x], default=None)
+            users.append({
+                "nombre": u.display_name or "",
+                "email": u.email or "",
+                "verif": bool(u.email_verified),
+                "created": created, "last": last,
+            })
+    except Exception as e:
+        print("panel list_users:", repr(e), flush=True)
+
+    now = datetime.now(timezone.utc)
+    d7, d30 = now - timedelta(days=7), now - timedelta(days=30)
+    stats = {
+        "total": len(users),
+        "verif": sum(1 for u in users if u["verif"]),
+        "act7": sum(1 for u in users if u["last"] and u["last"] >= d7),
+        "act30": sum(1 for u in users if u["last"] and u["last"] >= d30),
+        "new7": sum(1 for u in users if u["created"] and u["created"] >= d7),
+        "new30": sum(1 for u in users if u["created"] and u["created"] >= d30),
+    }
+    users.sort(key=lambda u: u["last"] or u["created"] or now.replace(year=1), reverse=True)
+
+    def fmt_dt(dt):
+        if not dt:
+            return "—"
+        days = (now - dt).days
+        if days <= 0:
+            return t("pa_hoy")
+        if days == 1:
+            return t("pa_ayer")
+        if days < 30:
+            return t("pa_hace_d", d=days)
+        return dt.strftime("%d/%m/%Y")
+
+    rows = [{"nombre": u["nombre"], "email": u["email"], "verif": u["verif"],
+             "alta": u["created"].strftime("%d/%m/%Y") if u["created"] else "—",
+             "ult": fmt_dt(u["last"])} for u in users]
+    return render_template("panel.html", **ctx("perfil", stats=stats, rows=rows))
 
 
 @app.get("/healthz")

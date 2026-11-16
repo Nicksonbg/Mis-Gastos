@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block main %}
+<section>
+  <div class="card hero">
+    <div class="hero-top"><span class="dot"></span>{{ t('pa_title') }}</div>
+    <div class="hero-val">{{ stats.total }}</div>
+    <div class="hero-sub"><span class="up">{{ t('pa_verif', n=stats.verif) }}</span></div>
+    <div class="hero-stats">
+      <div><div class="lbl">{{ t('pa_act7') }}</div><div class="v">{{ stats.act7 }}</div><div class="s">{{ t('pa_act30', n=stats.act30) }}</div></div>
+      <div><div class="lbl">{{ t('pa_new7') }}</div><div class="v">{{ stats.new7 }}</div><div class="s">{{ t('pa_new30', n=stats.new30) }}</div></div>
+      <div><div class="lbl">{{ t('pa_total') }}</div><div class="v">{{ stats.total }}</div><div class="s">{{ t('pa_verif', n=stats.verif) }}</div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="row" style="margin-bottom:10px"><h2 style="margin:0">{{ t('pa_lista') }}</h2><span class="spacer"></span><span class="small muted">{{ stats.total }}</span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>{{ t('pa_user') }}</th><th class="hide-sm">{{ t('pa_alta') }}</th><th>{{ t('pa_ult') }}</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{% if r.nombre %}<b>{{ r.nombre }}</b><br>{% endif %}<span class="muted small">{{ r.email }}{% if not r.verif %} · <span style="color:var(--warn)">{{ t('pa_sin_verif') }}</span>{% endif %}</span></td>
+          <td class="hide-sm muted">{{ r.alta }}</td>
+          <td>{{ r.ult }}</td>
+        </tr>
+      {% else %}<tr><td colspan="3" class="muted">{{ t('pa_ninguno') }}</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+    <p class="muted small" style="margin-top:10px">{{ t('pa_nota') }}</p>
+  </div>
+</section>
+{% endblock %}
