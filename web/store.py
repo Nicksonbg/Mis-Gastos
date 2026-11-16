@@ -24,6 +24,23 @@ def now_iso() -> str:
     return d.strftime("%Y-%m-%dT%H:%M:%S.") + f"{d.microsecond // 1000:03d}Z"
 
 
+def clean_profile(P: dict) -> dict:
+    """Saneado del perfil: nombre e icono recortados; la foto solo si es una imagen
+    razonable (data URL < 950 KB o una URL http corta), para no superar el límite de
+    1 MB por documento de Firestore."""
+    P = P if isinstance(P, dict) else {}
+    foto = P.get("foto", "")
+    if not isinstance(foto, str):
+        foto = ""
+    elif foto.startswith("data:image/"):
+        foto = foto if len(foto) <= 950_000 else ""
+    elif foto.startswith(("http://", "https://")):
+        foto = foto if len(foto) <= 2000 else ""
+    else:
+        foto = ""
+    return {"nombre": str(P.get("nombre", ""))[:80], "foto": foto, "icono": str(P.get("icono", ""))[:8]}
+
+
 class FirestoreStore:
     def __init__(self):
         import firebase_admin
@@ -46,6 +63,7 @@ class FirestoreStore:
         return seed()
 
     def save(self, uid, S):
+        S = normalize(S)  # saneado antes de guardar (recorta textos, acota listas, números finitos)
         self._ref(uid, "estado").set({"json": json.dumps(S, ensure_ascii=False, separators=(",", ":")),
                                       "actualizado": now_iso()})
 
@@ -57,8 +75,7 @@ class FirestoreStore:
         return p
 
     def save_profile(self, uid, P):
-        self._ref(uid, "perfil").set({"nombre": P.get("nombre", ""), "foto": P.get("foto", ""),
-                                      "icono": P.get("icono", ""), "actualizado": now_iso()})
+        self._ref(uid, "perfil").set(clean_profile(P) | {"actualizado": now_iso()})
 
     def delete_user_data(self, uid):
         for d in ("estado", "perfil", "ibkr"):
@@ -174,7 +191,7 @@ class LocalStore:
 
     def save(self, uid, S):
         d = self._all()
-        d.setdefault(uid, {})["estado"] = S
+        d.setdefault(uid, {})["estado"] = normalize(S)
         self._write(d)
 
     def load_profile(self, uid):
@@ -184,7 +201,7 @@ class LocalStore:
 
     def save_profile(self, uid, P):
         d = self._all()
-        d.setdefault(uid, {})["perfil"] = P
+        d.setdefault(uid, {})["perfil"] = clean_profile(P)
         self._write(d)
 
     _uso = {}

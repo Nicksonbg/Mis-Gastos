@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-33"
+APP_VERSION = "web-34"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -687,6 +687,8 @@ def datos_import():
     except ValueError:
         return redirect(url_for("datos", err="w_bad_file"))
     g.S = calc.normalize(d)
+    if len(json.dumps(g.S, ensure_ascii=False).encode("utf-8")) > 1_000_000:
+        return redirect(url_for("datos", err="w_bad_file"))
     return save_and_back("resumen", ok="w_imported")
 
 
@@ -986,8 +988,16 @@ def api_agent():
         ok = True
     if not ok:
         return {"error": "limit", "limit": limit}, 429
+    msgs = body.get("messages") or []
+    if isinstance(msgs, list):
+        msgs = msgs[-60:]  # no mandar un historial enorme a la IA (coste)
+        for mm in msgs:
+            if isinstance(mm, dict) and mm.get("role") == "user" and isinstance(mm.get("content"), str):
+                mm["content"] = mm["content"][:8000]
+    else:
+        msgs = []
     try:
-        out = agent.run(S, body.get("messages") or [], lang, P.get("nombre") or user.get("name", ""),
+        out = agent.run(S, msgs, lang, P.get("nombre") or user.get("name", ""),
                         decision=body.get("decision"), save=lambda s: store.save(g.uid, s),
                         loans_cat=TR["cats"][LANGS[lang]["i"]].split("|")[1])
     except agent.AIBusy:

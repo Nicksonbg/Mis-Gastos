@@ -8,6 +8,7 @@ from __future__ import annotations
 import calendar
 import math
 import random
+import re
 import string
 from datetime import date, timedelta
 
@@ -51,15 +52,150 @@ def seed() -> dict:
     return {"version": 1, "gastos": [], "prestamos": [], "inversiones": [], "watch": [], "movimientos": [], "presupuestos": []}
 
 
+# ---------- Saneado de datos (defensa ante JSON pegado/importado o corrupto) ----------
+_CAPS = {"gastos": 2000, "prestamos": 500, "inversiones": 1000, "watch": 1000,
+         "movimientos": 8000, "presupuestos": 500, "pagos_pendientes": 500}
+_MAX_CUOTAS = 1200
+_MAX_LINEAS = 300
+
+
+def _nz_str(v, n):
+    if v is None:
+        return ""
+    if not isinstance(v, str):
+        v = str(v)
+    return v[:n]
+
+
+def _nz_num(v, default=0.0, lo=-1e12, hi=1e12):
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return default
+    if not math.isfinite(x):
+        return default
+    return max(lo, min(hi, x))
+
+
+def _nz_day(v):
+    try:
+        d = int(v)
+    except (TypeError, ValueError):
+        return None
+    return d if 1 <= d <= 31 else None
+
+
+def _nz_date(v):
+    v = _nz_str(v, 10)
+    return v if re.match(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$", v) else ""
+
+
+def _nz_meses(v):
+    if not isinstance(v, list):
+        return []
+    out = []
+    for m in v[:12]:
+        try:
+            m = int(m)
+        except (TypeError, ValueError):
+            continue
+        if 1 <= m <= 12 and m not in out:
+            out.append(m)
+    return sorted(out)
+
+
+def _nz_pagos(v):
+    if not isinstance(v, dict):
+        return {}
+    out = {}
+    for k, val in list(v.items())[:800]:
+        k = _nz_str(k, 7)
+        if re.match(r"^\d{4}-(0[1-9]|1[0-2])$", k):
+            out[k] = val is True
+    return out
+
+
+def _nz_list(v, cap):
+    return [x for x in v if isinstance(x, dict)][:cap] if isinstance(v, list) else []
+
+
 def normalize(S: dict) -> dict:
+    """Devuelve un estado con la forma correcta: tipos coherentes, números finitos,
+    textos recortados y listas acotadas. Es la red de seguridad para datos pegados,
+    importados o corruptos, y se aplica tanto al cargar como al guardar."""
     base = seed()
     if isinstance(S, dict):
         base.update(S)
-    for k in ("gastos", "prestamos", "inversiones", "watch", "movimientos", "presupuestos", "pagos_pendientes"):
-        if not isinstance(base.get(k), list):
-            base[k] = []
+    base["ajustes"] = base.get("ajustes") if isinstance(base.get("ajustes"), dict) else {}
+    for k, cap in _CAPS.items():
+        base[k] = _nz_list(base.get(k), cap)
+
+    for g in base["gastos"]:
+        g["concepto"] = _nz_str(g.get("concepto"), 80)
+        g["categoria"] = _nz_str(g.get("categoria"), 40)
+        g["importe"] = _nz_num(g.get("importe"), 0.0, 0, 1e9)
+        g["dia"] = _nz_day(g.get("dia"))
+        g["prestamoId"] = _nz_str(g.get("prestamoId"), 60)
+        g["meses"] = _nz_meses(g.get("meses"))
+        if "pagos" in g:
+            g["pagos"] = _nz_pagos(g.get("pagos"))
+
+    for m in base["movimientos"]:
+        m["fecha"] = _nz_date(m.get("fecha"))
+        m["concepto"] = _nz_str(m.get("concepto"), 80)
+        m["categoria"] = _nz_str(m.get("categoria"), 40)
+        m["importe"] = _nz_num(m.get("importe"), 0.0, -1e9, 1e9)
+        if "lineas" in m:
+            lin = []
+            for ln in (m["lineas"] if isinstance(m.get("lineas"), list) else [])[:_MAX_LINEAS]:
+                if not isinstance(ln, dict):
+                    continue
+                ln["concepto"] = _nz_str(ln.get("concepto"), 120)
+                if "importe" in ln:
+                    ln["importe"] = _nz_num(ln.get("importe"), 0.0, -1e9, 1e9)
+                if "cantidad" in ln:
+                    ln["cantidad"] = _nz_num(ln.get("cantidad"), 0.0, -1e7, 1e7)
+                lin.append(ln)
+            m["lineas"] = lin
+        if isinstance(m.get("ticket"), dict):
+            tk = m["ticket"]
+            for kk in ("comercio", "direccion", "nif", "forma_pago", "num_ticket", "hora", "fecha", "moneda"):
+                if kk in tk:
+                    tk[kk] = _nz_str(tk.get(kk), 120)
+
+    for p in base["presupuestos"]:
+        p["categoria"] = _nz_str(p.get("categoria"), 40)
+        p["limite"] = _nz_num(p.get("limite"), 0.0, 0, 1e9)
+
     for l in base["prestamos"]:
-        l.setdefault("cuotas", [])
+        l["nombre"] = _nz_str(l.get("nombre"), 80)
+        l["entidad"] = _nz_str(l.get("entidad"), 120)
+        l["cuotas"] = _nz_list(l.get("cuotas"), _MAX_CUOTAS)
+        for c in l["cuotas"]:
+            c["fecha"] = _nz_date(c.get("fecha"))
+            c["cuota"] = _nz_num(c.get("cuota"), 0.0, -1e9, 1e9)
+            c["amortizacion"] = _nz_num(c.get("amortizacion"), 0.0, -1e9, 1e9)
+            c["intereses"] = _nz_num(c.get("intereses"), 0.0, -1e9, 1e9)
+            if "capitalAntes" in c:
+                c["capitalAntes"] = _nz_num(c.get("capitalAntes"), 0.0, -1e12, 1e12)
+            if "nota" in c:
+                c["nota"] = _nz_str(c.get("nota"), 120)
+            c["pagada"] = c.get("pagada") is True
+
+    for i in base["inversiones"]:
+        i["tipo"] = i.get("tipo") if i.get("tipo") in ("cripto", "accion", "divisa") else "cripto"
+        i["simbolo"] = _nz_str(i.get("simbolo"), 20)
+        i["cantidad"] = _nz_num(i.get("cantidad"), 0.0, -1e12, 1e12)
+        if "precioCompra" in i:
+            i["precioCompra"] = _nz_num(i.get("precioCompra"), 0.0, 0, 1e12)
+        i["broker"] = _nz_str(i.get("broker"), 60)
+        i["moneda"] = i.get("moneda") if i.get("moneda") in ("USD", "EUR") else "USD"
+
+    for w in base["watch"]:
+        w["simbolo"] = _nz_str(w.get("simbolo"), 20)
+        if "tipo" in w:
+            w["tipo"] = _nz_str(w.get("tipo"), 20)
+
     return base
 
 
