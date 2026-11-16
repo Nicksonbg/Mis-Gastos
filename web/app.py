@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-32"
+APP_VERSION = "web-33"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -214,8 +214,12 @@ RL_DEFAULT = (240, 60)  # resto de la web
 
 
 def client_ip():
+    # En Cloud Run, Google añade la IP real del cliente al FINAL de X-Forwarded-For.
+    # Lo que el cliente mande va delante y es falseable, así que tomamos la última.
     xff = request.headers.get("X-Forwarded-For", "")
-    return (xff.split(",")[0].strip() if xff else request.remote_addr) or "?"
+    if xff:
+        return xff.split(",")[-1].strip() or (request.remote_addr or "?")
+    return request.remote_addr or "?"
 
 
 def rate_limited():
@@ -236,7 +240,11 @@ def rate_limited():
             return True
         q.append(now)
         if len(_rl_hits) > 20000:  # evitar crecer sin control
-            _rl_hits.clear()
+            # quitar solo las entradas ya vencidas (no borrar los contadores de todos)
+            for k in [k for k, dq in _rl_hits.items() if not dq or now - dq[-1] > 300]:
+                del _rl_hits[k]
+            if len(_rl_hits) > 20000:   # caso extremo: último recurso
+                _rl_hits.clear()
     return False
 
 
@@ -245,6 +253,8 @@ def throttle():
     if request.method == "OPTIONS" or request.path == "/healthz":
         return
     if rate_limited():
+        if request.path.startswith("/api/"):
+            return {"error": "rate_limited", "msg": "Demasiadas peticiones. Espera un momento."}, 429, {"Retry-After": "30"}
         return make_response(("Demasiadas peticiones. Espera un momento.", 429,
                               {"Retry-After": "30"}))
 
