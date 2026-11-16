@@ -1,0 +1,37 @@
+name: Copias de seguridad (Firestore)
+# Se ejecuta a mano desde la pestaña Actions. Activa la recuperación a un punto
+# en el tiempo (PITR, 7 días) y crea copias automáticas diaria y semanal.
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT: personal-balance-dccca
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Versión de gcloud
+        run: gcloud --version | head -1
+
+      - name: Activar recuperación a un punto en el tiempo (PITR, 7 días)
+        run: gcloud firestore databases update --database='(default)' --enable-pitr --project "$PROJECT"
+
+      - name: Crear copia diaria (retención 7 días)
+        run: |
+          gcloud firestore backups schedules create --database='(default)' \
+            --recurrence=daily --retention=7d --project "$PROJECT" \
+            || echo "Aviso: la copia diaria ya existía o hubo un error (mirar el mensaje de arriba)."
+
+      - name: Crear copia semanal (retención 14 semanas)
+        run: |
+          gcloud firestore backups schedules create --database='(default)' \
+            --recurrence=weekly --retention=14w --project "$PROJECT" \
+            || echo "Aviso: la copia semanal ya existía o hubo un error (mirar el mensaje de arriba)."
+
+      - name: Resumen de copias programadas
+        run: gcloud firestore backups schedules list --database='(default)' --project "$PROJECT"
