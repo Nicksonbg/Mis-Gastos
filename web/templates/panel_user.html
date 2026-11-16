@@ -15,37 +15,15 @@
   </div>
 
   <div class="card" style="margin-top:16px">
-    <h2 style="margin:0 0 10px">{{ t('pa_resumen') }}</h2>
+    <h2 style="margin:0 0 4px">{{ t('pa_uso') }}</h2>
+    <p class="muted small" style="margin:0 0 10px">{{ t('pa_uso_nota') }}</p>
     <div class="loan-stats">
-      <div><div class="lbl">{{ t('g_t_fijos') }} · {{ t('al_mes') }}</div><div class="v">{{ money(resumen.fijos_mes) }}</div><div class="s">{{ resumen.n_gastos }} {{ t('g_t_fijos')|lower }}</div></div>
-      <div><div class="lbl">{{ t('g_t_dia') }} · {{ t('al_mes') }}</div><div class="v">{{ money(resumen.dia_mes) }}</div><div class="s">{{ resumen.n_mov }} {{ t('g_t_dia')|lower }}</div></div>
-      <div><div class="lbl">{{ t('k_este_anio') }}</div><div class="v">{{ money(resumen.anio) }}</div></div>
-      <div><div class="lbl">{{ t('k_deuda') }}</div><div class="v">{{ money(resumen.deuda) }}</div><div class="s">{{ resumen.n_prest }} {{ t('h_prestamos')|lower }}</div></div>
+      <div><div class="lbl">{{ t('g_t_fijos') }}</div><div class="v">{{ resumen.n_gastos }}</div></div>
+      <div><div class="lbl">{{ t('g_t_dia') }}</div><div class="v">{{ resumen.n_mov }}</div></div>
+      <div><div class="lbl">{{ t('h_prestamos') }}</div><div class="v">{{ resumen.n_prest }}</div></div>
       <div><div class="lbl">{{ t('h_pres') }}</div><div class="v">{{ resumen.n_pres }}</div></div>
       <div><div class="lbl">{{ t('tab_inv') }}</div><div class="v">{{ resumen.n_inv }}</div></div>
     </div>
-  </div>
-
-  <div class="card" style="margin-top:16px">
-    <h2 style="margin:0 0 10px">{{ t('h_fijos') }}</h2>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>{{ t('th_concepto') }}</th><th class="hide-sm">{{ t('th_categoria') }}</th><th class="n hide-sm">{{ t('th_dia_cobro') }}</th><th class="n">{{ t('al_mes') }}</th></tr></thead>
-      <tbody>
-      {% for g in gastos %}<tr><td>{{ g.concepto }}</td><td class="hide-sm muted">{{ g.categoria }}</td><td class="n hide-sm muted">{{ g.dia or '—' }}</td><td class="n">{{ money(g.importe) }}</td></tr>
-      {% else %}<tr><td colspan="4" class="muted">{{ t('pa_sin_gastos') }}</td></tr>{% endfor %}
-      </tbody>
-    </table></div>
-  </div>
-
-  <div class="card" style="margin-top:16px">
-    <h2 style="margin:0 0 10px">{{ t('h_prestamos') }}</h2>
-    {% for l in prestamos %}
-    <div class="row" style="padding:8px 0;border-top:1px solid var(--line)">
-      <div><b>{{ l.nombre }}</b> <span class="pill {{ l.estado[0] }}">{{ l.estado[1] }}</span><div class="muted small">{{ l.entidad }} · {{ l.pagadas }}/{{ l.n }}</div></div>
-      <span class="spacer"></span>
-      <div style="text-align:right"><b>{{ money(l.pendiente) }}</b><div class="muted small">{{ t('l_pend_pagar') }} · {{ money(l.total) }}</div></div>
-    </div>
-    {% else %}<p class="muted">{{ t('pa_sin_prest') }}</p>{% endfor %}
   </div>
 </section>
 {% endblock %}

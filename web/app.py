@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-43"
+APP_VERSION = "web-44"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -1518,8 +1518,6 @@ def panel_user(uid):
     plat_labels = {"app-ios": t("pa_app_ios"), "app-android": t("pa_app_android"), "app-otro": t("pa_app_otro"),
                    "nav-movil": t("pa_nav_movil"), "nav-pc": t("pa_nav_pc"), "": t("pa_plat_nd")}
 
-    mr = calc.mes_real(S, 0)
-    deuda = r2(sum(calc.loan_stats(l)["pendiente"] for l in S.get("prestamos", [])))
     cuenta = {
         "uid": uid, "email": u.email or "—", "nombre": u.display_name or prof.get("nombre") or "—",
         "verif": bool(u.email_verified), "prov": prov,
@@ -1527,22 +1525,13 @@ def panel_user(uid):
         "alta": ms_dt(getattr(u.user_metadata, "creation_timestamp", None)),
         "acceso": ms_dt(getattr(u.user_metadata, "last_sign_in_timestamp", None)),
     }
+    # Solo recuentos de uso (engagement). Sin importes ni detalle económico, por privacidad (RGPD).
     resumen = {
-        "fijos_mes": mr["f"], "dia_mes": mr["d"], "anio": calc.anio_real(S, calc.today().year),
         "n_gastos": len(S.get("gastos", [])), "n_mov": len(S.get("movimientos", [])),
-        "n_prest": len(S.get("prestamos", [])), "deuda": deuda,
+        "n_prest": len(S.get("prestamos", [])),
         "n_pres": len(S.get("presupuestos", [])), "n_inv": len(S.get("inversiones", [])),
     }
-    gastos = [{"concepto": gg.get("concepto", ""), "categoria": gg.get("categoria", ""),
-               "importe": r2(calc.mensual(gg)), "dia": gg.get("dia")} for gg in S.get("gastos", []) if not gg.get("prestamoId")]
-    prestamos = []
-    for l in S.get("prestamos", []):
-        s = calc.loan_stats(l)
-        estado = ("ok", "✓ " + t("terminado")) if s["nPend"] == 0 else ("bad", t("cuota_venc")) if s["overdue"] else ("ok", "✓ " + t("al_dia"))
-        prestamos.append({"nombre": l.get("nombre", ""), "entidad": l.get("entidad", ""),
-                          "pendiente": s["pendiente"], "total": s["total"], "estado": estado,
-                          "pagadas": s["nPaid"], "n": s["n"]})
-    return render_template("panel_user.html", **ctx("perfil", cuenta=cuenta, resumen=resumen, gastos=gastos, prestamos=prestamos))
+    return render_template("panel_user.html", **ctx("perfil", cuenta=cuenta, resumen=resumen))
 
 
 @app.get("/healthz")

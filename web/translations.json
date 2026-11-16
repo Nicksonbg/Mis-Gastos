@@ -1743,5 +1743,15 @@
     "Sin préstamos.",
     "No loans.",
     "Няма заеми."
+  ],
+  "pa_uso": [
+    "Uso de la app",
+    "App usage",
+    "Употреба"
+  ],
+  "pa_uso_nota": [
+    "Solo recuentos de actividad. No se muestran importes ni el detalle económico de la persona.",
+    "Activity counts only. No amounts or personal financial detail are shown.",
+    "Само брой активности. Не се показват суми или лични финансови данни."
   ]
 }
