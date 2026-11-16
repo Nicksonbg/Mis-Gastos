@@ -1808,5 +1808,15 @@
     "Admin",
     "Admin",
     "Админ"
+  ],
+  "priv_pol": [
+    "Política de privacidad",
+    "Privacy policy",
+    "Политика за поверителност"
+  ],
+  "priv_aviso": [
+    "Al usar Personal Balance aceptas nuestra",
+    "By using Personal Balance you accept our",
+    "Използвайки Personal Balance, приемаш нашата"
   ]
 }

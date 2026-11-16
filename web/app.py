@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-47"
+APP_VERSION = "web-48"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -1576,6 +1576,14 @@ def panel_user(uid):
            "n_prest": len(S.get("prestamos", [])),
            "n_pres": len(S.get("presupuestos", [])), "n_inv": len(S.get("inversiones", []))}
     return render_template("panel_user.html", **ctx("admin", cuenta=cuenta, uso=uso))
+
+
+@app.get("/privacidad")
+def privacidad():
+    from datetime import date as _date
+    back = request.referrer or url_for("login")
+    return render_template("privacidad.html", **ctx(None, show_inv=False,
+                           fecha=_date.today().strftime("%d/%m/%Y"), back=back))
 
 
 @app.get("/healthz")

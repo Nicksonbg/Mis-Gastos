@@ -1,0 +1,63 @@
+{% include "_head.html" %}
+<body data-page="privacidad">
+<div id="auth" style="position:static;min-height:100vh;padding:24px 0">
+ <div class="auth-card" style="max-width:760px;margin:0 auto">
+  <div class="card" style="text-align:left;line-height:1.55">
+   <div class="row" style="align-items:center;margin-bottom:6px"><h1 style="margin:0;font-size:24px">Política de privacidad</h1><span class="spacer"></span><a class="linkbtn" href="{{ back }}" style="color:var(--muted);text-decoration:none">‹ Volver</a></div>
+   <p class="muted small">Personal Balance · Última actualización: {{ fecha }}</p>
+
+   <h2 style="font-size:17px;margin:18px 0 6px">1. Quién es el responsable</h2>
+   <p>El responsable del tratamiento de tus datos es <b>Nikolay Kolev</b> (persona física, sin empresa), como titular de la aplicación <b>Personal Balance</b>.</p>
+   <p>Para cualquier cuestión sobre tus datos puedes escribir a: <b>nicksonbg@gmail.com</b>.</p>
+
+   <h2 style="font-size:17px;margin:18px 0 6px">2. Qué datos tratamos</h2>
+   <ul>
+    <li><b>Datos de cuenta:</b> tu correo electrónico, tu nombre, el método con el que entras (Google, Apple o correo), si tu correo está verificado y las fechas de alta y de último acceso.</li>
+    <li><b>Perfil y uso:</b> nombre visible, icono o foto de perfil (si la pones), tipo de dispositivo (app o navegador), zona horaria, idioma y los días en que abres la app (para medir el uso).</li>
+    <li><b>Datos que tú introduces:</b> tus gastos fijos, gastos del día a día, préstamos, presupuestos e inversiones, y las fotos de tickets que decidas escanear.</li>
+    <li><b>Datos técnicos:</b> dirección IP (de forma temporal, para evitar abusos) e identificadores de sesión.</li>
+   </ul>
+
+   <h2 style="font-size:17px;margin:18px 0 6px">3. Para qué los usamos y con qué base legal</h2>
+   <ul>
+    <li><b>Prestar el servicio</b> (guardar y mostrar tus finanzas, sincronizar entre tus dispositivos): para poder darte el servicio que solicitas.</li>
+    <li><b>Leer tickets con inteligencia artificial</b> y el asistente: cuando tú lo pides al escanear un ticket o escribir al asistente.</li>
+    <li><b>Seguridad y prevención de abusos</b> (límites de uso): por interés legítimo en proteger el servicio.</li>
+    <li><b>Avisos y notificaciones:</b> solo si tú los activas (consentimiento).</li>
+   </ul>
+
+   <h2 style="font-size:17px;margin:18px 0 6px">4. Dónde se guardan y quién los trata</h2>
+   <p>Tus datos se guardan en servicios de <b>Google</b> (Firebase, para el inicio de sesión y la base de datos, y Google Cloud Run, para el servidor), alojados en la <b>Unión Europea</b>. La aplicación se sirve a través de <b>GitHub</b>.</p>
+   <p>Cuando escaneas un ticket o usas el asistente, el texto o la imagen se envían a <b>Groq</b> (proveedor de inteligencia artificial) únicamente para leer el ticket o responder, y después se guarda el resultado. Groq está en <b>Estados Unidos</b>, por lo que esos envíos suponen una transferencia internacional de datos.</p>
+   <p>El inicio de sesión puede realizarse mediante <b>Google</b> o <b>Apple</b>, según el método que elijas.</p>
+
+   <h2 style="font-size:17px;margin:18px 0 6px">5. Fotos de tickets</h2>
+   <p>Si haces una foto de un ticket <b>sin conexión</b>, la foto se guarda <b>solo en tu dispositivo</b> hasta que haya internet. Al leerla, se envía a Groq para extraer los datos (importe, comercio, etc.) y se guarda ese resultado junto a tu gasto.</p>
+
+   <h2 style="font-size:17px;margin:18px 0 6px">6. Quién puede ver tus datos</h2>
+   <p>Tus datos económicos <b>solo los ves tú</b>. El responsable únicamente puede ver datos de <b>cuenta y de uso</b> (correo, dispositivo, frecuencia de uso, cuántos apuntes tienes…), <b>nunca los importes ni el detalle de tus gastos, préstamos o inversiones</b>.</p>
+
+   <h2 style="font-size:17px;margin:18px 0 6px">7. Cuánto tiempo los guardamos</h2>
+   <p>Conservamos tus datos mientras mantengas tu cuenta. Si borras tu cuenta, tus datos se eliminan.</p>
+
+   <h2 style="font-size:17px;margin:18px 0 6px">8. Tus derechos</h2>
+   <p>Puedes <b>acceder</b> a tus datos, <b>corregirlos</b>, <b>exportarlos</b> y <b>borrarlos</b>. Desde la propia app puedes exportar todos tus datos y eliminar tu cuenta cuando quieras. También puedes oponerte o limitar ciertos tratamientos escribiendo a <b>nicksonbg@gmail.com</b>.</p>
+   <p>Si crees que no tratamos bien tus datos, puedes reclamar ante la <b>Agencia Española de Protección de Datos</b> (<span class="muted">www.aepd.es</span>).</p>
+
+   <h2 style="font-size:17px;margin:18px 0 6px">9. Edad mínima</h2>
+   <p>Personal Balance está dirigida <b>solo a mayores de 18 años</b>. Si eres menor de 18, no debes usar la aplicación.</p>
+
+   <h2 style="font-size:17px;margin:18px 0 6px">10. Seguridad</h2>
+   <p>Usamos conexiones cifradas (HTTPS) y cada cuenta está aislada: una persona no puede ver los datos de otra. Aun así, ningún sistema es 100 % infalible.</p>
+
+   <h2 style="font-size:17px;margin:18px 0 6px">11. Almacenamiento en el dispositivo</h2>
+   <p>La app guarda datos en tu dispositivo (almacenamiento local y cookies técnicas necesarias para la sesión, el idioma y el tema). No usamos cookies de publicidad ni de seguimiento.</p>
+
+   <h2 style="font-size:17px;margin:18px 0 6px">12. Cambios</h2>
+   <p>Podemos actualizar esta política. Si hay cambios importantes, lo indicaremos en la app. La fecha de arriba muestra la última actualización.</p>
+
+   <div style="margin-top:20px"><a class="btn" href="{{ back }}" style="text-decoration:none">‹ Volver</a></div>
+  </div>
+ </div>
+</div>
+</body></html>
