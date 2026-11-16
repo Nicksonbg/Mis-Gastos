@@ -76,6 +76,16 @@ if (DEV) {
         showErr(E(x.code));
       }
     };
+    const APPLE_ON = false;  // poner true cuando Apple esté configurado en Firebase
+    if (APPLE_ON) { const ab = $('#a-apple'); if (ab) ab.classList.remove('hidden'); }
+    $('#a-apple').onclick = async () => {
+      err.textContent = '';
+      const pr = new A.OAuthProvider('apple.com'); pr.addScope('email'); pr.addScope('name');
+      try { await A.signInWithPopup(auth, pr) } catch (x) {
+        if (x.code === 'auth/popup-blocked' || x.code === 'auth/operation-not-supported-in-this-environment') { try { await A.signInWithRedirect(auth, pr); return } catch (y) {} }
+        showErr(x.code === 'auth/operation-not-allowed' ? 'a_apple_off' : E(x.code));
+      }
+    };
     $('#a-forgot').onclick = async () => {
       const email = $('#a-email').value.trim(); if (!email) return showErr('a_need_email');
       try { await A.sendPasswordResetEmail(auth, email); err.textContent = tr.a_reset_sent; err.className = 'okm' } catch (x) { showErr(E(x.code)) }
