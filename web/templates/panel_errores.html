@@ -19,7 +19,7 @@
           <button class="btn ghost sm" data-res>{{ t('pa_err_reabrir') if e.resuelto else t('pa_err_resuelto') }}</button>
           <button class="btn ghost sm" data-cop>{{ t('pa_err_copiar') }}</button>
         </div>
-        <div class="ia-out" style="display:none;margin-top:8px;white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:8px;font-size:13px"></div>
+        <div class="ia-out" style="{{ '' if e.analisis else 'display:none;' }}margin-top:8px;white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:8px;font-size:13px">{{ e.analisis or '' }}</div>
         <textarea class="cop-src" readonly style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">[{{ e.tipo }}] {{ e.msg }}
 Dónde: {{ e.donde }} · {{ e.plat }}
 Cuándo: {{ e.cuando }}{% if e.email %} · {{ e.email }}{% endif %}

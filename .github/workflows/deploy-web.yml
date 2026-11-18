@@ -70,3 +70,21 @@ jobs:
           else
             gcloud scheduler jobs create http pb-resumen "${COMMON[@]}" --headers "X-Cron-Key=$CK"
           fi
+      - name: Programar el aviso de errores (cada 15 minutos)
+        run: |
+          COMMON=(--location $REGION --project $PROJECT --schedule "*/15 * * * *" --time-zone "Atlantic/Canary" \
+            --uri "$URL/cron/error-alert" --http-method POST --attempt-deadline 120s)
+          if gcloud scheduler jobs describe pb-error-alert --location $REGION --project $PROJECT >/dev/null 2>&1; then
+            gcloud scheduler jobs update http pb-error-alert "${COMMON[@]}" --update-headers "X-Cron-Key=$CK"
+          else
+            gcloud scheduler jobs create http pb-error-alert "${COMMON[@]}" --headers "X-Cron-Key=$CK"
+          fi
+      - name: Programar el resumen diario de errores (08:00 hora de Canarias)
+        run: |
+          COMMON=(--location $REGION --project $PROJECT --schedule "0 8 * * *" --time-zone "Atlantic/Canary" \
+            --uri "$URL/cron/error-digest" --http-method POST --attempt-deadline 300s)
+          if gcloud scheduler jobs describe pb-error-digest --location $REGION --project $PROJECT >/dev/null 2>&1; then
+            gcloud scheduler jobs update http pb-error-digest "${COMMON[@]}" --update-headers "X-Cron-Key=$CK"
+          else
+            gcloud scheduler jobs create http pb-error-digest "${COMMON[@]}" --headers "X-Cron-Key=$CK"
+          fi

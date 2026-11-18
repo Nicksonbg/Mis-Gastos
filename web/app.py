@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-50"
+APP_VERSION = "web-51"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -1688,6 +1688,71 @@ def _analizar_error(e):
         return (r.json()["choices"][0]["message"].get("content") or "").strip() or "La IA no devolvió respuesta."
     except Exception as ex:
         return "No se pudo analizar: " + str(ex)[:150]
+
+
+ERR_PANEL_URL = "https://personal-balance-web-778378922815.europe-west1.run.app/panel/errores"
+
+
+def _push_admin(msg):
+    """Envía un push SOLO a los dispositivos del admin (tú)."""
+    import push
+    from firebase_admin import auth
+    priv = push.vapid(store.db)[0]
+    sent, cache = 0, {}
+    for sb in store.list_subs():
+        uid = sb.get("uid")
+        if uid not in cache:
+            try:
+                cache[uid] = is_admin({"email": auth.get_user(uid).email or ""})
+            except Exception:
+                cache[uid] = False
+        if not cache[uid]:
+            continue
+        try:
+            if push.send(sb, msg, priv):
+                sent += 1
+            else:
+                store.delete_sub(sb["_id"])
+        except Exception as e:
+            print("push admin:", repr(e), flush=True)
+    return sent
+
+
+@app.post("/cron/error-alert")
+def cron_error_alert():
+    key = os.environ.get("CRON_KEY", "")
+    if not key or not secrets.compare_digest(request.headers.get("X-Cron-Key", ""), key):
+        abort(403)
+    errs = [e for e in store.list_errores(100) if not e.get("avisado")]
+    for e in errs:
+        store.set_error(e["_id"], {"avisado": True})
+    if not errs:
+        return {"nuevos": 0}
+    first = (errs[0].get("msg") or "(sin mensaje)")[:140]
+    sent = _push_admin({"title": f"⚠️ {len(errs)} error(es) en la app", "body": first,
+                        "tag": "pb-err", "url": ERR_PANEL_URL})
+    return {"nuevos": len(errs), "enviados": sent}
+
+
+@app.post("/cron/error-digest")
+def cron_error_digest():
+    key = os.environ.get("CRON_KEY", "")
+    if not key or not secrets.compare_digest(request.headers.get("X-Cron-Key", ""), key):
+        abort(403)
+    from datetime import datetime, timezone, timedelta
+    corte = (datetime.now(timezone.utc) - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%S")
+    errs = [e for e in store.list_errores(150) if (e.get("ts") or "") >= corte]
+    analizados = 0
+    for e in errs:
+        if not e.get("analisis") and analizados < 8:
+            store.set_error(e["_id"], {"analisis": _analizar_error(e)})
+            analizados += 1
+    if not errs and request.args.get("force") != "1":
+        return {"hoy": 0}
+    cuerpo = f"{len(errs)} error(es) en 24 h." + (f" {analizados} analizados con IA." if analizados else "") + " Ábrelo para verlos."
+    sent = _push_admin({"title": "📋 Resumen de errores", "body": cuerpo,
+                        "tag": "pb-err-digest", "url": ERR_PANEL_URL})
+    return {"hoy": len(errs), "analizados": analizados, "enviados": sent}
 
 
 @app.get("/privacidad")
