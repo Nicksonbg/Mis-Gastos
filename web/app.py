@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-49"
+APP_VERSION = "web-50"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -1634,6 +1634,60 @@ def panel_errores_clear():
         abort(404)
     store.clear_errores()
     return redirect(url_for("panel_errores"))
+
+
+@app.post("/panel/errores/resolver")
+@login_required
+def panel_errores_resolver():
+    if not is_admin(g.user):
+        abort(404)
+    eid = request.form.get("id", "")
+    e = store.get_error(eid)
+    if not e:
+        return {"error": "no encontrado"}, 404
+    nuevo = not e.get("resuelto")
+    store.set_error(eid, {"resuelto": nuevo})
+    return {"resuelto": nuevo}
+
+
+@app.post("/panel/errores/analizar")
+@login_required
+def panel_errores_analizar():
+    if not is_admin(g.user):
+        abort(404)
+    e = store.get_error(request.form.get("id", ""))
+    if not e:
+        return {"error": "no encontrado"}, 404
+    return {"texto": _analizar_error(e)}
+
+
+def _analizar_error(e):
+    key = os.environ.get("GROQ_API_KEY")
+    if not key:
+        return "La IA no está disponible ahora mismo."
+    sysmsg = ("Eres un ayudante técnico para el desarrollador de 'Personal Balance', una app de finanzas "
+              "personales (PWA en JavaScript en el móvil + backend Flask/Python con Firebase/Firestore). "
+              "Te paso un error real de la app. Responde en español de España, breve y claro, con tres puntos: "
+              "1) qué significa el error, 2) la causa más probable, 3) una sugerencia concreta de por dónde "
+              "mirar para arreglarlo. No inventes; si falta información para estar seguro, dilo.")
+    txt = (f"Tipo: {e.get('tipo')}\nMensaje: {e.get('msg')}\nDónde: {e.get('donde')}\n"
+           f"Plataforma: {e.get('plat')}\nTraza:\n{e.get('stack') or '(sin traza)'}")
+    try:
+        import httpx
+        model = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
+        body = {"model": model, "temperature": 0.3, "max_completion_tokens": 900,
+                "messages": [{"role": "system", "content": sysmsg}, {"role": "user", "content": txt}]}
+        if model.startswith("openai/gpt-oss"):
+            body["reasoning_effort"] = "low"
+        r = httpx.post("https://api.groq.com/openai/v1/chat/completions", json=body, timeout=60,
+                       headers={"Authorization": "Bearer " + key})
+        if r.status_code == 429:
+            return "La IA está ocupada ahora mismo (límite gratuito). Prueba en un minuto."
+        if r.status_code >= 400:
+            return "No se pudo analizar (IA): HTTP " + str(r.status_code)
+        return (r.json()["choices"][0]["message"].get("content") or "").strip() or "La IA no devolvió respuesta."
+    except Exception as ex:
+        return "No se pudo analizar: " + str(ex)[:150]
 
 
 @app.get("/privacidad")

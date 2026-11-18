@@ -1838,5 +1838,45 @@
     "Sin errores registrados. 🎉",
     "No errors logged. 🎉",
     "Няма записани грешки. 🎉"
+  ],
+  "pa_err_ia": [
+    "Analizar con IA",
+    "Analyze with AI",
+    "Анализ с ИИ"
+  ],
+  "pa_err_pensando": [
+    "Analizando…",
+    "Analyzing…",
+    "Анализирам…"
+  ],
+  "pa_err_resuelto": [
+    "Marcar resuelto",
+    "Mark resolved",
+    "Отбележи решен"
+  ],
+  "pa_err_reabrir": [
+    "Reabrir",
+    "Reopen",
+    "Отвори пак"
+  ],
+  "pa_err_resuelto_badge": [
+    "Resuelto",
+    "Resolved",
+    "Решен"
+  ],
+  "pa_err_copiar": [
+    "Copiar",
+    "Copy",
+    "Копирай"
+  ],
+  "pa_err_copiado": [
+    "¡Copiado!",
+    "Copied!",
+    "Копирано!"
+  ],
+  "pa_err_fallo": [
+    "No se pudo analizar. Inténtalo de nuevo.",
+    "Couldn't analyze. Try again.",
+    "Неуспешен анализ. Опитай пак."
   ]
 }

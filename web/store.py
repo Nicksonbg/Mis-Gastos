@@ -214,6 +214,16 @@ class FirestoreStore:
             n += 1
         return n
 
+    def get_error(self, eid):
+        d = self.db.collection("errores").document(eid).get()
+        return (d.to_dict() | {"_id": d.id}) if d.exists else None
+
+    def set_error(self, eid, fields):
+        try:
+            self.db.collection("errores").document(eid).update(fields)
+        except Exception as e:
+            print("set_error:", repr(e), flush=True)
+
 
 class LocalStore:
     """Solo para desarrollo: guarda en un archivo JSON."""
@@ -347,6 +357,19 @@ class LocalStore:
         n = len(self.list_errores(999))
         json.dump([], open("dev-errores.json", "w"))
         return n
+
+    def get_error(self, eid):
+        for e in self.list_errores(999):
+            if e.get("_id") == eid:
+                return e
+        return None
+
+    def set_error(self, eid, fields):
+        errs = self.list_errores(999)
+        for e in errs:
+            if e.get("_id") == eid:
+                e.update(fields)
+        json.dump(errs, open("dev-errores.json", "w"))
 
 
 store = LocalStore() if DEV else FirestoreStore()

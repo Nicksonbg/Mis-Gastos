@@ -6,16 +6,48 @@
     <div class="row" style="margin-bottom:10px"><h2 style="margin:0">{{ t('pa_errores') }}</h2><span class="spacer"></span>
       {% if errs %}<form method="post" action="{{ url_for('panel_errores_clear') }}" data-confirm="{{ t('pa_err_vaciar_ask') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost sm">{{ t('pa_err_vaciar') }}</button></form>{% endif %}</div>
     {% for e in errs %}
-      <details style="border-top:1px solid var(--line);padding:9px 0">
+      <details class="err-item{{ ' resuelto' if e.resuelto }}" data-id="{{ e._id }}" style="border-top:1px solid var(--line);padding:9px 0">
         <summary style="cursor:pointer">
-          <span class="pill {{ 'bad' if e.tipo == 'server' else 'warn' }}">{{ 'Servidor' if e.tipo == 'server' else 'App' }}</span>
+          <span class="pill {{ 'ok' if e.resuelto else ('bad' if e.tipo == 'server' else 'warn') }}">{{ t('pa_err_resuelto_badge') if e.resuelto else ('Servidor' if e.tipo == 'server' else 'App') }}</span>
           <b>{{ e.msg or '(sin mensaje)' }}</b>
           <div class="muted small" style="margin-top:2px">{{ e.cuando }}{% if e.donde %} · {{ e.donde }}{% endif %}{% if e.plat %} · {{ e.plat }}{% endif %}{% if e.email %} · {{ e.email }}{% endif %}</div>
         </summary>
         {% if e.stack %}<pre style="white-space:pre-wrap;font-size:12px;background:var(--bg);padding:8px;border-radius:8px;margin:6px 0 0;overflow:auto">{{ e.stack }}</pre>{% endif %}
         {% if e.ua %}<p class="muted small" style="margin:6px 0 0">{{ e.ua }}</p>{% endif %}
+        <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn ghost sm" data-ia>{{ t('pa_err_ia') }}</button>
+          <button class="btn ghost sm" data-res>{{ t('pa_err_reabrir') if e.resuelto else t('pa_err_resuelto') }}</button>
+          <button class="btn ghost sm" data-cop>{{ t('pa_err_copiar') }}</button>
+        </div>
+        <div class="ia-out" style="display:none;margin-top:8px;white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:8px;font-size:13px"></div>
+        <textarea class="cop-src" readonly style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">[{{ e.tipo }}] {{ e.msg }}
+Dónde: {{ e.donde }} · {{ e.plat }}
+Cuándo: {{ e.cuando }}{% if e.email %} · {{ e.email }}{% endif %}
+{{ e.ua }}
+
+{{ e.stack }}</textarea>
       </details>
     {% else %}<p class="muted">{{ t('pa_err_ninguno') }}</p>{% endfor %}
   </div>
 </section>
+<script>
+(function(){
+  var CSRF={{ csrf|tojson }};
+  var URL_IA={{ url_for('panel_errores_analizar')|tojson }}, URL_RES={{ url_for('panel_errores_resolver')|tojson }};
+  var T={ia:{{ t('pa_err_ia')|tojson }},pensando:{{ t('pa_err_pensando')|tojson }},res:{{ t('pa_err_resuelto')|tojson }},reab:{{ t('pa_err_reabrir')|tojson }},cop:{{ t('pa_err_copiar')|tojson }},copok:{{ t('pa_err_copiado')|tojson }},fallo:{{ t('pa_err_fallo')|tojson }}};
+  function post(url,id){return fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'csrf='+encodeURIComponent(CSRF)+'&id='+encodeURIComponent(id)}).then(function(r){return r.json()});}
+  document.addEventListener('click',function(ev){
+    var d=ev.target.closest('.err-item'); if(!d)return; var id=d.dataset.id;
+    if(ev.target.closest('[data-ia]')){ev.preventDefault();var b=ev.target.closest('[data-ia]'),out=d.querySelector('.ia-out');
+      out.style.display='block';out.textContent=T.pensando;b.disabled=true;
+      post(URL_IA,id).then(function(j){out.textContent=j.texto||T.fallo;}).catch(function(){out.textContent=T.fallo;}).then(function(){b.disabled=false;});}
+    else if(ev.target.closest('[data-res]')){ev.preventDefault();var rb=ev.target.closest('[data-res]');rb.disabled=true;
+      post(URL_RES,id).then(function(j){d.classList.toggle('resuelto',!!j.resuelto);rb.textContent=j.resuelto?T.reab:T.res;}).catch(function(){}).then(function(){rb.disabled=false;});}
+    else if(ev.target.closest('[data-cop]')){ev.preventDefault();var cb=ev.target.closest('[data-cop]'),src=d.querySelector('.cop-src');
+      var done=function(){cb.textContent=T.copok;setTimeout(function(){cb.textContent=T.cop;},1500);};
+      try{navigator.clipboard.writeText(src.value).then(done,function(){src.select();document.execCommand('copy');done();});}catch(e){src.select();document.execCommand('copy');done();}}
+  });
+})();
+</script>
+<style>.err-item.resuelto>summary b{text-decoration:line-through;opacity:.6}.err-item.resuelto{opacity:.75}</style>
 {% endblock %}
