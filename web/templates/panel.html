@@ -11,6 +11,7 @@
       <div><div class="lbl">{{ t('pa_total') }}</div><div class="v">{{ stats.total }}</div><div class="s">{{ t('pa_verif', n=stats.verif) }}</div></div>
     </div>
   </div>
+  <div style="margin-top:12px"><a class="btn ghost" href="{{ url_for('panel_errores') }}" style="text-decoration:none">{{ t('pa_errores') }}{% if n_err %} · {{ n_err }}{% endif %}</a></div>
   <div class="card" style="margin-top:16px">
     <h2 style="margin:0 0 10px">{{ t('pa_altas_mes') }}</h2>
     {% for m in meses %}<div class="hist-row"><span class="hist-m">{{ m.lbl }}</span><span class="hist-bar"><i style="width:{{ (m.n/altas_max*100)|round if altas_max else 0 }}%"></i></span><span class="hist-v">{{ m.n }}</span></div>{% endfor %}

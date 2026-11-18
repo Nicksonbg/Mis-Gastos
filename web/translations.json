@@ -1818,5 +1818,25 @@
     "Al usar Personal Balance aceptas nuestra",
     "By using Personal Balance you accept our",
     "Използвайки Personal Balance, приемаш нашата"
+  ],
+  "pa_errores": [
+    "Errores",
+    "Errors",
+    "Грешки"
+  ],
+  "pa_err_vaciar": [
+    "Vaciar",
+    "Clear",
+    "Изчисти"
+  ],
+  "pa_err_vaciar_ask": [
+    "¿Borrar todos los errores registrados?",
+    "Delete all logged errors?",
+    "Да изтрия ли всички грешки?"
+  ],
+  "pa_err_ninguno": [
+    "Sin errores registrados. 🎉",
+    "No errors logged. 🎉",
+    "Няма записани грешки. 🎉"
   ]
 }

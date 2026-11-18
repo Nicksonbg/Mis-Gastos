@@ -194,6 +194,26 @@ class FirestoreStore:
                 rec["plat"] = doc.get("plat") or ""
         return out
 
+    def log_error(self, data):
+        try:
+            d = dict(data)
+            d["ts"] = now_iso()
+            self.db.collection("errores").add(d)
+        except Exception as e:
+            print("log_error:", repr(e), flush=True)
+
+    def list_errores(self, limit=150):
+        from google.cloud import firestore as gfs
+        q = self.db.collection("errores").order_by("ts", direction=gfs.Query.DESCENDING).limit(limit)
+        return [d.to_dict() | {"_id": d.id} for d in q.stream()]
+
+    def clear_errores(self, limit=500):
+        n = 0
+        for d in self.db.collection("errores").limit(limit).stream():
+            d.reference.delete()
+            n += 1
+        return n
+
 
 class LocalStore:
     """Solo para desarrollo: guarda en un archivo JSON."""
@@ -308,6 +328,25 @@ class LocalStore:
         return {uid: {"actualizado": (v.get("estado") or {}).get("_actualizado"),
                       "plat": (v.get("perfil") or {}).get("plat", "")}
                 for uid, v in self._all().items()}
+
+    def log_error(self, data):
+        errs = self.list_errores(999)
+        rec = dict(data)
+        rec["ts"] = now_iso()
+        rec["_id"] = str(len(errs))
+        errs.insert(0, rec)
+        json.dump(errs[:500], open("dev-errores.json", "w"))
+
+    def list_errores(self, limit=150):
+        try:
+            return json.load(open("dev-errores.json"))[:limit]
+        except Exception:
+            return []
+
+    def clear_errores(self, limit=500):
+        n = len(self.list_errores(999))
+        json.dump([], open("dev-errores.json", "w"))
+        return n
 
 
 store = LocalStore() if DEV else FirestoreStore()

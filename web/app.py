@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-48"
+APP_VERSION = "web-49"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -1000,6 +1000,12 @@ def err500(e):
     orig = getattr(e, "original_exception", None) or e
     traceback.print_exception(orig)
     try:
+        store.log_error({"tipo": "server", "msg": str(orig)[:500],
+                         "stack": traceback.format_exc()[:2000], "donde": request.path,
+                         "uid": g.get("uid", ""), "email": (g.get("user") or {}).get("email", "")})
+    except Exception:
+        pass
+    try:
         return render_template("error.html", **ctx(None, why=None)), 500
     except Exception:
         return "Error", 500
@@ -1497,7 +1503,11 @@ def panel():
                    "nav-movil": t("pa_nav_movil"), "nav-pc": t("pa_nav_pc"), "": t("pa_plat_nd")}
     plat_bd = breakdown("plat", plat_labels)
 
-    return render_template("panel.html", **ctx("admin", stats=stats, rows=rows,
+    try:
+        n_err = len(store.list_errores(100))
+    except Exception:
+        n_err = 0
+    return render_template("panel.html", **ctx("admin", stats=stats, rows=rows, n_err=n_err,
                                                meses=meses, altas_max=altas_max, prov_bd=prov_bd, plat_bd=plat_bd))
 
 
@@ -1576,6 +1586,54 @@ def panel_user(uid):
            "n_prest": len(S.get("prestamos", [])),
            "n_pres": len(S.get("presupuestos", [])), "n_inv": len(S.get("inversiones", []))}
     return render_template("panel_user.html", **ctx("admin", cuenta=cuenta, uso=uso))
+
+
+@app.route("/api/error", methods=["POST", "OPTIONS"])
+def api_error():
+    if request.method == "OPTIONS":
+        return "", 204
+    user = _api_user()
+    if not user:
+        return {"error": "auth"}, 401
+    b = request.get_json(silent=True) or {}
+    store.log_error({
+        "tipo": "client",
+        "uid": user.get("uid", ""), "email": user.get("email", ""),
+        "msg": str(b.get("msg") or "")[:500],
+        "stack": str(b.get("stack") or "")[:2000],
+        "donde": str(b.get("donde") or "")[:160],
+        "plat": str(b.get("plat") or "")[:120],
+        "ua": str(b.get("ua") or request.headers.get("User-Agent", ""))[:300],
+    })
+    return "", 204
+
+
+@app.get("/panel/errores")
+@login_required
+def panel_errores():
+    if not is_admin(g.user):
+        abort(404)
+    from datetime import datetime
+    errs = store.list_errores(150)
+
+    def fmt(ts):
+        try:
+            return datetime.fromisoformat(str(ts).replace("Z", "+00:00")).strftime("%d/%m %H:%M")
+        except Exception:
+            return str(ts or "")[:16]
+
+    for e in errs:
+        e["cuando"] = fmt(e.get("ts"))
+    return render_template("panel_errores.html", **ctx("admin", errs=errs))
+
+
+@app.post("/panel/errores/clear")
+@login_required
+def panel_errores_clear():
+    if not is_admin(g.user):
+        abort(404)
+    store.clear_errores()
+    return redirect(url_for("panel_errores"))
 
 
 @app.get("/privacidad")

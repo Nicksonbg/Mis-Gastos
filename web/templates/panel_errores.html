@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block main %}
+<section>
+  <div style="margin-bottom:10px"><a href="{{ url_for('panel') }}" class="linkbtn" style="color:var(--muted);text-decoration:none">‹ {{ t('pa_volver') }}</a></div>
+  <div class="card">
+    <div class="row" style="margin-bottom:10px"><h2 style="margin:0">{{ t('pa_errores') }}</h2><span class="spacer"></span>
+      {% if errs %}<form method="post" action="{{ url_for('panel_errores_clear') }}" data-confirm="{{ t('pa_err_vaciar_ask') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost sm">{{ t('pa_err_vaciar') }}</button></form>{% endif %}</div>
+    {% for e in errs %}
+      <details style="border-top:1px solid var(--line);padding:9px 0">
+        <summary style="cursor:pointer">
+          <span class="pill {{ 'bad' if e.tipo == 'server' else 'warn' }}">{{ 'Servidor' if e.tipo == 'server' else 'App' }}</span>
+          <b>{{ e.msg or '(sin mensaje)' }}</b>
+          <div class="muted small" style="margin-top:2px">{{ e.cuando }}{% if e.donde %} · {{ e.donde }}{% endif %}{% if e.plat %} · {{ e.plat }}{% endif %}{% if e.email %} · {{ e.email }}{% endif %}</div>
+        </summary>
+        {% if e.stack %}<pre style="white-space:pre-wrap;font-size:12px;background:var(--bg);padding:8px;border-radius:8px;margin:6px 0 0;overflow:auto">{{ e.stack }}</pre>{% endif %}
+        {% if e.ua %}<p class="muted small" style="margin:6px 0 0">{{ e.ua }}</p>{% endif %}
+      </details>
+    {% else %}<p class="muted">{{ t('pa_err_ninguno') }}</p>{% endfor %}
+  </div>
+</section>
+{% endblock %}

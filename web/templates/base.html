@@ -38,5 +38,8 @@ addEventListener('DOMContentLoaded',()=>{try{const y=sessionStorage.getItem('pb-
 <script>window.PB_AGENT={api:'{{ url_for('api_agent') }}',getToken:async()=>{try{await window.pbFresh?.()}catch(e){}return null},onChange:()=>setTimeout(()=>location.reload(),900)}</script>
 <script src="{{ url_for('static', filename='agent.js') }}?v={{ version }}" defer></script>
 {% include "_i18n.html" %}
+<script>(function(){var S={},N=0;function rep(m,s,d){try{if(N>25)return;var k=(m||'')+'|'+(d||'');if(S[k])return;S[k]=1;N++;fetch('/api/error',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msg:String(m||'').slice(0,500),stack:String(s||'').slice(0,2000),donde:String(d||location.pathname).slice(0,160),plat:'web'})}).catch(function(){})}catch(e){}}
+window.addEventListener('error',function(e){rep(e.message,e.error&&e.error.stack,location.pathname)});
+window.addEventListener('unhandledrejection',function(e){var r=e.reason;rep((r&&r.message)||String(r),r&&r.stack,'promise '+location.pathname)});})();</script>
 </body>
 </html>

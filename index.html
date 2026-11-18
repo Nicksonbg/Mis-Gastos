@@ -757,6 +757,17 @@ const parse=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
 const todayISO=()=>iso(new Date());
 const uid=()=>Math.random().toString(36).slice(2,10);
 function pbPlat(){try{const ua=navigator.userAgent||'',ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),android=/Android/.test(ua),standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true,mobile=ios||android||/Mobi/.test(ua);return standalone?(ios?'app-ios':android?'app-android':'app-otro'):(mobile?'nav-movil':'nav-pc')}catch(e){return''}}
+(function(){const API='https://personal-balance-web-778378922815.europe-west1.run.app/api/error',SENT={};let N=0;
+  function rep(msg,stack,donde){try{if(N>25)return;const k=(msg||'')+'|'+(donde||'');if(SENT[k])return;SENT[k]=1;N++;
+    const ver=(typeof APP_V!=='undefined'?APP_V:'?'),pl=(function(){try{return pbPlat()}catch(e){return''}})();
+    Promise.resolve(window.__pbTok?window.__pbTok():null).then(function(tok){if(!tok)return;
+      fetch(API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({msg:String(msg||'').slice(0,500),stack:String(stack||'').slice(0,2000),donde:String(donde||'').slice(0,160),plat:'app v'+ver+(pl?' '+pl:'')})}).catch(function(){})
+    }).catch(function(){})
+  }catch(e){}}
+  function tab(){try{const o=document.querySelector('#nav .on');return 'tab:'+((o&&o.dataset.tab)||location.hash||'')}catch(e){return''}}
+  window.addEventListener('error',function(e){rep(e.message,e.error&&e.error.stack,tab())});
+  window.addEventListener('unhandledrejection',function(e){const r=e.reason;rep((r&&r.message)||String(r),r&&r.stack,'promise '+tab())});
+})();
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}}};
 
@@ -1274,7 +1285,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='75';$('#ver').textContent='v'+APP_V;
+const APP_V='76';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 /* ---------- Avisos de pagos (notificaciones push) ---------- */
 const PUSH_API='https://personal-balance-web-778378922815.europe-west1.run.app/api/push/';
@@ -1944,7 +1955,7 @@ if('serviceWorker' in navigator){
 </script>
 <script>window.PB_AGENT={api:'https://personal-balance-web-778378922815.europe-west1.run.app/api/agent',getToken:()=>window.__pbTok?window.__pbTok():null}</script>
 <script src="https://personal-balance-web-778378922815.europe-west1.run.app/static/agent.js" defer></script>
-<script src="https://personal-balance-web-778378922815.europe-west1.run.app/static/scan.js?v=75" defer></script>
+<script src="https://personal-balance-web-778378922815.europe-west1.run.app/static/scan.js?v=76" defer></script>
 <div id="inst" class="inst hidden" role="dialog" aria-live="polite">
   <button class="inst-x" id="inst-x" aria-label="Cerrar">×</button>
   <div class="inst-row"><img src="icon-192.png" alt="" class="inst-ic"><div><b id="inst-t"></b><div class="inst-b" id="inst-b"></div></div></div>
