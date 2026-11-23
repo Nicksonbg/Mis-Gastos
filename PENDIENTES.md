@@ -1,32 +1,45 @@
 # Pendientes — Personal Balance
 
-Lista de cosas anotadas para hacer más adelante. No son fallos ni urgencias.
+Lista de tareas del proyecto. Copia de la que está en el documento "Personal Balance"
+(versión oficial y al día). "Niko" = solo la puede hacer él, en su iPhone o en sus cuentas.
 
-## Seguridad (endurecimiento, opcional)
+App v76 · web-52.
 
-- [ ] **"Pro" decidido en el servidor.** Cuando se construya la versión de pago,
-  el estado `pro` (sí/no) debe marcarse y comprobarse **en el servidor** (al pagar,
-  o al activarlo el admin), nunca fiándose de lo que mande el cliente. Motivo: al
-  importar datos se conservan campos extra, así que un cliente no debe poder
-  ponerse el `pro` a mano para desbloquear gratis.
-- [ ] **CSP más estricta (con `script-src`).** Red de seguridad extra contra XSS
-  futuros. Requiere trabajo porque la app usa scripts en línea (habría que usar
-  nonces o mover el JS). Para cuando haya tiempo.
+## Pendiente
 
-## Hecho
+- [ ] **Niko** — iPhone: crear el atajo de pagos (con guía de Claude) y compartir el enlace de iCloud
+- [ ] iPhone: botones "Instalar atajo" y "Conectar" + guía en la app (cuando haya enlace)
+- [ ] **Niko** — Android: app en Google Play que detecta los pagos (dar de alta la cuenta, 25 $)
+- [ ] **Niko** — Probar el escáner con la cámara del iPhone (la lectura con la IA ya está comprobada)
+- [ ] **Niko** — Regenerar el token Flex de IBKR y pegarlo de nuevo
+- [ ] Efecto cristal del menú en el iPhone
+- [ ] Más brókeres (módulo avanzado): Trade Republic, Revolut, MyInvestor, Benchmark
+- [ ] **Niko** — Día de pago de Aqua Dama
+- [ ] "Pro" decidido y comprobado en el servidor (cuando se construya la versión de pago)
+- [ ] CSP más estricta con script-src (red extra contra XSS; requiere nonces)
+- [ ] Más adelante: conectar el banco (open banking, de pago)
+- [ ] Prueba piloto con 10–20 personas
+- [ ] **Niko** — Publicar en Google Play y App Store cuando todo esté listo
 
+## Hecho (desde la v50)
+
+- [x] (2026-11) Panel de administración con "Uso de la app": botón Admin el primero de la barra, solo Niko.
+- [x] (2026-11) Métricas de uso por usuario: web o app, país, desde cuándo y frecuencia diaria — sin datos económicos de los usuarios.
+- [x] (2026-11) Registro de errores con tres botones por error (Analizar con IA, Marcar resuelto, Copiar), aviso al instante y resumen diario.
+- [x] (2026-11) Copias de seguridad automáticas de Firestore (PITR + diaria + semanal).
+- [x] (2026-11) Política de privacidad y aviso de datos (/privacidad).
+- [x] (2026-11) Alerta de gasto en Google Cloud (5 €).
+- [x] (2026-11) Historial del año mes a mes en Resumen y "gastado este año" real.
+- [x] (2026-11) "Gastos mensuales" incluye el día a día en el total del mes.
+- [x] (2026-11) Arreglada la falsa "Cuota vencida" de los préstamos; tick verde "Al día".
+- [x] (2026-11) Cola sin conexión del escáner: las fotos sin internet se guardan y se procesan al volver.
+- [x] (2026-11-23) Auditoría de seguridad completa (SSRF, XSS, inyección, CSRF, IDOR, subidas, cabeceras): sin vulnerabilidades abiertas.
 - [x] (2026-11-23) Foto de perfil: solo imágenes subidas, sin enlaces externos ni SVG.
-- [x] (2026-11-23) Auditoría de seguridad completa (SSRF, XSS, inyección, CSRF, IDOR,
-  subida de archivos, redirecciones, cabeceras, secretos): sin vulnerabilidades abiertas.
-- [x] (2026-11) Copias de seguridad de Firestore (PITR + diaria + semanal).
-- [x] (2026-11) Aviso de gasto en Google Cloud (5 €).
-- [x] (2026-11) Registro de errores + avisos al admin + resumen diario.
-- [x] (2026-11) Política de privacidad.
 
-## Ideas por decidir (del plan Pro)
+## Ideas por decidir (plan Pro, aún sin construir)
 
 - Modelo freemium: gratis útil + 10 escaneos/mes; **Pro 1,99 € (pago único)** = todo
-  ilimitado (uso justo, con tope oculto anti-abuso). Admin puede regalar Pro.
+  ilimitado (uso justo, con tope oculto anti-abuso). Admin puede regalar Pro, registrado solo para el admin.
 - Función "Mis documentos": avisos de caducidad de DNI/pasaporte/carnet (lectura de la
   fecha en el móvil, sin guardar la imagen). Tarjetas de banco: fuera (ya avisa el banco).
 - Posible nicho: gestión de vida para personas que viven fuera de su país.
