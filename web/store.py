@@ -25,18 +25,13 @@ def now_iso() -> str:
 
 
 def clean_profile(P: dict) -> dict:
-    """Saneado del perfil: nombre e icono recortados; la foto solo si es una imagen
-    razonable (data URL < 950 KB o una URL http corta), para no superar el límite de
-    1 MB por documento de Firestore."""
+    """Saneado del perfil: nombre e icono recortados; la foto SOLO si es una imagen
+    subida (data URL de imagen < 950 KB, sin SVG), para no superar el límite de 1 MB
+    por documento de Firestore. No se aceptan enlaces externos como foto."""
     P = P if isinstance(P, dict) else {}
     foto = P.get("foto", "")
-    if not isinstance(foto, str):
-        foto = ""
-    elif foto.startswith("data:image/"):
-        foto = foto if len(foto) <= 950_000 else ""
-    elif foto.startswith(("http://", "https://")):
-        foto = foto if len(foto) <= 2000 else ""
-    else:
+    if not (isinstance(foto, str) and foto.startswith("data:image/")
+            and not foto.startswith("data:image/svg") and len(foto) <= 950_000):
         foto = ""
     out = {"nombre": str(P.get("nombre", ""))[:80], "foto": foto, "icono": str(P.get("icono", ""))[:8]}
     if P.get("plat") in ("app-ios", "app-android", "app-otro", "nav-movil", "nav-pc"):
