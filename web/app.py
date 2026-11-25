@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-52"
+APP_VERSION = "web-53"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -1419,11 +1419,13 @@ def panel():
         except ValueError:
             return None
 
+    diag = []
     usage = {}
     try:
         usage = store.usage()
     except Exception as e:
         print("panel usage:", repr(e), flush=True)
+        diag.append("usage: " + str(e)[:300])
 
     users = []
     try:
@@ -1446,6 +1448,7 @@ def panel():
             })
     except Exception as e:
         print("panel list_users:", repr(e), flush=True)
+        diag.append("list_users: " + str(e)[:300])
 
     now = datetime.now(timezone.utc)
     d7, d30 = now - timedelta(days=7), now - timedelta(days=30)
@@ -1508,7 +1511,8 @@ def panel():
     except Exception:
         n_err = 0
     return render_template("panel.html", **ctx("admin", stats=stats, rows=rows, n_err=n_err,
-                                               meses=meses, altas_max=altas_max, prov_bd=prov_bd, plat_bd=plat_bd))
+                                               meses=meses, altas_max=altas_max, prov_bd=prov_bd, plat_bd=plat_bd,
+                                               diag=diag))
 
 
 @app.get("/panel/u/<uid>")

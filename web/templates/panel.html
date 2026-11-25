@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block main %}
 <section>
+  {% if diag %}
+  <div class="card" style="margin-bottom:12px;border:1px solid var(--warn);background:rgba(255,170,0,.08)">
+    <h2 style="margin:0 0 6px;color:var(--warn)">⚠︎ No se pudieron cargar todos los datos</h2>
+    {% for d in diag %}<p class="small muted" style="margin:2px 0;word-break:break-word">{{ d }}</p>{% endfor %}
+  </div>
+  {% endif %}
   <div class="card hero">
     <div class="hero-top"><span class="dot"></span>{{ t('pa_title') }}</div>
     <div class="hero-val">{{ stats.total }}</div>
