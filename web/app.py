@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-54"
+APP_VERSION = "web-55"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -1520,6 +1520,19 @@ def panel():
         n_err = len(store.list_errores(100))
     except Exception:
         n_err = 0
+
+    # Autodiagnóstico temporal: registra el uso del propio admin y comprueba que la
+    # escritura en Firestore funciona, releyendo el perfil justo después.
+    try:
+        g.P = store.load_profile(g.uid)
+        before = dict(g.P)
+        track_usage()
+        after = store.load_profile(g.uid)
+        diag.append("autotest escritura: antes plat=%r dias=%r | despues plat=%r dias=%r lang=%r" % (
+            before.get("plat"), before.get("dias"), after.get("plat"), after.get("dias"), after.get("lang")))
+    except Exception as e:
+        diag.append("autotest ERROR: " + repr(e)[:300])
+
     return render_template("panel.html", **ctx("admin", stats=stats, rows=rows, n_err=n_err,
                                                meses=meses, altas_max=altas_max, prov_bd=prov_bd, plat_bd=plat_bd,
                                                diag=diag))
