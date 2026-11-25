@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-56"
+APP_VERSION = "web-57"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -1521,17 +1521,19 @@ def panel():
     except Exception:
         n_err = 0
 
-    # Autodiagnóstico temporal: escribe DIRECTAMENTE en el perfil del admin (sin
-    # tragarse el error) y relee, para ver si la escritura en Firestore funciona.
+    # Autodiagnóstico temporal (RAW): escribe directo con el cliente de Firestore,
+    # sin pasar por store/clean_profile, y relee en crudo.
     try:
-        base = store.load_profile(g.uid)
-        base["plat"] = "nav-pc"; base["dias"] = [calc.iso(calc.today())]; base["lang"] = "es-ES"
-        store.save_profile(g.uid, base)
-        chk = store.load_profile(g.uid)
-        diag.append("autotest escritura OK: releido plat=%r dias=%r lang=%r" % (
-            chk.get("plat"), chk.get("dias"), chk.get("lang")))
+        info = ["store=" + type(store).__name__, "uid=" + str(g.uid)]
+        from firebase_admin import firestore as _fs
+        _db = _fs.client()
+        _ref = _db.collection("users").document(str(g.uid)).collection("data").document("perfil")
+        _ref.set({"probe": "XYZ", "actualizado": datetime.now(timezone.utc).isoformat()}, merge=True)
+        _snap = _ref.get()
+        info.append("raw exists=%s dict=%r" % (_snap.exists, _snap.to_dict()))
+        diag.append(" | ".join(info))
     except Exception as e:
-        diag.append("autotest ERROR escritura: " + repr(e)[:400])
+        diag.append("autotest RAW ERROR: " + repr(e)[:400])
 
     return render_template("panel.html", **ctx("admin", stats=stats, rows=rows, n_err=n_err,
                                                meses=meses, altas_max=altas_max, prov_bd=prov_bd, plat_bd=plat_bd,
