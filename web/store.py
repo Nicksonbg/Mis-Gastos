@@ -24,10 +24,30 @@ def now_iso() -> str:
     return d.strftime("%Y-%m-%dT%H:%M:%S.") + f"{d.microsecond // 1000:03d}Z"
 
 
+# Campos del perfil y su valor por defecto. ÚNICA fuente de verdad: tanto lo que
+# se guarda (clean_profile) como lo que se lee (load_profile en ambos almacenes)
+# se limitan a estas claves, para que no puedan volver a desincronizarse.
+PROFILE_FIELDS = {"nombre": "", "foto": "", "icono": "", "plat": "", "dias": [], "tz": "", "lang": ""}
+
+
+def profile_defaults() -> dict:
+    """Perfil vacío con los campos por defecto (copia nueva de las listas)."""
+    return {k: (list(v) if isinstance(v, list) else v) for k, v in PROFILE_FIELDS.items()}
+
+
+def read_profile(raw) -> dict:
+    """Lee un perfil guardado quedándose solo con los campos conocidos (PROFILE_FIELDS)."""
+    p = profile_defaults()
+    if isinstance(raw, dict):
+        p.update({k: v for k, v in raw.items() if k in PROFILE_FIELDS})
+    return p
+
+
 def clean_profile(P: dict) -> dict:
-    """Saneado del perfil: nombre e icono recortados; la foto SOLO si es una imagen
-    subida (data URL de imagen < 950 KB, sin SVG), para no superar el límite de 1 MB
-    por documento de Firestore. No se aceptan enlaces externos como foto."""
+    """Saneado del perfil antes de guardar: nombre e icono recortados; la foto SOLO si
+    es una imagen subida (data URL de imagen < 950 KB, sin SVG), para no superar el
+    límite de 1 MB por documento de Firestore. No se aceptan enlaces externos como foto.
+    Solo emite claves de PROFILE_FIELDS (ver arriba)."""
     P = P if isinstance(P, dict) else {}
     foto = P.get("foto", "")
     if not (isinstance(foto, str) and foto.startswith("data:image/")
@@ -46,7 +66,8 @@ def clean_profile(P: dict) -> dict:
         out["tz"] = P["tz"][:64]
     if isinstance(P.get("lang"), str) and P.get("lang"):
         out["lang"] = P["lang"][:20]
-    return out
+    # Red de seguridad: nunca emitir una clave que load_profile no vaya a leer.
+    return {k: v for k, v in out.items() if k in PROFILE_FIELDS}
 
 
 class FirestoreStore:
@@ -77,10 +98,7 @@ class FirestoreStore:
 
     def load_profile(self, uid):
         snap = self._ref(uid, "perfil").get()
-        p = {"nombre": "", "foto": "", "icono": "", "plat": "", "dias": [], "tz": "", "lang": ""}
-        if snap.exists:
-            p.update({k: v for k, v in (snap.to_dict() or {}).items() if k in p})
-        return p
+        return read_profile(snap.to_dict() if snap.exists else None)
 
     def save_profile(self, uid, P):
         self._ref(uid, "perfil").set(clean_profile(P) | {"actualizado": now_iso()})
@@ -246,9 +264,7 @@ class LocalStore:
         self._write(d)
 
     def load_profile(self, uid):
-        p = {"nombre": "", "foto": "", "icono": ""}
-        p.update(self._all().get(uid, {}).get("perfil") or {})
-        return p
+        return read_profile(self._all().get(uid, {}).get("perfil"))
 
     def save_profile(self, uid, P):
         d = self._all()
