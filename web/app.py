@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-57"
+APP_VERSION = "web-58"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -1520,20 +1520,6 @@ def panel():
         n_err = len(store.list_errores(100))
     except Exception:
         n_err = 0
-
-    # Autodiagnóstico temporal (RAW): escribe directo con el cliente de Firestore,
-    # sin pasar por store/clean_profile, y relee en crudo.
-    try:
-        info = ["store=" + type(store).__name__, "uid=" + str(g.uid)]
-        from firebase_admin import firestore as _fs
-        _db = _fs.client()
-        _ref = _db.collection("users").document(str(g.uid)).collection("data").document("perfil")
-        _ref.set({"probe": "XYZ", "actualizado": datetime.now(timezone.utc).isoformat()}, merge=True)
-        _snap = _ref.get()
-        info.append("raw exists=%s dict=%r" % (_snap.exists, _snap.to_dict()))
-        diag.append(" | ".join(info))
-    except Exception as e:
-        diag.append("autotest RAW ERROR: " + repr(e)[:400])
 
     return render_template("panel.html", **ctx("admin", stats=stats, rows=rows, n_err=n_err,
                                                meses=meses, altas_max=altas_max, prov_bd=prov_bd, plat_bd=plat_bd,

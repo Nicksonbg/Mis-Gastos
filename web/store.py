@@ -77,7 +77,7 @@ class FirestoreStore:
 
     def load_profile(self, uid):
         snap = self._ref(uid, "perfil").get()
-        p = {"nombre": "", "foto": "", "icono": ""}
+        p = {"nombre": "", "foto": "", "icono": "", "plat": "", "dias": [], "tz": "", "lang": ""}
         if snap.exists:
             p.update({k: v for k, v in (snap.to_dict() or {}).items() if k in p})
         return p
