@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-53"
+APP_VERSION = "web-54"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -326,9 +326,36 @@ def ctx(tab, **kw):
                 version=APP_VERSION, **kw)
 
 
+def track_usage():
+    """Registra métricas de uso (no económicas) en el perfil: plataforma, día de
+    actividad e idioma. Se llama en cada carga de datos, así que se dispara en
+    cualquier página de la web, no solo en Resumen."""
+    try:
+        P = g.get("P")
+        if P is None:
+            return
+        ua = request.headers.get("User-Agent", "")
+        pl = "nav-movil" if any(x in ua for x in ("iPhone", "iPad", "Android", "Mobile")) else "nav-pc"
+        hoy = calc.iso(calc.today())
+        lang_h = (request.headers.get("Accept-Language", "").split(",")[0].strip())[:20]
+        dias = P.get("dias") if isinstance(P.get("dias"), list) else []
+        changed = False
+        if (P.get("plat") or "") != pl:
+            P["plat"] = pl; changed = True
+        if hoy not in dias:
+            dias.append(hoy); P["dias"] = dias; changed = True
+        if lang_h and P.get("lang") != lang_h:
+            P["lang"] = lang_h; changed = True
+        if changed:
+            store.save_profile(g.uid, P)
+    except Exception as e:
+        print("uso web:", repr(e), flush=True)
+
+
 def load():
     g.S = store.load(g.uid)
     g.P = store.load_profile(g.uid)
+    track_usage()
     return g.S
 
 
@@ -364,23 +391,6 @@ def salir():
 @login_required
 def resumen():
     S = load()
-    try:
-        ua = request.headers.get("User-Agent", "")
-        pl = "nav-movil" if any(x in ua for x in ("iPhone", "iPad", "Android", "Mobile")) else "nav-pc"
-        hoy = calc.iso(calc.today())
-        lang_h = (request.headers.get("Accept-Language", "").split(",")[0].strip())[:20]
-        dias = g.P.get("dias") if isinstance(g.P.get("dias"), list) else []
-        changed = False
-        if (g.P.get("plat") or "") != pl:
-            g.P["plat"] = pl; changed = True
-        if hoy not in dias:
-            dias.append(hoy); g.P["dias"] = dias; changed = True
-        if lang_h and g.P.get("lang") != lang_h:
-            g.P["lang"] = lang_h; changed = True
-        if changed:
-            store.save_profile(g.uid, g.P)
-    except Exception as e:
-        print("uso web:", repr(e), flush=True)
     off = request.args.get("m", 0, type=int)
     tm = calc.total_mes(S)
     mr = calc.mes_real(S, 0)
