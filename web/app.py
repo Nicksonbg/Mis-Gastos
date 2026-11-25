@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-59"
+APP_VERSION = "web-60"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -346,7 +346,8 @@ def track_usage():
             dias.append(hoy); P["dias"] = dias; changed = True
         if lang_h and P.get("lang") != lang_h:
             P["lang"] = lang_h; changed = True
-        tzc = (request.cookies.get("pb_tz") or "")[:64]
+        from urllib.parse import unquote
+        tzc = unquote(request.cookies.get("pb_tz") or "")[:64]
         if tzc and P.get("tz") != tzc:
             P["tz"] = tzc; changed = True
         if changed:
