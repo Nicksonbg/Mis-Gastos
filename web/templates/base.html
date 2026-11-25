@@ -29,6 +29,8 @@ addEventListener('DOMContentLoaded',()=>{try{const y=sessionStorage.getItem('pb-
   document.querySelectorAll('form[data-confirm]').forEach(f=>f.addEventListener('submit',e=>{if(f.dataset.ok)return;e.preventDefault();e.stopImmediatePropagation();const d=document.getElementById('dlg-ok');document.getElementById('dlg-ok-t').textContent=f.dataset.confirm;document.getElementById('dlg-ok-m').textContent=f.dataset.confirmMsg||'';d.returnValue='';d.addEventListener('close',()=>{if(d.returnValue==='ok'){f.dataset.ok='1';f.requestSubmit()}},{once:true});d.showModal()},true));
   if(location.hash.startsWith('#l-')){const c=document.getElementById(location.hash.slice(1));const d=c&&c.querySelector('details');if(d)d.open=true;if(c)c.scrollIntoView()}
   if(history.replaceState&&/[?&](ok|err)=/.test(location.search)){const u=new URL(location);u.searchParams.delete('ok');u.searchParams.delete('err');history.replaceState(null,'',u)}
+  // Zona horaria del navegador (para deducir el país de forma fiable, no por el idioma)
+  try{var _tz=Intl.DateTimeFormat().resolvedOptions().timeZone;if(_tz)document.cookie='pb_tz='+encodeURIComponent(_tz)+';path=/;max-age=31536000;samesite=Lax'}catch(e){}
 });
 </script>
 <dialog id="dlg-ok"><form method="dialog">

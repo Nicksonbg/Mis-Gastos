@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-58"
+APP_VERSION = "web-59"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -346,6 +346,9 @@ def track_usage():
             dias.append(hoy); P["dias"] = dias; changed = True
         if lang_h and P.get("lang") != lang_h:
             P["lang"] = lang_h; changed = True
+        tzc = (request.cookies.get("pb_tz") or "")[:64]
+        if tzc and P.get("tz") != tzc:
+            P["tz"] = tzc; changed = True
         if changed:
             store.save_profile(g.uid, P)
     except Exception as e:
@@ -1559,11 +1562,18 @@ def panel_user(uid):
     plat_labels = {"app-ios": t("pa_app_ios"), "app-android": t("pa_app_android"), "app-otro": t("pa_app_otro"),
                    "nav-movil": t("pa_nav_movil"), "nav-pc": t("pa_nav_pc"), "": t("pa_plat_nd")}
 
-    # País aproximado a partir del idioma (región) o la zona horaria
+    # País aproximado: PRIMERO por zona horaria (señal real de ubicación) y, solo
+    # si no hay, por la región del idioma (poco fiable: mucha gente usa en-US).
     PAISES = {"ES": "España", "GB": "Reino Unido", "US": "EE. UU.", "FR": "Francia", "DE": "Alemania",
               "IT": "Italia", "PT": "Portugal", "BG": "Bulgaria", "MA": "Marruecos", "MX": "México",
               "AR": "Argentina", "CO": "Colombia", "RO": "Rumanía", "NL": "Países Bajos", "BE": "Bélgica",
-              "CH": "Suiza", "IE": "Irlanda", "US": "EE. UU.", "BR": "Brasil", "EC": "Ecuador", "PE": "Perú"}
+              "CH": "Suiza", "IE": "Irlanda", "BR": "Brasil", "EC": "Ecuador", "PE": "Perú"}
+    TZ_PAIS = {"Europe/Madrid": "España", "Atlantic/Canary": "España", "Africa/Ceuta": "España",
+               "Europe/Sofia": "Bulgaria", "Europe/Lisbon": "Portugal", "Atlantic/Azores": "Portugal",
+               "Europe/London": "Reino Unido", "Europe/Paris": "Francia", "Europe/Berlin": "Alemania",
+               "Europe/Rome": "Italia", "Europe/Amsterdam": "Países Bajos", "Europe/Brussels": "Bélgica",
+               "Europe/Zurich": "Suiza", "Europe/Dublin": "Irlanda", "Europe/Bucharest": "Rumanía",
+               "Africa/Casablanca": "Marruecos"}
     lang = prof.get("lang") or ""
     tz = prof.get("tz") or ""
     region = ""
@@ -1571,7 +1581,10 @@ def panel_user(uid):
         if sep in lang:
             region = lang.split(sep)[1][:2].upper()
             break
-    pais = PAISES.get(region) or (tz.split("/")[-1].replace("_", " ") if tz else "—")
+    if tz:
+        pais = TZ_PAIS.get(tz) or (tz.split("/")[-1].replace("_", " ") if "/" in tz else PAISES.get(region) or "—")
+    else:
+        pais = PAISES.get(region) or "—"
 
     # Frecuencia de uso a partir de los días de actividad registrados
     hoy = calc.today()
