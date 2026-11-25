@@ -54,14 +54,20 @@
       var copy = document.createElement("canvas"); copy.width = canvas.width; copy.height = canvas.height;
       copy.getContext("2d").drawImage(canvas, 0, 0);
       rects.forEach(function (rc) {
-        var pad = 3, m = 18;
-        var x = (rc.left - base.left - pad) * scale, y = (rc.top - base.top - pad) * scale;
-        var w = (rc.width + pad * 2) * scale, h = (rc.height + pad * 2) * scale;
+        var pad = 7;
+        var bx = (rc.left - base.left - pad) * scale, by = (rc.top - base.top - pad) * scale;
+        var bw = (rc.width + pad * 2) * scale, bh = (rc.height + pad * 2) * scale;
+        // Desenfoque proporcional al tamaño del texto (las cifras grandes necesitan más).
+        var br = Math.max(10, Math.round(bh * 0.5)), m = br + 6;
+        // Región origen=destino 1:1, recortada al lienzo (evita bordes transparentes).
+        var sx = Math.max(0, bx - m), sy = Math.max(0, by - m);
+        var ex = Math.min(canvas.width, bx + bw + m), ey = Math.min(canvas.height, by + bh + m);
         ctx.save();
-        ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-        ctx.filter = "blur(9px)";
-        ctx.drawImage(copy, x - m, y - m, w + 2 * m, h + 2 * m, x - m, y - m, w + 2 * m, h + 2 * m);
-        ctx.drawImage(copy, x - m, y - m, w + 2 * m, h + 2 * m, x - m, y - m, w + 2 * m, h + 2 * m);
+        ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.clip();
+        ctx.filter = "blur(" + br + "px)";
+        ctx.drawImage(copy, sx, sy, ex - sx, ey - sy, sx, sy, ex - sx, ey - sy);     // original -> difuminado
+        ctx.drawImage(canvas, sx, sy, ex - sx, ey - sy, sx, sy, ex - sx, ey - sy);   // acumula
+        ctx.drawImage(canvas, sx, sy, ex - sx, ey - sy, sx, sy, ex - sx, ey - sy);   // acumula
         ctx.restore();
       });
       ctx.filter = "none";
