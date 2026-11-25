@@ -23,6 +23,9 @@ App v76 · web-52.
 
 ## Hecho (desde la v50)
 
+- [x] (2026-11-25) Panel: permiso de Firebase Authentication (Viewer) para que la cuenta del servidor pueda listar a los usuarios.
+- [x] (2026-11-25) Arreglada la lectura del perfil: el panel ya muestra dispositivo, país, idioma y días activos (antes `load_profile` descartaba esos campos al leerlos, aunque sí estaban guardados).
+- [x] (2026-11-25) País deducido por **zona horaria** (antes por el idioma, que daba EE. UU. a usuarios en Europa). La web ahora captura la zona horaria; la app ya lo hacía.
 - [x] (2026-11) Panel de administración con "Uso de la app": botón Admin el primero de la barra, solo Niko.
 - [x] (2026-11) Métricas de uso por usuario: web o app, país, desde cuándo y frecuencia diaria — sin datos económicos de los usuarios.
 - [x] (2026-11) Registro de errores con tres botones por error (Analizar con IA, Marcar resuelto, Copiar), aviso al instante y resumen diario.
