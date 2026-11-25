@@ -237,6 +237,39 @@ class FirestoreStore:
         except Exception as e:
             print("set_error:", repr(e), flush=True)
 
+    # ---- Mensajes de problemas de los usuarios (colección solo del servidor) ----
+    def add_mensaje(self, data):
+        try:
+            d = dict(data)
+            d["ts"] = now_iso()
+            d.setdefault("resuelto", False)
+            self.db.collection("mensajes").add(d)
+            return True
+        except Exception as e:
+            print("add_mensaje:", repr(e), flush=True)
+            return False
+
+    def list_mensajes(self, limit=300):
+        from google.cloud import firestore as gfs
+        q = self.db.collection("mensajes").order_by("ts", direction=gfs.Query.DESCENDING).limit(limit)
+        return [d.to_dict() | {"_id": d.id} for d in q.stream()]
+
+    def get_mensaje(self, mid):
+        d = self.db.collection("mensajes").document(mid).get()
+        return (d.to_dict() | {"_id": d.id}) if d.exists else None
+
+    def set_mensaje(self, mid, fields):
+        try:
+            self.db.collection("mensajes").document(mid).update(fields)
+        except Exception as e:
+            print("set_mensaje:", repr(e), flush=True)
+
+    def delete_mensaje(self, mid):
+        try:
+            self.db.collection("mensajes").document(mid).delete()
+        except Exception as e:
+            print("delete_mensaje:", repr(e), flush=True)
+
 
 class LocalStore:
     """Solo para desarrollo: guarda en un archivo JSON."""
@@ -381,6 +414,39 @@ class LocalStore:
             if e.get("_id") == eid:
                 e.update(fields)
         json.dump(errs, open("dev-errores.json", "w"))
+
+    def add_mensaje(self, data):
+        msgs = self.list_mensajes(999)
+        rec = dict(data)
+        rec["ts"] = now_iso()
+        rec.setdefault("resuelto", False)
+        rec["_id"] = str(len(msgs))
+        msgs.insert(0, rec)
+        json.dump(msgs[:500], open("dev-mensajes.json", "w"))
+        return True
+
+    def list_mensajes(self, limit=300):
+        try:
+            return json.load(open("dev-mensajes.json"))[:limit]
+        except Exception:
+            return []
+
+    def get_mensaje(self, mid):
+        for m in self.list_mensajes(999):
+            if m.get("_id") == mid:
+                return m
+        return None
+
+    def set_mensaje(self, mid, fields):
+        msgs = self.list_mensajes(999)
+        for m in msgs:
+            if m.get("_id") == mid:
+                m.update(fields)
+        json.dump(msgs, open("dev-mensajes.json", "w"))
+
+    def delete_mensaje(self, mid):
+        msgs = [m for m in self.list_mensajes(999) if m.get("_id") != mid]
+        json.dump(msgs, open("dev-mensajes.json", "w"))
 
 
 store = LocalStore() if DEV else FirestoreStore()

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block main %}
+<section>
+  <div style="margin-bottom:10px"><a href="{{ url_for('panel') }}" class="linkbtn" style="color:var(--muted);text-decoration:none">‹ Volver</a></div>
+  <div class="card">
+    <div class="row" style="margin-bottom:10px"><h2 style="margin:0">Mensajes</h2><span class="spacer"></span><span class="small muted">{{ nuevos }} sin resolver</span></div>
+    {% for m in msgs %}
+      <div class="msg-item{{ ' resuelto' if m.resuelto }}" data-id="{{ m._id }}" style="border-top:1px solid var(--line);padding:11px 0">
+        <div class="row" style="gap:8px">
+          <span class="pill {{ 'ok' if m.resuelto else 'warn' }}">{{ 'Resuelto' if m.resuelto else 'Nuevo' }}</span>
+          {% if m.uid %}<a href="{{ url_for('panel_user', uid=m.uid) }}" style="color:inherit"><b>{{ m.nombre or m.email or m.uid }}</b></a>{% else %}<b>{{ m.nombre or '—' }}</b>{% endif %}
+        </div>
+        <p style="margin:8px 0;white-space:pre-wrap">{{ m.texto }}</p>
+        {% if m.foto %}<img src="{{ m.foto }}" alt="captura" loading="lazy" style="max-width:100%;max-height:440px;border-radius:10px;border:1px solid var(--line)">{% endif %}
+        <div class="muted small" style="margin-top:6px">{{ m.cuando }}{% if m.plat %} · {{ m.plat }}{% endif %}{% if m.version %} · {{ m.version }}{% endif %}{% if m.email %} · {{ m.email }}{% endif %}</div>
+        <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button type="button" class="btn ghost sm" data-res>{{ 'Reabrir' if m.resuelto else 'Marcar resuelto' }}</button>
+          <form method="post" action="{{ url_for('panel_mensajes_borrar') }}" data-confirm="¿Borrar este mensaje?" data-confirm-msg="No se puede deshacer." style="display:inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ m._id }}"><button class="btn ghost sm">Borrar</button></form>
+        </div>
+      </div>
+    {% else %}<p class="muted">Todavía no hay mensajes.</p>{% endfor %}
+  </div>
+</section>
+<script>
+(function(){
+  var CSRF={{ csrf|tojson }}, URL_RES={{ url_for('panel_mensajes_resolver')|tojson }};
+  document.addEventListener('click',function(ev){
+    var b=ev.target.closest('[data-res]'); if(!b)return; ev.preventDefault();
+    var d=ev.target.closest('.msg-item'), id=d.dataset.id; b.disabled=true;
+    fetch(URL_RES,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'csrf='+encodeURIComponent(CSRF)+'&id='+encodeURIComponent(id)})
+      .then(function(r){return r.json()}).then(function(j){d.classList.toggle('resuelto',!!j.resuelto);b.textContent=j.resuelto?'Reabrir':'Marcar resuelto';})
+      .catch(function(){}).then(function(){b.disabled=false;});
+  });
+})();
+</script>
+<style>.msg-item.resuelto{opacity:.65}</style>
+{% endblock %}

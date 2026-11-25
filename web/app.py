@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-60"
+APP_VERSION = "web-61"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -209,7 +209,7 @@ import threading
 _rl_lock = threading.Lock()
 _rl_hits = collections.defaultdict(collections.deque)
 RL_RULES = (("/api/agent", 20, 60), ("/api/scan", 20, 60), ("/api/opinion", 15, 60),
-            ("/api/pago", 60, 60), ("/api/", 120, 60))
+            ("/api/mensaje", 12, 60), ("/api/pago", 60, 60), ("/api/", 120, 60))
 RL_DEFAULT = (240, 60)  # resto de la web
 
 
@@ -1383,6 +1383,86 @@ def api_opinion():
     return {"ok": True}
 
 
+# ---------- Mensajes de problemas (soporte) ----------
+def _encode_captura(data_url):
+    """Re-codifica la captura a un JPEG acotado (máx. 1000 px, calidad 72) para no
+    superar el límite de Firestore. Devuelve '' si no es una imagen válida."""
+    if not (isinstance(data_url, str) and data_url.startswith("data:image/") and "," in data_url):
+        return ""
+    try:
+        from PIL import Image
+        raw = base64.b64decode(data_url.split(",", 1)[1])
+        im = Image.open(io.BytesIO(raw)).convert("RGB")
+        im.thumbnail((1000, 1000))
+        buf = io.BytesIO()
+        im.save(buf, "JPEG", quality=72)
+        out = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+        return out if len(out) <= 900_000 else ""
+    except Exception:
+        return ""
+
+
+def _revisar_captura(data_url):
+    """La IA mira la captura y dice si se ven cantidades de dinero o datos sensibles.
+    Best-effort: si la IA no está disponible o falla, devolvemos hay=None y el cliente
+    muestra un recordatorio genérico. La IA solo AVISA; tapar los números lo hace el usuario."""
+    key = os.environ.get("GROQ_API_KEY")
+    if not key or not (isinstance(data_url, str) and data_url.startswith("data:image/")):
+        return {"hay": None}
+    try:
+        import httpx
+        from scan import VISION_MODEL, URL as GURL
+        p = ("Mira esta captura de pantalla de una app de finanzas personales. ¿Se ven cantidades "
+             "de dinero, saldos, importes o números de cuenta/tarjeta? Responde SOLO un JSON: "
+             '{"hay_cifras": true o false}. No expliques nada.')
+        body = {"model": VISION_MODEL, "temperature": 0, "max_completion_tokens": 200,
+                "messages": [{"role": "user", "content": [{"type": "text", "text": p},
+                              {"type": "image_url", "image_url": {"url": data_url}}]}],
+                "response_format": {"type": "json_object"}, "reasoning_format": "hidden", "reasoning_effort": "none"}
+        r = httpx.post(GURL, json=body, timeout=30, headers={"Authorization": f"Bearer {key}"})
+        if r.status_code >= 400:
+            return {"hay": None}
+        txt = r.json()["choices"][0]["message"].get("content") or "{}"
+        txt = re.sub(r"<think>.*?</think>", "", txt, flags=re.S)
+        m = re.search(r"\{.*\}", txt, re.S)
+        return {"hay": bool(json.loads(m.group(0) if m else txt).get("hay_cifras"))}
+    except Exception as e:
+        print("revisar_captura:", repr(e), flush=True)
+        return {"hay": None}
+
+
+def _save_mensaje(user, data):
+    from store import now_iso
+    texto = str(data.get("texto") or "").strip()[:3000]
+    if not texto:
+        return "msg_vacio"
+    doc = {"uid": user["uid"], "email": user.get("email", ""), "nombre": user.get("name", "") or "",
+           "texto": texto, "foto": _encode_captura(data.get("foto") or ""),
+           "plat": str(data.get("plat") or "")[:20], "version": str(data.get("version") or APP_VERSION)[:20],
+           "idioma": str(data.get("lang") or cur_lang())[:5], "fecha": now_iso(), "resuelto": False}
+    return None if store.add_mensaje(doc) else "msg_fallo"
+
+
+@app.route("/api/mensaje", methods=["POST", "OPTIONS"])
+def api_mensaje():
+    if request.method == "OPTIONS":
+        return "", 204
+    user = _api_user()
+    if not user:
+        return {"error": "auth"}, 401
+    err = _save_mensaje(user, request.get_json(silent=True) or {})
+    return ({"error": err}, 400) if err else {"ok": True}
+
+
+@app.route("/api/mensaje/revisar", methods=["POST", "OPTIONS"])
+def api_mensaje_revisar():
+    if request.method == "OPTIONS":
+        return "", 204
+    if not _api_user():
+        return {"error": "auth"}, 401
+    return _revisar_captura((request.get_json(silent=True) or {}).get("foto") or "")
+
+
 @app.get("/opiniones")
 @login_required
 def opiniones():
@@ -1474,7 +1554,16 @@ def panel():
         "new7": sum(1 for u in users if u["created"] and u["created"] >= d7),
         "new30": sum(1 for u in users if u["created"] and u["created"] >= d30),
     }
-    users.sort(key=lambda u: u["last"] or u["created"] or now.replace(year=1), reverse=True)
+    # Mensajes de problemas sin resolver: esos usuarios suben al principio y se marcan.
+    try:
+        _msgs = store.list_mensajes(300)
+    except Exception:
+        _msgs = []
+    abiertos = {m.get("uid") for m in _msgs if not m.get("resuelto") and m.get("uid")}
+    n_msg = sum(1 for m in _msgs if not m.get("resuelto"))
+    for u in users:
+        u["msg"] = u["uid"] in abiertos
+    users.sort(key=lambda u: (u["msg"], u["last"] or u["created"] or now.replace(year=1)), reverse=True)
 
     def fmt_dt(dt):
         if not dt:
@@ -1490,7 +1579,7 @@ def panel():
 
     rows = [{"uid": u["uid"], "nombre": u["nombre"], "email": u["email"], "verif": u["verif"],
              "alta": u["created"].strftime("%d/%m/%Y") if u["created"] else "—",
-             "ult": fmt_dt(u["last"])} for u in users]
+             "ult": fmt_dt(u["last"]), "msg": u["msg"]} for u in users]
 
     # Altas por mes (últimos 12 meses)
     mes_c = t("meses_c").split("|")
@@ -1525,7 +1614,7 @@ def panel():
     except Exception:
         n_err = 0
 
-    return render_template("panel.html", **ctx("admin", stats=stats, rows=rows, n_err=n_err,
+    return render_template("panel.html", **ctx("admin", stats=stats, rows=rows, n_err=n_err, n_msg=n_msg,
                                                meses=meses, altas_max=altas_max, prov_bd=prov_bd, plat_bd=plat_bd,
                                                diag=diag))
 
@@ -1677,6 +1766,48 @@ def panel_errores_resolver():
     nuevo = not e.get("resuelto")
     store.set_error(eid, {"resuelto": nuevo})
     return {"resuelto": nuevo}
+
+
+@app.get("/panel/mensajes")
+@login_required
+def panel_mensajes():
+    if not is_admin(g.user):
+        abort(404)
+    from datetime import datetime
+    msgs = store.list_mensajes(300)
+
+    def fmt(ts):
+        try:
+            return datetime.fromisoformat(str(ts).replace("Z", "+00:00")).strftime("%d/%m %H:%M")
+        except Exception:
+            return str(ts or "")[:16]
+    for m in msgs:
+        m["cuando"] = fmt(m.get("ts"))
+    nuevos = sum(1 for m in msgs if not m.get("resuelto"))
+    return render_template("panel_mensajes.html", **ctx("admin", msgs=msgs, nuevos=nuevos))
+
+
+@app.post("/panel/mensajes/resolver")
+@login_required
+def panel_mensajes_resolver():
+    if not is_admin(g.user):
+        abort(404)
+    mid = request.form.get("id", "")
+    m = store.get_mensaje(mid)
+    if not m:
+        return {"error": "no encontrado"}, 404
+    nuevo = not m.get("resuelto")
+    store.set_mensaje(mid, {"resuelto": nuevo})
+    return {"resuelto": nuevo}
+
+
+@app.post("/panel/mensajes/borrar")
+@login_required
+def panel_mensajes_borrar():
+    if not is_admin(g.user):
+        abort(404)
+    store.delete_mensaje(request.form.get("id", ""))
+    return redirect(url_for("panel_mensajes"))
 
 
 @app.post("/panel/errores/analizar")
