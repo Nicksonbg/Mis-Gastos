@@ -4,9 +4,9 @@
   if (!window.PB_API_MSG) return;
   var L = (window.PB_LANG || "es").slice(0, 2);
   var TX = ({
-    es: { btn: "Problema", title: "Reportar un problema", ph: "Cuéntanos qué ha pasado…", note: "Adjuntamos una captura de esta pantalla con las cifras difuminadas por tu seguridad.", keep: "Enviar con captura", drop: "Enviar sin captura", send: "Enviar", cancel: "Cancelar", sending: "Enviando…", prep: "Preparando captura…", ok: "¡Gracias! Lo hemos recibido.", err: "No se pudo enviar. Inténtalo de nuevo.", empty: "Escribe primero el problema.", aiwarn: "La IA ha visto cantidades en la captura; ya van difuminadas.", nocap: "No se pudo hacer la captura; se envía solo el texto." },
-    en: { btn: "Problem", title: "Report a problem", ph: "Tell us what happened…", note: "We attach a screenshot of this screen with the amounts blurred for your safety.", keep: "Send with screenshot", drop: "Send without screenshot", send: "Send", cancel: "Cancel", sending: "Sending…", prep: "Preparing screenshot…", ok: "Thanks! We got it.", err: "Could not send. Try again.", empty: "Write the problem first.", aiwarn: "The AI spotted amounts in the screenshot; they are already blurred.", nocap: "Could not take the screenshot; sending text only." },
-    bg: { btn: "Проблем", title: "Съобщи проблем", ph: "Кажи ни какво стана…", note: "Прилагаме снимка на този екран със замъглени суми за твоята сигурност.", keep: "Изпрати със снимка", drop: "Изпрати без снимка", send: "Изпрати", cancel: "Отказ", sending: "Изпраща…", prep: "Подготвя снимка…", ok: "Благодарим! Получихме го.", err: "Неуспешно. Опитай пак.", empty: "Първо напиши проблема.", aiwarn: "ИИ видя суми в снимката; те вече са замъглени.", nocap: "Снимката не успя; изпраща се само текст." }
+    es: { btn: "Problema", title: "Reportar un problema", ph: "Cuéntanos qué ha pasado…", note: "Adjuntamos una captura de esta pantalla con las cifras difuminadas por tu seguridad.", keep: "Enviar con captura", drop: "Enviar sin captura", send: "Enviar", cancel: "Cancelar", sending: "Enviando…", prep: "Preparando captura…", ok: "¡Gracias! Lo hemos recibido.", err: "No se pudo enviar. Inténtalo de nuevo.", empty: "Escribe primero el problema.", aiwarn: "La IA ha visto cantidades en la captura; ya van difuminadas.", nocap: "No se pudo hacer la captura; se envía solo el texto.", zoom: "Toca la imagen para verla a pantalla completa." },
+    en: { btn: "Problem", title: "Report a problem", ph: "Tell us what happened…", note: "We attach a screenshot of this screen with the amounts blurred for your safety.", keep: "Send with screenshot", drop: "Send without screenshot", send: "Send", cancel: "Cancel", sending: "Sending…", prep: "Preparing screenshot…", ok: "Thanks! We got it.", err: "Could not send. Try again.", empty: "Write the problem first.", aiwarn: "The AI spotted amounts in the screenshot; they are already blurred.", nocap: "Could not take the screenshot; sending text only.", zoom: "Tap the image to view it full screen." },
+    bg: { btn: "Проблем", title: "Съобщи проблем", ph: "Кажи ни какво стана…", note: "Прилагаме снимка на този екран със замъглени суми за твоята сигурност.", keep: "Изпрати със снимка", drop: "Изпрати без снимка", send: "Изпрати", cancel: "Отказ", sending: "Изпраща…", prep: "Подготвя снимка…", ok: "Благодарим! Получихме го.", err: "Неуспешно. Опитай пак.", empty: "Първо напиши проблема.", aiwarn: "ИИ видя суми в снимката; те вече са замъглени.", nocap: "Снимката не успя; изпраща се само текст.", zoom: "Докосни изображението за цял екран." }
   })[L] || null;
   if (!TX) TX = { btn: "Problem", title: "Report a problem", ph: "…", note: "", keep: "Send with screenshot", drop: "Send without screenshot", send: "Send", cancel: "Cancel", sending: "…", prep: "…", ok: "OK", err: "Error", empty: "Write first.", aiwarn: "", nocap: "" };
 
@@ -84,7 +84,16 @@
         ctx.restore();
       });
       ctx.filter = "none";
-      return canvas.toDataURL("image/jpeg", 0.8);
+      // Reducir a un tamaño razonable para que la vista previa y el envío sean ligeros.
+      var maxDim = 1400, big = Math.max(canvas.width, canvas.height);
+      if (big > maxDim) {
+        var k = maxDim / big;
+        var out = document.createElement("canvas");
+        out.width = Math.round(canvas.width * k); out.height = Math.round(canvas.height * k);
+        out.getContext("2d").drawImage(canvas, 0, 0, out.width, out.height);
+        return out.toDataURL("image/jpeg", 0.82);
+      }
+      return canvas.toDataURL("image/jpeg", 0.82);
     }).catch(function () { return null; });
   }
 
@@ -97,7 +106,9 @@
       "padding:9px 14px;font:inherit;font-size:13px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.92}" +
       "#pb-rep-btn:hover{opacity:1}" +
       "#pb-rep-dlg{border:none;border-radius:16px;padding:18px;max-width:460px;width:92vw;background:var(--card,#1b1b1f);color:var(--text,#fff)}" +
-      "#pb-rep-dlg::backdrop{background:rgba(0,0,0,.5)}";
+      "#pb-rep-dlg::backdrop{background:rgba(0,0,0,.5)}" +
+      "#pb-rep-ov{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.93);align-items:center;justify-content:center;padding:10px;cursor:zoom-out}" +
+      "#pb-rep-ov img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}";
     document.head.appendChild(st);
     var btn = document.createElement("button");
     btn.id = "pb-rep-btn"; btn.type = "button"; btn.textContent = "🛟 " + TX.btn;
@@ -112,12 +123,15 @@
       '<p class="muted small" id="pb-rep-note" style="margin:8px 0 0"></p>' +
       '<div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap"><span class="spacer"></span>' +
       '<button type="button" class="btn ghost" id="pb-rep-x">' + TX.cancel + '</button>' +
-      '<button type="button" class="btn" id="pb-rep-send">' + TX.send + '</button></div></form>';
+      '<button type="button" class="btn" id="pb-rep-send">' + TX.send + '</button></div>' +
+      '<div id="pb-rep-ov"><img alt=""></div></form>';
     document.body.appendChild(dlg);
 
     btn.addEventListener("click", open);
     dlg.querySelector("#pb-rep-x").addEventListener("click", function () { dlg.close(); });
     dlg.querySelector("#pb-rep-send").addEventListener("click", send);
+    var ov = dlg.querySelector("#pb-rep-ov");
+    ov.addEventListener("click", function () { ov.style.display = "none"; });
   }
 
   function open() {
@@ -129,9 +143,13 @@
     capture().then(function (dataURL) {
       foto = dataURL;
       if (!dataURL) { cap.innerHTML = '<p class="muted small">' + TX.nocap + "</p>"; return; }
-      cap.innerHTML = '<img src="' + dataURL + '" alt="" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--line)">' +
+      cap.innerHTML = '<img id="pb-rep-img" src="' + dataURL + '" alt="" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--line);cursor:zoom-in">' +
+        '<div class="muted small" style="margin-top:4px">' + TX.zoom + '</div>' +
         '<label style="display:flex;align-items:center;gap:8px;margin-top:8px" class="small"><input type="checkbox" id="pb-rep-keep" checked> ' + TX.keep + "</label>";
       note.textContent = TX.note;
+      cap.querySelector("#pb-rep-img").addEventListener("click", function () {
+        var ov = dlg.querySelector("#pb-rep-ov"); ov.querySelector("img").src = dataURL; ov.style.display = "flex";
+      });
       // Aviso de la IA (best-effort): si detecta cantidades, lo decimos; ya van difuminadas.
       if (window.PB_API_MSG_REV) {
         postJSON(window.PB_API_MSG_REV, { foto: dataURL })
