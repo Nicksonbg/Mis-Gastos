@@ -66,24 +66,26 @@
       ctx.setTransform(1, 0, 0, 1, 0, 0); // html2canvas deja una escala activa; la reseteamos
       var copy = document.createElement("canvas"); copy.width = canvas.width; copy.height = canvas.height;
       copy.getContext("2d").drawImage(canvas, 0, 0);
+      // Difuminado SIN ctx.filter (iOS Safari no lo soporta en canvas antes de 18.4):
+      // reducimos cada cifra a muy pocos píxeles y la volvemos a ampliar -> se promedia y queda borrosa.
+      var tmp = document.createElement("canvas"), tctx = tmp.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
       rects.forEach(function (rc) {
         var pad = 7;
-        var bx = (rc.left - base.left - pad) * scale, by = (rc.top - base.top - pad) * scale;
-        var bw = (rc.width + pad * 2) * scale, bh = (rc.height + pad * 2) * scale;
-        // Desenfoque proporcional al tamaño del texto (las cifras grandes necesitan más).
-        var br = Math.max(10, Math.round(bh * 0.5)), m = br + 6;
-        // Región origen=destino 1:1, recortada al lienzo (evita bordes transparentes).
-        var sx = Math.max(0, bx - m), sy = Math.max(0, by - m);
-        var ex = Math.min(canvas.width, bx + bw + m), ey = Math.min(canvas.height, by + bh + m);
-        ctx.save();
-        ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.clip();
-        ctx.filter = "blur(" + br + "px)";
-        ctx.drawImage(copy, sx, sy, ex - sx, ey - sy, sx, sy, ex - sx, ey - sy);     // original -> difuminado
-        ctx.drawImage(canvas, sx, sy, ex - sx, ey - sy, sx, sy, ex - sx, ey - sy);   // acumula
-        ctx.drawImage(canvas, sx, sy, ex - sx, ey - sy, sx, sy, ex - sx, ey - sy);   // acumula
-        ctx.restore();
+        var bx = Math.max(0, Math.round((rc.left - base.left - pad) * scale));
+        var by = Math.max(0, Math.round((rc.top - base.top - pad) * scale));
+        var bw = Math.round(Math.min((rc.width + pad * 2) * scale, canvas.width - bx));
+        var bh = Math.round(Math.min((rc.height + pad * 2) * scale, canvas.height - by));
+        if (bw < 2 || bh < 2) return;
+        var th = Math.max(2, Math.round(bh * 0.08)), tw = Math.max(2, Math.round(bw * (th / bh)));
+        tmp.width = tw; tmp.height = th; tctx.imageSmoothingEnabled = true;
+        tctx.clearRect(0, 0, tw, th);
+        tctx.drawImage(copy, bx, by, bw, bh, 0, 0, tw, th);   // reducir mucho
+        ctx.drawImage(tmp, 0, 0, tw, th, bx, by, bw, bh);     // ampliar -> borroso
+        tctx.clearRect(0, 0, tw, th);
+        tctx.drawImage(ctx.canvas, bx, by, bw, bh, 0, 0, tw, th); // 2ª pasada, remata
+        ctx.drawImage(tmp, 0, 0, tw, th, bx, by, bw, bh);
       });
-      ctx.filter = "none";
       // Reducir a un tamaño razonable para que la vista previa y el envío sean ligeros.
       var maxDim = 1400, big = Math.max(canvas.width, canvas.height);
       if (big > maxDim) {

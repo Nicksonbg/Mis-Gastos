@@ -11,7 +11,7 @@
           {% if m.uid %}<a href="{{ url_for('panel_user', uid=m.uid) }}" style="color:inherit"><b>{{ m.nombre or m.email or m.uid }}</b></a>{% else %}<b>{{ m.nombre or '—' }}</b>{% endif %}
         </div>
         <p style="margin:8px 0;white-space:pre-wrap">{{ m.texto }}</p>
-        {% if m.foto %}<img src="{{ m.foto }}" alt="captura" loading="lazy" class="pb-shot" title="Abrir en una pestaña nueva" style="max-width:100%;max-height:440px;border-radius:10px;border:1px solid var(--line);cursor:zoom-in">{% endif %}
+        {% if m.foto %}<img src="{{ m.foto }}" alt="captura" loading="lazy" class="pb-shot" title="Toca para ampliar" style="max-width:100%;max-height:440px;border-radius:10px;border:1px solid var(--line);cursor:zoom-in">{% endif %}
         <div class="muted small" style="margin-top:6px">{{ m.cuando }}{% if m.plat %} · {{ m.plat }}{% endif %}{% if m.version %} · {{ m.version }}{% endif %}{% if m.email %} · {{ m.email }}{% endif %}</div>
         <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
           <button type="button" class="btn ghost sm" data-res>{{ 'Reabrir' if m.resuelto else 'Marcar resuelto' }}</button>
@@ -20,15 +20,19 @@
       </div>
     {% else %}<p class="muted">Todavía no hay mensajes.</p>{% endfor %}
   </div>
+  <div id="pb-shot-ov"><button id="pb-shot-x" type="button" aria-label="Cerrar">✕</button><img alt=""></div>
 </section>
 <script>
 (function(){
   var CSRF={{ csrf|tojson }}, URL_RES={{ url_for('panel_mensajes_resolver')|tojson }};
-  function toBlob(d){var p=d.split(','),m=(p[0].match(/:(.*?);/)||[])[1]||'image/jpeg',b=atob(p[1]),n=b.length,u=new Uint8Array(n);while(n--)u[n]=b.charCodeAt(n);return new Blob([u],{type:m});}
+  var ov=document.getElementById('pb-shot-ov');
+  function cerrar(){ov.style.display='none';document.body.style.overflow='';}
   document.addEventListener('click',function(ev){
-    var im=ev.target.closest('.pb-shot'); if(!im)return;
-    try{window.open(URL.createObjectURL(toBlob(im.src)),'_blank');}catch(e){window.open(im.src,'_blank');}
+    var im=ev.target.closest('.pb-shot');
+    if(im){ov.querySelector('img').src=im.src;ov.scrollTop=0;ov.style.display='block';document.body.style.overflow='hidden';return;}
+    if(ev.target===ov||ev.target.id==='pb-shot-x'){cerrar();return;}
   });
+  document.addEventListener('keydown',function(ev){if(ev.key==='Escape')cerrar();});
   document.addEventListener('click',function(ev){
     var b=ev.target.closest('[data-res]'); if(!b)return; ev.preventDefault();
     var d=ev.target.closest('.msg-item'), id=d.dataset.id; b.disabled=true;
@@ -38,5 +42,8 @@
   });
 })();
 </script>
-<style>.msg-item.resuelto{opacity:.65}</style>
+<style>.msg-item.resuelto{opacity:.65}
+#pb-shot-ov{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.95);overflow:auto;padding:16px;text-align:center;-webkit-overflow-scrolling:touch}
+#pb-shot-ov img{width:100%;max-width:900px;height:auto;border-radius:8px;margin:0 auto}
+#pb-shot-x{position:fixed;top:12px;right:14px;z-index:201;background:#fff;color:#000;border:none;border-radius:999px;width:42px;height:42px;font-size:20px;line-height:42px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.4)}</style>
 {% endblock %}
