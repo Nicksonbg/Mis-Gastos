@@ -44,7 +44,7 @@ addEventListener('DOMContentLoaded',()=>{try{const y=sessionStorage.getItem('pb-
 window.addEventListener('error',function(e){rep(e.message,e.error&&e.error.stack,location.pathname)});
 window.addEventListener('unhandledrejection',function(e){var r=e.reason;rep((r&&r.message)||String(r),r&&r.stack,'promise '+location.pathname)});})();</script>
 {% if user %}
-<script>window.PB_API_MSG="{{ url_for('api_mensaje') }}";window.PB_API_MSG_REV="{{ url_for('api_mensaje_revisar') }}";window.PB_H2C="{{ url_for('static', filename='html2canvas.min.js') }}?v={{ version }}";window.PB_LANG="{{ lang }}";window.PB_VER="{{ version }}";</script>
+<script>window.PB_API_MSG="{{ url_for('api_mensaje') }}";window.PB_API_MSG_REV="{{ url_for('api_mensaje_revisar') }}";window.PB_H2C="{{ url_for('static', filename='modern-screenshot.js') }}?v={{ version }}";window.PB_LANG="{{ lang }}";window.PB_VER="{{ version }}";</script>
 <script src="{{ url_for('static', filename='report.js') }}?v={{ version }}" defer></script>
 {% endif %}
 </body>

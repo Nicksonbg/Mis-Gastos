@@ -21,11 +21,11 @@
     });
   }
 
-  function loadH2C() {
+  function loadShot() {
     return new Promise(function (res, rej) {
-      if (window.html2canvas) return res(window.html2canvas);
+      if (window.modernScreenshot) return res(window.modernScreenshot);
       var s = document.createElement("script");
-      s.src = window.PB_H2C; s.onload = function () { res(window.html2canvas); }; s.onerror = rej;
+      s.src = window.PB_H2C; s.onload = function () { res(window.modernScreenshot); }; s.onerror = rej;
       document.head.appendChild(s);
     });
   }
@@ -56,8 +56,10 @@
         if (/\d/.test(el.value || "")) { var rc = el.getBoundingClientRect(); if (rc.width > 0 && rc.height > 0) rects.push(rc); }
       });
     } catch (e) { }
-    return loadH2C().then(function (h2c) {
-      return h2c(area, { backgroundColor: getComputedStyle(document.body).backgroundColor || "#000", logging: false, useCORS: true });
+    return loadShot().then(function (ms) {
+      // modern-screenshot usa el render nativo del navegador (foreignObject), así que
+      // soporta CSS moderno (color-mix, backdrop-filter…) que html2canvas no entiende.
+      return ms.domToCanvas(area, { backgroundColor: getComputedStyle(document.body).backgroundColor || "#000" });
     }).then(function (canvas) {
       var scale = canvas.width / base.width;
       var ctx = canvas.getContext("2d");
