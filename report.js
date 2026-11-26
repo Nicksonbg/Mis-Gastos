@@ -90,7 +90,7 @@
   function buildUI() {
     var st = document.createElement("style");
     st.textContent =
-      "#pb-rep-btn{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:50;" +
+      "#pb-rep-btn{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:50;" +
       "background:var(--card,#1b1b1f);color:var(--text,#fff);border:1px solid var(--line,#333);border-radius:999px;" +
       "padding:9px 14px;font:inherit;font-size:13px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.92}" +
       "#pb-rep-btn:hover{opacity:1}" +
