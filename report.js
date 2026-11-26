@@ -1,14 +1,15 @@
-/* Reportar un problema: captura la pantalla actual, DIFUMINA todo texto con cifras
-   (lado seguro: tapa de más, nunca de menos) y lo envía con un mensaje. */
+/* Reportar un problema: mensaje de texto + captura OPCIONAL de la pantalla visible
+   (la hace el usuario con un botón), con las cifras difuminadas de forma suave.
+   El difuminado se hace reduciendo+ampliando cada cifra (sin ctx.filter, que iOS
+   Safari no soporta en canvas antes de 18.4). */
 (function () {
   if (!window.PB_API_MSG) return;
   var L = (window.PB_LANG || "es").slice(0, 2);
   var TX = ({
-    es: { btn: "Problema", title: "Reportar un problema", ph: "Cuéntanos qué ha pasado…", note: "Adjuntamos una captura de esta pantalla con las cifras difuminadas por tu seguridad.", keep: "Enviar con captura", drop: "Enviar sin captura", send: "Enviar", cancel: "Cancelar", sending: "Enviando…", prep: "Preparando captura…", ok: "¡Gracias! Lo hemos recibido.", err: "No se pudo enviar. Inténtalo de nuevo.", empty: "Escribe primero el problema.", aiwarn: "La IA ha visto cantidades en la captura; ya van difuminadas.", nocap: "No se pudo hacer la captura; se envía solo el texto.", zoom: "Toca la imagen para verla a pantalla completa." },
-    en: { btn: "Problem", title: "Report a problem", ph: "Tell us what happened…", note: "We attach a screenshot of this screen with the amounts blurred for your safety.", keep: "Send with screenshot", drop: "Send without screenshot", send: "Send", cancel: "Cancel", sending: "Sending…", prep: "Preparing screenshot…", ok: "Thanks! We got it.", err: "Could not send. Try again.", empty: "Write the problem first.", aiwarn: "The AI spotted amounts in the screenshot; they are already blurred.", nocap: "Could not take the screenshot; sending text only.", zoom: "Tap the image to view it full screen." },
-    bg: { btn: "Проблем", title: "Съобщи проблем", ph: "Кажи ни какво стана…", note: "Прилагаме снимка на този екран със замъглени суми за твоята сигурност.", keep: "Изпрати със снимка", drop: "Изпрати без снимка", send: "Изпрати", cancel: "Отказ", sending: "Изпраща…", prep: "Подготвя снимка…", ok: "Благодарим! Получихме го.", err: "Неуспешно. Опитай пак.", empty: "Първо напиши проблема.", aiwarn: "ИИ видя суми в снимката; те вече са замъглени.", nocap: "Снимката не успя; изпраща се само текст.", zoom: "Докосни изображението за цял екран." }
-  })[L] || null;
-  if (!TX) TX = { btn: "Problem", title: "Report a problem", ph: "…", note: "", keep: "Send with screenshot", drop: "Send without screenshot", send: "Send", cancel: "Cancel", sending: "…", prep: "…", ok: "OK", err: "Error", empty: "Write first.", aiwarn: "", nocap: "" };
+    es: { btn: "Problema", title: "Reportar un problema", ph: "Cuéntanos qué ha pasado…", shot: "📸 Capturar pantalla", reshot: "Repetir captura", remove: "Quitar captura", note: "La captura es opcional y solo coge lo que se ve. Tapamos las cifras por tu seguridad.", send: "Enviar", cancel: "Cancelar", sending: "Enviando…", shooting: "Capturando…", ok: "¡Gracias! Lo hemos recibido.", err: "No se pudo enviar. Inténtalo de nuevo.", empty: "Escribe primero el problema.", nocap: "No se pudo capturar la pantalla.", zoom: "Toca la imagen para verla grande." },
+    en: { btn: "Problem", title: "Report a problem", ph: "Tell us what happened…", shot: "📸 Capture screen", reshot: "Retake", remove: "Remove screenshot", note: "The screenshot is optional and only takes what's visible. We blur the amounts for your safety.", send: "Send", cancel: "Cancel", sending: "Sending…", shooting: "Capturing…", ok: "Thanks! We got it.", err: "Could not send. Try again.", empty: "Write the problem first.", nocap: "Could not capture the screen.", zoom: "Tap the image to view it bigger." },
+    bg: { btn: "Проблем", title: "Съобщи проблем", ph: "Кажи ни какво стана…", shot: "📸 Снимка на екрана", reshot: "Отново", remove: "Премахни снимката", note: "Снимката е по избор и взема само видимото. Замъгляваме сумите за сигурност.", send: "Изпрати", cancel: "Отказ", sending: "Изпраща…", shooting: "Прави снимка…", ok: "Благодарим! Получихме го.", err: "Неуспешно. Опитай пак.", empty: "Първо напиши проблема.", nocap: "Екранът не можа да се заснеме.", zoom: "Докосни за по-голямо." }
+  })[L] || { btn: "Problem", title: "Report a problem", ph: "…", shot: "Capture", reshot: "Retake", remove: "Remove", note: "", send: "Send", cancel: "Cancel", sending: "…", shooting: "…", ok: "OK", err: "Error", empty: "Write first.", nocap: "Error", zoom: "" };
 
   // Envía JSON con auth flexible: por token Bearer (app, window.PB_TOKEN()) o por cookie (web).
   function postJSON(url, obj) {
@@ -30,17 +31,15 @@
     });
   }
 
-  // Captura <main> y difumina los rectángulos de todo texto con dígitos. Devuelve dataURL o null.
-  function capture() {
-    var area = document.querySelector("main") || document.body;
-    var base = area.getBoundingClientRect();
-    // 1) Rectángulos de texto con cifras + inputs con valor numérico.
-    var rects = [];
+  // Rectángulos (coords de viewport) de todo texto con cifras que esté VISIBLE en pantalla.
+  function digitRects() {
+    var W = window.innerWidth, H = window.innerHeight, rects = [];
     try {
-      var walk = document.createTreeWalker(area, NodeFilter.SHOW_TEXT, {
+      var walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
         acceptNode: function (n) {
           if (!/\d/.test(n.nodeValue || "")) return NodeFilter.FILTER_REJECT;
           var p = n.parentElement; if (!p) return NodeFilter.FILTER_REJECT;
+          if (p.closest("#pb-rep-dlg,#pb-rep-btn")) return NodeFilter.FILTER_REJECT;
           var st = getComputedStyle(p);
           if (st.visibility === "hidden" || st.display === "none" || +st.opacity === 0) return NodeFilter.FILTER_REJECT;
           return NodeFilter.FILTER_ACCEPT;
@@ -50,56 +49,68 @@
       while ((node = walk.nextNode())) {
         var r = document.createRange(); r.selectNodeContents(node);
         var list = r.getClientRects();
-        for (var i = 0; i < list.length; i++) if (list[i].width > 0 && list[i].height > 0) rects.push(list[i]);
+        for (var i = 0; i < list.length; i++) {
+          var rc = list[i];
+          if (rc.width <= 0 || rc.height <= 0) continue;
+          if (rc.bottom < 0 || rc.top > H || rc.right < 0 || rc.left > W) continue; // fuera de pantalla
+          rects.push(rc);
+        }
       }
-      area.querySelectorAll("input,textarea").forEach(function (el) {
-        if (/\d/.test(el.value || "")) { var rc = el.getBoundingClientRect(); if (rc.width > 0 && rc.height > 0) rects.push(rc); }
+      document.body.querySelectorAll("input,textarea").forEach(function (el) {
+        if (el.closest("#pb-rep-dlg")) return;
+        if (/\d/.test(el.value || "")) { var rc = el.getBoundingClientRect(); if (rc.width > 0 && rc.height > 0 && rc.bottom > 0 && rc.top < H) rects.push(rc); }
       });
     } catch (e) { }
+    return rects;
+  }
+
+  // Difumina una zona del canvas reduciéndola a 'th' px de alto y volviéndola a ampliar.
+  // Sin ctx.filter (iOS Safari no lo soporta en canvas antes de 18.4).
+  function blurRegion(ctx, src, tmp, tctx, bx, by, bw, bh, th) {
+    th = Math.max(2, Math.round(th)); var tw = Math.max(2, Math.round(bw * (th / bh)));
+    tmp.width = tw; tmp.height = th; tctx.imageSmoothingEnabled = true;
+    tctx.clearRect(0, 0, tw, th);
+    tctx.drawImage(src, bx, by, bw, bh, 0, 0, tw, th);
+    ctx.drawImage(tmp, 0, 0, tw, th, bx, by, bw, bh);
+  }
+
+  // Captura SOLO lo visible (viewport) y difumina las cifras. Devuelve dataURL o null.
+  function capture() {
+    var W = window.innerWidth, H = window.innerHeight, SX = window.scrollX || 0, SY = window.scrollY || 0;
+    var rects = digitRects();
+    var btn = document.getElementById("pb-rep-btn"); var prev = btn ? btn.style.display : "";
+    if (btn) btn.style.display = "none";
     return loadShot().then(function (ms) {
-      // modern-screenshot usa el render nativo del navegador (foreignObject), así que
-      // soporta CSS moderno (color-mix, backdrop-filter…) que html2canvas no entiende.
-      return ms.domToCanvas(area, { backgroundColor: getComputedStyle(document.body).backgroundColor || "#000" });
+      return ms.domToCanvas(document.body, {
+        width: W, height: H, scale: 2,
+        style: { transform: "translate(" + (-SX) + "px," + (-SY) + "px)", transformOrigin: "top left" },
+        backgroundColor: getComputedStyle(document.body).backgroundColor || "#000"
+      });
     }).then(function (canvas) {
-      var scale = canvas.width / base.width;
-      var ctx = canvas.getContext("2d");
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // html2canvas deja una escala activa; la reseteamos
+      if (btn) btn.style.display = prev;
+      var scale = canvas.width / W;
+      var ctx = canvas.getContext("2d"); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true;
       var copy = document.createElement("canvas"); copy.width = canvas.width; copy.height = canvas.height;
       copy.getContext("2d").drawImage(canvas, 0, 0);
-      // Difuminado SIN ctx.filter (iOS Safari no lo soporta en canvas antes de 18.4):
-      // reducimos cada cifra a muy pocos píxeles y la volvemos a ampliar -> se promedia y queda borrosa.
       var tmp = document.createElement("canvas"), tctx = tmp.getContext("2d");
-      ctx.imageSmoothingEnabled = true;
       rects.forEach(function (rc) {
-        var pad = 7;
-        var bx = Math.max(0, Math.round((rc.left - base.left - pad) * scale));
-        var by = Math.max(0, Math.round((rc.top - base.top - pad) * scale));
+        var pad = 5;
+        var bx = Math.max(0, Math.round((rc.left - pad) * scale));
+        var by = Math.max(0, Math.round((rc.top - pad) * scale));
         var bw = Math.round(Math.min((rc.width + pad * 2) * scale, canvas.width - bx));
         var bh = Math.round(Math.min((rc.height + pad * 2) * scale, canvas.height - by));
         if (bw < 2 || bh < 2) return;
-        var th = Math.max(2, Math.round(bh * 0.08)), tw = Math.max(2, Math.round(bw * (th / bh)));
-        tmp.width = tw; tmp.height = th; tctx.imageSmoothingEnabled = true;
-        tctx.clearRect(0, 0, tw, th);
-        tctx.drawImage(copy, bx, by, bw, bh, 0, 0, tw, th);   // reducir mucho
-        ctx.drawImage(tmp, 0, 0, tw, th, bx, by, bw, bh);     // ampliar -> borroso
-        tctx.clearRect(0, 0, tw, th);
-        tctx.drawImage(ctx.canvas, bx, by, bw, bh, 0, 0, tw, th); // 2ª pasada, remata
-        ctx.drawImage(tmp, 0, 0, tw, th, bx, by, bw, bh);
+        // Tope absoluto de ~6 px: hasta las cifras grandes quedan ilegibles, pero con
+        // aspecto de borroso suave (no bloque negro). Dos pasadas para rematar.
+        var th = Math.max(2, Math.min(Math.round(bh * 0.18), 6));
+        blurRegion(ctx, copy, tmp, tctx, bx, by, bw, bh, th);
+        blurRegion(ctx, ctx.canvas, tmp, tctx, bx, by, bw, bh, Math.max(2, th - 1));
       });
-      // Reducir a un tamaño razonable para que la vista previa y el envío sean ligeros.
-      var maxDim = 1400, big = Math.max(canvas.width, canvas.height);
-      if (big > maxDim) {
-        var k = maxDim / big;
-        var out = document.createElement("canvas");
-        out.width = Math.round(canvas.width * k); out.height = Math.round(canvas.height * k);
-        out.getContext("2d").drawImage(canvas, 0, 0, out.width, out.height);
-        return out.toDataURL("image/jpeg", 0.82);
-      }
-      return canvas.toDataURL("image/jpeg", 0.82);
-    }).catch(function () { return null; });
+      return canvas.toDataURL("image/jpeg", 0.85);
+    }).catch(function () { if (btn) btn.style.display = prev; return null; });
   }
 
-  var dlg, foto = null;
+  var dlg, ov, foto = null;
   function buildUI() {
     var st = document.createElement("style");
     st.textContent =
@@ -109,9 +120,11 @@
       "#pb-rep-btn:hover{opacity:1}" +
       "#pb-rep-dlg{border:none;border-radius:16px;padding:18px;max-width:460px;width:92vw;background:var(--card,#1b1b1f);color:var(--text,#fff)}" +
       "#pb-rep-dlg::backdrop{background:rgba(0,0,0,.5)}" +
-      "#pb-rep-ov{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.93);align-items:center;justify-content:center;padding:10px;cursor:zoom-out}" +
-      "#pb-rep-ov img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}";
+      "#pb-rep-ov{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.95);overflow:auto;padding:16px;text-align:center;-webkit-overflow-scrolling:touch}" +
+      "#pb-rep-ov img{width:100%;max-width:900px;height:auto;border-radius:8px;margin:0 auto}" +
+      "#pb-rep-ovx{position:fixed;top:12px;right:14px;z-index:101;background:#fff;color:#000;border:none;border-radius:999px;width:42px;height:42px;font-size:20px;line-height:42px;cursor:pointer}";
     document.head.appendChild(st);
+
     var btn = document.createElement("button");
     btn.id = "pb-rep-btn"; btn.type = "button"; btn.textContent = "🛟 " + TX.btn;
     btn.setAttribute("aria-label", TX.title);
@@ -121,42 +134,70 @@
     dlg.innerHTML =
       '<form method="dialog"><h3 style="margin:0 0 10px">' + TX.title + '</h3>' +
       '<textarea id="pb-rep-txt" rows="4" placeholder="' + TX.ph.replace(/"/g, "&quot;") + '" maxlength="3000" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit;resize:vertical"></textarea>' +
+      '<div style="margin-top:10px"><button type="button" class="btn ghost" id="pb-rep-shot"></button></div>' +
       '<div id="pb-rep-cap" style="margin-top:10px"></div>' +
       '<p class="muted small" id="pb-rep-note" style="margin:8px 0 0"></p>' +
       '<div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap"><span class="spacer"></span>' +
       '<button type="button" class="btn ghost" id="pb-rep-x">' + TX.cancel + '</button>' +
-      '<button type="button" class="btn" id="pb-rep-send">' + TX.send + '</button></div>' +
-      '<div id="pb-rep-ov"><img alt=""></div></form>';
+      '<button type="button" class="btn" id="pb-rep-send">' + TX.send + '</button></div></form>';
     document.body.appendChild(dlg);
+
+    ov = document.createElement("div"); ov.id = "pb-rep-ov";
+    ov.innerHTML = '<button type="button" id="pb-rep-ovx" aria-label="Cerrar">✕</button><img alt="">';
+    document.body.appendChild(ov);
+    function cerrarOv() { ov.style.display = "none"; }
+    ov.addEventListener("click", function (e) { if (e.target === ov || e.target.id === "pb-rep-ovx") cerrarOv(); });
 
     btn.addEventListener("click", open);
     dlg.querySelector("#pb-rep-x").addEventListener("click", function () { dlg.close(); });
     dlg.querySelector("#pb-rep-send").addEventListener("click", send);
-    var ov = dlg.querySelector("#pb-rep-ov");
-    ov.addEventListener("click", function () { ov.style.display = "none"; });
+    dlg.querySelector("#pb-rep-shot").addEventListener("click", doShot);
+  }
+
+  function setShotBtn(label, disabled) {
+    var b = dlg.querySelector("#pb-rep-shot"); b.textContent = label; b.disabled = !!disabled;
   }
 
   function open() {
     foto = null;
     dlg.querySelector("#pb-rep-txt").value = "";
-    var cap = dlg.querySelector("#pb-rep-cap"), note = dlg.querySelector("#pb-rep-note");
-    cap.innerHTML = '<p class="muted small">' + TX.prep + "</p>"; note.textContent = "";
+    dlg.querySelector("#pb-rep-cap").innerHTML = "";
+    dlg.querySelector("#pb-rep-note").textContent = TX.note;
+    setShotBtn(TX.shot, false);
     dlg.showModal();
-    capture().then(function (dataURL) {
-      foto = dataURL;
-      if (!dataURL) { cap.innerHTML = '<p class="muted small">' + TX.nocap + "</p>"; return; }
-      cap.innerHTML = '<img id="pb-rep-img" src="' + dataURL + '" alt="" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--line);cursor:zoom-in">' +
-        '<div class="muted small" style="margin-top:4px">' + TX.zoom + '</div>' +
-        '<label style="display:flex;align-items:center;gap:8px;margin-top:8px" class="small"><input type="checkbox" id="pb-rep-keep" checked> ' + TX.keep + "</label>";
-      note.textContent = TX.note;
-      cap.querySelector("#pb-rep-img").addEventListener("click", function () {
-        var ov = dlg.querySelector("#pb-rep-ov"); ov.querySelector("img").src = dataURL; ov.style.display = "flex";
+  }
+
+  // Cierra el diálogo un instante para capturar la pantalla real, y lo reabre con la vista previa.
+  function doShot() {
+    var note = dlg.querySelector("#pb-rep-note");
+    var saved = dlg.querySelector("#pb-rep-txt").value;
+    setShotBtn(TX.shooting, true);
+    dlg.close();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        capture().then(function (dataURL) {
+          dlg.showModal();
+          dlg.querySelector("#pb-rep-txt").value = saved;
+          if (!dataURL) { setShotBtn(TX.shot, false); note.textContent = TX.nocap; return; }
+          foto = dataURL;
+          showPreview(dataURL);
+          setShotBtn(TX.reshot, false);
+          note.textContent = TX.note;
+        });
       });
-      // Aviso de la IA (best-effort): si detecta cantidades, lo decimos; ya van difuminadas.
-      if (window.PB_API_MSG_REV) {
-        postJSON(window.PB_API_MSG_REV, { foto: dataURL })
-          .then(function (r) { return r.json(); }).then(function (j) { if (j && j.hay) note.textContent = TX.aiwarn + " " + TX.note; }).catch(function () { });
-      }
+    });
+  }
+
+  function showPreview(dataURL) {
+    var cap = dlg.querySelector("#pb-rep-cap");
+    cap.innerHTML = '<img id="pb-rep-img" src="' + dataURL + '" alt="" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--line);cursor:zoom-in">' +
+      '<div class="muted small" style="margin-top:4px">' + TX.zoom + '</div>' +
+      '<button type="button" class="btn ghost sm" id="pb-rep-rm" style="margin-top:6px">' + TX.remove + '</button>';
+    cap.querySelector("#pb-rep-img").addEventListener("click", function () {
+      ov.querySelector("img").src = dataURL; ov.scrollTop = 0; ov.style.display = "block";
+    });
+    cap.querySelector("#pb-rep-rm").addEventListener("click", function () {
+      foto = null; cap.innerHTML = ""; setShotBtn(TX.shot, false);
     });
   }
 
@@ -164,9 +205,8 @@
     var txt = dlg.querySelector("#pb-rep-txt").value.trim();
     var note = dlg.querySelector("#pb-rep-note");
     if (!txt) { note.textContent = TX.empty; return; }
-    var keep = dlg.querySelector("#pb-rep-keep");
     var payload = { texto: txt, lang: L, plat: window.PB_PLAT || "web", version: window.PB_VER || "" };
-    if (foto && (!keep || keep.checked)) payload.foto = foto;
+    if (foto) payload.foto = foto;
     var sb = dlg.querySelector("#pb-rep-send"); sb.disabled = true; note.textContent = TX.sending;
     postJSON(window.PB_API_MSG, payload)
       .then(function (r) { if (!r.ok) throw 0; return r.json(); })
