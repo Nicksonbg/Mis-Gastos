@@ -11,7 +11,7 @@
           {% if m.uid %}<a href="{{ url_for('panel_user', uid=m.uid) }}" style="color:inherit"><b>{{ m.nombre or m.email or m.uid }}</b></a>{% else %}<b>{{ m.nombre or '—' }}</b>{% endif %}
         </div>
         <p style="margin:8px 0;white-space:pre-wrap">{{ m.texto }}</p>
-        {% if m.foto %}<img src="{{ m.foto }}" alt="captura" loading="lazy" style="max-width:100%;max-height:440px;border-radius:10px;border:1px solid var(--line)">{% endif %}
+        {% if m.foto %}<img src="{{ m.foto }}" alt="captura" loading="lazy" class="pb-shot" title="Toca para ampliar" style="max-width:100%;max-height:440px;border-radius:10px;border:1px solid var(--line);cursor:zoom-in">{% endif %}
         <div class="muted small" style="margin-top:6px">{{ m.cuando }}{% if m.plat %} · {{ m.plat }}{% endif %}{% if m.version %} · {{ m.version }}{% endif %}{% if m.email %} · {{ m.email }}{% endif %}</div>
         <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
           <button type="button" class="btn ghost sm" data-res>{{ 'Reabrir' if m.resuelto else 'Marcar resuelto' }}</button>
@@ -20,10 +20,16 @@
       </div>
     {% else %}<p class="muted">Todavía no hay mensajes.</p>{% endfor %}
   </div>
+  <div id="pb-shot-ov"><img alt=""></div>
 </section>
 <script>
 (function(){
   var CSRF={{ csrf|tojson }}, URL_RES={{ url_for('panel_mensajes_resolver')|tojson }};
+  var ov=document.getElementById('pb-shot-ov');
+  document.addEventListener('click',function(ev){
+    var im=ev.target.closest('.pb-shot'); if(im){ov.querySelector('img').src=im.src;ov.style.display='flex';return;}
+    if(ev.target.closest('#pb-shot-ov')){ov.style.display='none';return;}
+  });
   document.addEventListener('click',function(ev){
     var b=ev.target.closest('[data-res]'); if(!b)return; ev.preventDefault();
     var d=ev.target.closest('.msg-item'), id=d.dataset.id; b.disabled=true;
@@ -33,5 +39,7 @@
   });
 })();
 </script>
-<style>.msg-item.resuelto{opacity:.65}</style>
+<style>.msg-item.resuelto{opacity:.65}
+#pb-shot-ov{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.93);align-items:center;justify-content:center;padding:10px;cursor:zoom-out}
+#pb-shot-ov img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}</style>
 {% endblock %}
