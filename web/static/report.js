@@ -10,6 +10,17 @@
   })[L] || null;
   if (!TX) TX = { btn: "Problem", title: "Report a problem", ph: "…", note: "", keep: "Send with screenshot", drop: "Send without screenshot", send: "Send", cancel: "Cancel", sending: "…", prep: "…", ok: "OK", err: "Error", empty: "Write first.", aiwarn: "", nocap: "" };
 
+  // Envía JSON con auth flexible: por token Bearer (app, window.PB_TOKEN()) o por cookie (web).
+  function postJSON(url, obj) {
+    return Promise.resolve(typeof window.PB_TOKEN === "function" ? window.PB_TOKEN() : null).then(function (tok) {
+      var h = { "Content-Type": "application/json" };
+      if (tok) h["Authorization"] = "Bearer " + tok;
+      var opt = { method: "POST", headers: h, body: JSON.stringify(obj) };
+      if (!tok) opt.credentials = "same-origin";
+      return fetch(url, opt);
+    });
+  }
+
   function loadH2C() {
     return new Promise(function (res, rej) {
       if (window.html2canvas) return res(window.html2canvas);
@@ -121,7 +132,7 @@
       note.textContent = TX.note;
       // Aviso de la IA (best-effort): si detecta cantidades, lo decimos; ya van difuminadas.
       if (window.PB_API_MSG_REV) {
-        fetch(window.PB_API_MSG_REV, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ foto: dataURL }) })
+        postJSON(window.PB_API_MSG_REV, { foto: dataURL })
           .then(function (r) { return r.json(); }).then(function (j) { if (j && j.hay) note.textContent = TX.aiwarn + " " + TX.note; }).catch(function () { });
       }
     });
@@ -132,10 +143,10 @@
     var note = dlg.querySelector("#pb-rep-note");
     if (!txt) { note.textContent = TX.empty; return; }
     var keep = dlg.querySelector("#pb-rep-keep");
-    var payload = { texto: txt, lang: L, plat: "web", version: window.PB_VER || "" };
+    var payload = { texto: txt, lang: L, plat: window.PB_PLAT || "web", version: window.PB_VER || "" };
     if (foto && (!keep || keep.checked)) payload.foto = foto;
     var sb = dlg.querySelector("#pb-rep-send"); sb.disabled = true; note.textContent = TX.sending;
-    fetch(window.PB_API_MSG, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(payload) })
+    postJSON(window.PB_API_MSG, payload)
       .then(function (r) { if (!r.ok) throw 0; return r.json(); })
       .then(function () { dlg.close(); alert(TX.ok); })
       .catch(function () { note.textContent = TX.err; })
