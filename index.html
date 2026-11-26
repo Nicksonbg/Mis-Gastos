@@ -758,7 +758,8 @@ const todayISO=()=>iso(new Date());
 const uid=()=>Math.random().toString(36).slice(2,10);
 function pbPlat(){try{const ua=navigator.userAgent||'',ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),android=/Android/.test(ua),standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true,mobile=ios||android||/Mobi/.test(ua);return standalone?(ios?'app-ios':android?'app-android':'app-otro'):(mobile?'nav-movil':'nav-pc')}catch(e){return''}}
 (function(){const API='https://personal-balance-web-778378922815.europe-west1.run.app/api/error',SENT={};let N=0;
-  function rep(msg,stack,donde){try{if(N>25)return;const k=(msg||'')+'|'+(donde||'');if(SENT[k])return;SENT[k]=1;N++;
+  const IGN=/chrome:\s*call method|window message[^]*timed out|extension context invalidated|resizeobserver loop|chrome-extension:\/\/|moz-extension:\/\/|safari-extension:\/\//i;
+  function rep(msg,stack,donde){try{if(N>25)return;if(IGN.test((msg||'')+' '+(stack||''))||/^script error\.?$/i.test(msg||''))return;const k=(msg||'')+'|'+(donde||'');if(SENT[k])return;SENT[k]=1;N++;
     const ver=(typeof APP_V!=='undefined'?APP_V:'?'),pl=(function(){try{return pbPlat()}catch(e){return''}})();
     Promise.resolve(window.__pbTok?window.__pbTok():null).then(function(tok){if(!tok)return;
       fetch(API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({msg:String(msg||'').slice(0,500),stack:String(stack||'').slice(0,2000),donde:String(donde||'').slice(0,160),plat:'app v'+ver+(pl?' '+pl:'')})}).catch(function(){})
