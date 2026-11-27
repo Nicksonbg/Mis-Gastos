@@ -6,9 +6,9 @@
   if (!window.PB_API_MSG) return;
   var L = (window.PB_LANG || "es").slice(0, 2);
   var TX = ({
-    es: { btn: "Problema", title: "Reportar un problema", ph: "Cuéntanos qué ha pasado…", shot: "📸 Capturar pantalla", reshot: "Repetir captura", remove: "Quitar captura", note: "La captura es opcional y solo coge lo que se ve. Tapamos las cifras por tu seguridad.", send: "Enviar", cancel: "Cancelar", sending: "Enviando…", shooting: "Capturando…", ok: "¡Gracias! Lo hemos recibido.", err: "No se pudo enviar. Inténtalo de nuevo.", empty: "Escribe primero el problema.", nocap: "No se pudo capturar la pantalla.", zoom: "Toca la imagen para verla grande." },
-    en: { btn: "Problem", title: "Report a problem", ph: "Tell us what happened…", shot: "📸 Capture screen", reshot: "Retake", remove: "Remove screenshot", note: "The screenshot is optional and only takes what's visible. We blur the amounts for your safety.", send: "Send", cancel: "Cancel", sending: "Sending…", shooting: "Capturing…", ok: "Thanks! We got it.", err: "Could not send. Try again.", empty: "Write the problem first.", nocap: "Could not capture the screen.", zoom: "Tap the image to view it bigger." },
-    bg: { btn: "Проблем", title: "Съобщи проблем", ph: "Кажи ни какво стана…", shot: "📸 Снимка на екрана", reshot: "Отново", remove: "Премахни снимката", note: "Снимката е по избор и взема само видимото. Замъгляваме сумите за сигурност.", send: "Изпрати", cancel: "Отказ", sending: "Изпраща…", shooting: "Прави снимка…", ok: "Благодарим! Получихме го.", err: "Неуспешно. Опитай пак.", empty: "Първо напиши проблема.", nocap: "Екранът не можа да се заснеме.", zoom: "Докосни за по-голямо." }
+    es: { btn: "Problema", title: "Reportar un problema", ph: "Cuéntanos qué ha pasado…", shot: "📸 Capturar pantalla", reshot: "Repetir captura", remove: "Quitar captura", note: "La captura es opcional y solo coge lo que se ve. Tapamos las cifras por tu seguridad.", send: "Enviar", cancel: "Cancelar", sending: "Enviando…", shooting: "Capturando…", ok: "¡Gracias! Lo hemos recibido.", err: "No se pudo enviar. Inténtalo de nuevo.", empty: "Escribe primero el problema.", nocap: "No se pudo capturar la pantalla.", zoom: "Toca la imagen para verla a tamaño real." },
+    en: { btn: "Problem", title: "Report a problem", ph: "Tell us what happened…", shot: "📸 Capture screen", reshot: "Retake", remove: "Remove screenshot", note: "The screenshot is optional and only takes what's visible. We blur the amounts for your safety.", send: "Send", cancel: "Cancel", sending: "Sending…", shooting: "Capturing…", ok: "Thanks! We got it.", err: "Could not send. Try again.", empty: "Write the problem first.", nocap: "Could not capture the screen.", zoom: "Tap the image to view it full size." },
+    bg: { btn: "Проблем", title: "Съобщи проблем", ph: "Кажи ни какво стана…", shot: "📸 Снимка на екрана", reshot: "Отново", remove: "Премахни снимката", note: "Снимката е по избор и взема само видимото. Замъгляваме сумите за сигурност.", send: "Изпрати", cancel: "Отказ", sending: "Изпраща…", shooting: "Прави снимка…", ok: "Благодарим! Получихме го.", err: "Неуспешно. Опитай пак.", empty: "Първо напиши проблема.", nocap: "Екранът не можа да се заснеме.", zoom: "Докосни за реален размер." }
   })[L] || { btn: "Problem", title: "Report a problem", ph: "…", shot: "Capture", reshot: "Retake", remove: "Remove", note: "", send: "Send", cancel: "Cancel", sending: "…", shooting: "…", ok: "OK", err: "Error", empty: "Write first.", nocap: "Error", zoom: "" };
 
   // Envía JSON con auth flexible: por token Bearer (app, window.PB_TOKEN()) o por cookie (web).
@@ -123,7 +123,7 @@
         blurRegion(ctx, copy, tmp, tctx, bx, by, bw, bh, th);
         blurRegion(ctx, ctx.canvas, tmp, tctx, bx, by, bw, bh, Math.max(2, th - 1));
       });
-      return canvas.toDataURL("image/jpeg", 0.85);
+      return canvas.toDataURL("image/jpeg", 0.92);
     });
     var timed = new Promise(function (res) { setTimeout(function () { res("__timeout__"); }, 10000); });
     return Promise.race([work, timed]).then(function (r) {
@@ -142,8 +142,8 @@
       "#pb-rep-btn:hover{opacity:1}" +
       "#pb-rep-dlg{border:none;border-radius:16px;padding:18px;max-width:460px;width:92vw;background:var(--card,#1b1b1f);color:var(--text,#fff)}" +
       "#pb-rep-dlg::backdrop{background:rgba(0,0,0,.5)}" +
-      "#pb-rep-ov{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.95);overflow:auto;padding:16px;text-align:center;-webkit-overflow-scrolling:touch}" +
-      "#pb-rep-ov img{width:100%;max-width:900px;height:auto;border-radius:8px;margin:0 auto}" +
+      "#pb-rep-ov{display:none;position:fixed;inset:0;z-index:100;background:rgba(8,10,14,.98);overflow:auto;padding:16px;text-align:center;-webkit-overflow-scrolling:touch}" +
+      "#pb-rep-ov img{display:block;margin:12px auto;max-width:none;height:auto;background:#fff;border-radius:6px;box-shadow:0 0 0 2px rgba(255,255,255,.2)}" +
       "#pb-rep-ovx{position:fixed;top:12px;right:14px;z-index:101;background:#fff;color:#000;border:none;border-radius:999px;width:42px;height:42px;font-size:20px;line-height:42px;cursor:pointer}";
     document.head.appendChild(st);
 
@@ -212,11 +212,15 @@
 
   function showPreview(dataURL) {
     var cap = dlg.querySelector("#pb-rep-cap");
-    cap.innerHTML = '<img id="pb-rep-img" src="' + dataURL + '" alt="" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--line);cursor:zoom-in">' +
-      '<div class="muted small" style="margin-top:4px">' + TX.zoom + '</div>' +
+    cap.innerHTML = '<div style="background:#eceff3;border:1px solid var(--line);border-radius:12px;padding:6px;display:inline-block;max-width:100%">' +
+      '<img id="pb-rep-img" src="' + dataURL + '" alt="" style="display:block;max-width:100%;max-height:360px;border-radius:7px;cursor:zoom-in"></div>' +
+      '<div class="muted small" style="margin-top:6px">👆 ' + TX.zoom + '</div>' +
       '<button type="button" class="btn ghost sm" id="pb-rep-rm" style="margin-top:6px">' + TX.remove + '</button>';
     cap.querySelector("#pb-rep-img").addEventListener("click", function () {
-      ov.querySelector("img").src = dataURL; ov.scrollTop = 0; ov.style.display = "block";
+      var oi = ov.querySelector("img");
+      function fit() { oi.style.width = Math.max(320, Math.round(oi.naturalWidth / 2)) + "px"; }
+      oi.onload = fit; oi.src = dataURL; if (oi.complete && oi.naturalWidth) fit();
+      ov.scrollTop = 0; ov.style.display = "block";
     });
     cap.querySelector("#pb-rep-rm").addEventListener("click", function () {
       foto = null; cap.innerHTML = ""; setShotBtn(TX.shot, false);
