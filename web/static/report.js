@@ -83,9 +83,24 @@
     if (btn) btn.style.display = "none";
     function restore() { if (btn) btn.style.display = prev; }
     // font:false evita que la librería descargue e incruste las Google Fonts (eso se colgaba).
+    // filter: quita la UI del propio reporte y los nodos que inyectan las extensiones del
+    //   navegador (Grammarly, LastPass…), cuyas imágenes chrome-extension:// no se pueden
+    //   incrustar y "ensucian" el lienzo (toDataURL fallaba → "No se pudo capturar").
+    // placeholderImage + timeout: si una imagen no carga, se sustituye en vez de ensuciar.
+    var PH = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
     var work = loadShot().then(function (ms) {
       return ms.domToCanvas(document.body, {
-        width: W, height: H, scale: 2, font: false,
+        width: W, height: H, scale: 2, font: false, timeout: 6000, placeholderImage: PH,
+        filter: function (node) {
+          if (!node || node.nodeType !== 1) return true;
+          var id = node.id || "";
+          if (id === "pb-rep-dlg" || id === "pb-rep-ov" || id === "pb-rep-btn") return false;
+          var nn = (node.nodeName || "").toLowerCase();
+          if (nn.indexOf("grammarly") >= 0 || nn.indexOf("-extension") >= 0 || nn.indexOf("lastpass") >= 0) return false;
+          var cn = typeof node.className === "string" ? node.className : "";
+          if (/grammarly|lastpass|gramm/i.test(id + " " + cn)) return false;
+          return true;
+        },
         style: { transform: "translate(" + (-SX) + "px," + (-SY) + "px)", transformOrigin: "top left" },
         backgroundColor: getComputedStyle(document.body).backgroundColor || "#000"
       });
