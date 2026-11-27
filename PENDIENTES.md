@@ -20,8 +20,15 @@ App v76 · web-52.
 - [ ] Más adelante: conectar el banco (open banking, de pago)
 - [ ] Prueba piloto con 10–20 personas
 - [ ] **Niko** — Publicar en Google Play y App Store cuando todo esté listo
+- [ ] Admin dentro de la app (PWA): dibujar el panel (uso, usuarios, mensajes) de forma nativa dentro de la app, en vez de abrir la web en otra pestaña. Requiere crear endpoints JSON protegidos (Bearer + admin) y rehacer cada vista en la app. De momento la pestaña "Admin" abre el panel web (que se ve igual porque es el mismo).
 
 ## Hecho (desde la v50)
+
+- [x] (2026-11-27) Selector de mes: pulsar el nombre del mes abre un menú para saltar a cualquier mes (app y web), sin pasar mes a mes.
+- [x] (2026-11-27) Importación automática de facturas (semiautomática): robots semanales (lunes) leen el correo de **Fenie/luz** (del PDF) y **Digi** (del cuerpo) y envían un correo con un enlace de "un toque" que crea/actualiza el gasto fijo tras confirmar. Pilot: solo Niko (se lee su Gmail).
+- [x] (2026-11-27) Gastos fijos con **mes de inicio** (`desde`): un gasto fijo puede empezar en su mes de cargo y no aparece ni cuenta en meses anteriores (p. ej. la luz empieza en diciembre).
+- [x] (2026-11-27) Enlace de "un toque" genérico `?fijo=Nombre&imp=...&dia=...&mes=...` para cualquier gasto fijo.
+- [x] (2026-11-27) Perfil: quitados los iconos de emoji infantiles (avatar = foto o inicial) y añadida la pestaña **Admin** en la barra (como en la web), solo para el administrador.
 
 - [x] (2026-11-25) Panel: permiso de Firebase Authentication (Viewer) para que la cuenta del servidor pueda listar a los usuarios.
 - [x] (2026-11-25) Arreglada la lectura del perfil: el panel ya muestra dispositivo, país, idioma y días activos (antes `load_profile` descartaba esos campos al leerlos, aunque sí estaban guardados).
