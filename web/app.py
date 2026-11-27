@@ -26,7 +26,7 @@ from store import DEV, store
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # fotos y copias de seguridad
 
-APP_VERSION = "web-72"
+APP_VERSION = "web-73"
 FB_CFG = {
     "apiKey": "AIzaSyDCJX-0ByjCWV-mtH-WNop5-6wVF76JBAs",
     "authDomain": "personal-balance-dccca.firebaseapp.com",
@@ -1318,6 +1318,90 @@ def cron_resumen():
                 print("resumen send:", repr(e), flush=True)
     print(f"resumen mensual: enviados={sent}", flush=True)
     return {"sent": sent, "users": len(by_uid)}
+
+
+# ---------- Importación automática de la factura de la luz (Fenie) ----------
+# La tarea diaria lee el correo de Fenie, saca el importe y la fecha de cargo
+# del PDF y llama aquí para crear/actualizar SOLO el gasto fijo indicado.
+# Doble candado: clave secreta FENIE_KEY + el correo debe ser de un administrador
+# (la misma huella sha256 que da acceso al panel), así nunca toca otra cuenta.
+def _fenie_push(uid, concepto, importe, dia):
+    import push
+    subs = [s for s in store.list_subs() if s.get("uid") == uid]
+    if not subs:
+        return 0
+    priv = push.vapid(store.db)[0]
+    lang = subs[0].get("lang", "es")
+    m = push.money(importe, lang)
+    body = {"es": f"{concepto}: {m}, se cobra el día {dia}.",
+            "en": f"{concepto}: {m}, charged on day {dia}.",
+            "bg": f"{concepto}: {m}, таксува се на {dia}-то число."}.get(lang) or f"{concepto}: {m}, se cobra el día {dia}."
+    title = {"es": "Factura actualizada", "en": "Bill updated", "bg": "Обновена фактура"}.get(lang, "Factura actualizada")
+    msg = {"title": title, "body": body, "tag": "pb-fenie", "url": "./"}
+    sent = 0
+    for sb in subs:
+        try:
+            if push.send(sb, msg, priv):
+                sent += 1
+            else:
+                store.delete_sub(sb["_id"])
+        except Exception as e:
+            print("fenie push send:", repr(e), flush=True)
+    return sent
+
+
+@app.post("/cron/fenie")
+def cron_fenie():
+    import hashlib
+    key = os.environ.get("FENIE_KEY", "")
+    if not key or not secrets.compare_digest(request.headers.get("X-Cron-Key", ""), key):
+        abort(403)
+    d = request.get_json(silent=True) or {}
+    email = (d.get("email") or "").strip().lower()
+    if not email or hashlib.sha256(email.encode()).hexdigest() not in ADMIN_HASHES:
+        abort(403)
+    try:
+        importe = round(float(d.get("importe")), 2)
+    except (TypeError, ValueError):
+        return {"error": "importe no válido"}, 400
+    if not 0 < importe < 100000:
+        return {"error": "importe fuera de rango"}, 400
+    dia = max(1, min(31, int(d.get("dia") or 6)))
+    concepto = (str(d.get("concepto") or "Luz")).strip()[:80] or "Luz"
+    categoria = (str(d.get("categoria") or "Casa")).strip()[:40]
+    # Resolver el usuario por su correo (en local usamos el usuario de pruebas)
+    if DEV:
+        uid = "dev"
+    else:
+        try:
+            from firebase_admin import auth as fb_auth
+            uid = fb_auth.get_user_by_email(email).uid
+        except Exception as e:
+            print("fenie get_user:", repr(e), flush=True)
+            return {"error": "usuario no encontrado"}, 404
+    S = store.load(uid)
+    gasto = next((x for x in S["gastos"] if (x.get("concepto") or "").strip().lower() == concepto.lower()
+                  and not x.get("prestamoId")), None)
+    anterior = gasto.get("importe") if gasto else None
+    if gasto:
+        gasto["importe"] = importe
+        gasto["dia"] = dia
+        if not (gasto.get("categoria") or "").strip():
+            gasto["categoria"] = categoria
+        creado = False
+    else:
+        S["gastos"].append({"id": calc.uid(), "concepto": concepto, "importe": importe,
+                            "dia": dia, "categoria": categoria, "prestamoId": "", "meses": []})
+        creado = True
+    store.save(uid, S)
+    enviados = 0
+    try:
+        enviados = _fenie_push(uid, concepto, importe, dia)
+    except Exception as e:
+        print("fenie push:", repr(e), flush=True)
+    print(f"fenie: {concepto} {importe}€ dia {dia} {'creado' if creado else 'actualizado'} push={enviados}", flush=True)
+    return {"ok": True, "concepto": concepto, "importe": importe, "dia": dia,
+            "creado": creado, "anterior": anterior, "push": enviados}
 
 
 # ---------- Opiniones ----------

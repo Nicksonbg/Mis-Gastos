@@ -22,6 +22,7 @@ jobs:
       - name: Desplegar en Cloud Run
         env:
           GK: ${{ secrets.GROQ_API_KEY }}
+          FK: ${{ secrets.FENIE_KEY }}
         run: |
           # Clave para la tarea diaria de recordatorios: se reutiliza la existente o se crea una nueva
           CK=$(gcloud run services describe $SERVICE --region $REGION --project $PROJECT --format=json 2>/dev/null \
@@ -30,6 +31,7 @@ jobs:
           echo "::add-mask::$CK"; echo "CK=$CK" >> $GITHUB_ENV
           VARS="CRON_KEY=$CK"
           if [ -n "$GK" ]; then VARS="$VARS,GROQ_API_KEY=$GK"; else echo "::warning::Falta el secreto GROQ_API_KEY: el asistente de IA no funcionará"; fi
+          if [ -n "$FK" ]; then VARS="$VARS,FENIE_KEY=$FK"; else echo "::warning::Falta el secreto FENIE_KEY: la importación de la factura de la luz no funcionará"; fi
           EXTRA="--update-env-vars=$VARS --remove-env-vars=ANTHROPIC_API_KEY"
           gcloud run deploy $SERVICE --source web --region $REGION --project $PROJECT \
             --allow-unauthenticated --memory 512Mi --min-instances 0 --max-instances 2 --timeout 120 --quiet $EXTRA
