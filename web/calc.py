@@ -137,6 +137,9 @@ def normalize(S: dict) -> dict:
         g["dia"] = _nz_day(g.get("dia"))
         g["prestamoId"] = _nz_str(g.get("prestamoId"), 60)
         g["meses"] = _nz_meses(g.get("meses"))
+        dsd = g.get("desde")
+        g["desde"] = dsd if (isinstance(dsd, str) and len(dsd) == 7 and dsd[4] == "-"
+                             and dsd[:4].isdigit() and dsd[5:].isdigit()) else ""
         if "pagos" in g:
             g["pagos"] = _nz_pagos(g.get("pagos"))
 
@@ -296,6 +299,8 @@ def mes_items(S, off: int = 0):
             continue
         if not cobra_en(g, m0.month):
             continue
+        if g.get("desde") and mk < g["desde"]:
+            continue  # gasto fijo con mes de inicio posterior: aún no aplica
         fecha = None
         if g.get("dia"):
             last = calendar.monthrange(m0.year, m0.month)[1]

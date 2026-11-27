@@ -878,6 +878,7 @@ function mesItems(off=mesOff){
       if(!cs.length)return; // préstamo sin cuota este mes
       cs.forEach(c=>items.push({tipo:'cuota',ref:l.id+'|'+c.id,concepto:g.concepto+(c.nota?' ('+c.nota+')':''),fecha:c.fecha,importe:+c.cuota,pagado:isPaid(c),manual:c.pagada!=null}));return}
     if(!cobraEn(g,m0.getMonth()+1))return; // no se cobra este mes
+    if(g.desde&&mk<g.desde)return; // gasto fijo con mes de inicio posterior
     let fecha=null;if(g.dia){const last=new Date(m0.getFullYear(),m0.getMonth()+1,0).getDate();fecha=mk+'-'+pad(Math.min(+g.dia,last))}
     const ov=g.pagos&&g.pagos[mk];const auto=!!fecha&&fecha<=t;
     items.push({tipo:'gasto',ref:g.id+'|'+mk,concepto:g.concepto,fecha,importe:+g.importe,pagado:ov!=null?ov:auto,manual:ov!=null,auto});
@@ -1309,7 +1310,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='84';$('#ver').textContent='v'+APP_V;
+const APP_V='85';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 /* ---------- Avisos de pagos (notificaciones push) ---------- */
 const PUSH_API='https://personal-balance-web-778378922815.europe-west1.run.app/api/push/';
@@ -1733,17 +1734,18 @@ async function doPush(){if(!fb||!curUid)return;if(pushing){pushAgain=true;return
 function pbLuzLink(){try{
   var q=new URLSearchParams(location.search),raw=q.get('setluz');
   if(raw==null)return;
-  var imp=parseFloat(String(raw).replace(',','.')),dia=parseInt(q.get('dia')||'',10);
+  var imp=parseFloat(String(raw).replace(',','.')),dia=parseInt(q.get('dia')||'',10),mes=q.get('mes')||'';
   try{history.replaceState(null,'',location.pathname)}catch(e){}
   if(!(imp>0&&imp<100000))return;
   if(!(dia>=1&&dia<=31))dia=0;
+  if(!/^\d{4}-\d{2}$/.test(mes))mes='';
   imp=Math.round(imp*100)/100;
   var g=S.gastos.find(function(x){return(x.concepto||'').trim().toLowerCase()==='luz'&&!x.prestamoId});
   var msg=dia?t('luz_link_m',{a:money(imp),d:dia}):t('luz_link_m0',{a:money(imp)});
   ask(t('luz_link_t'),msg,t('luz_upd')).then(function(ok){
     if(!ok||curUid==null)return;
-    if(g){g.importe=imp;if(dia)g.dia=dia}
-    else S.gastos.push({id:uid(),concepto:'Luz',importe:imp,dia:dia||6,categoria:(t('cats').split('|')[0]||'Casa'),prestamoId:''});
+    if(g){g.importe=imp;if(dia)g.dia=dia;if(mes&&!g.desde)g.desde=mes}
+    else S.gastos.push({id:uid(),concepto:'Luz',importe:imp,dia:dia||6,categoria:(t('cats').split('|')[0]||'Casa'),prestamoId:'',desde:mes});
     save();showTab('resumen');
     ask(t('luz_link_ok'),'',t('accept'),true);
   });
