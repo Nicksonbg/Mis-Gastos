@@ -53,9 +53,10 @@
       <span class="spacer"></span><span class="small muted">{{ t('hist_total', x=money(hist_tot)) }}</span></div>
     {% for r in hist %}{% if r.future %}<div class="hist-row muted"><span class="hist-m">{{ MES[r.mo-1] }}</span><span class="hist-bar"></span><span class="hist-v">—</span></div>{% else %}<a class="hist-row{{ ' on' if r.off == 0 }}" href="{{ url_for('resumen', m=r.off) }}#mes"><span class="hist-m">{{ MES[r.mo-1] }}</span><span class="hist-bar"><i style="width:{{ (r.total/hist_max*100)|round(1) if hist_max else 0 }}%"></i></span><span class="hist-v">{{ money(r.total) }}</span></a>{% endif %}{% endfor %}
   </div>
-  <div class="card" style="margin-top:16px" id="mes">
+  <div class="card" style="margin-top:16px;position:relative" id="mes">
     <div class="row" style="margin-bottom:10px"><h2 style="margin:0">{{ t('h_mes') }}</h2>
-      <span class="chips"><a href="{{ url_for('resumen', m=off-1) }}#mes" title="{{ t('mes_prev') }}">‹</a><a class="on" href="{{ url_for('resumen', m=0) }}#mes">{{ mes_lbl }}</a><a href="{{ url_for('resumen', m=off+1) }}#mes" title="{{ t('mes_next') }}">›</a></span>
+      <span class="chips"><a href="{{ url_for('resumen', m=off-1) }}#mes" title="{{ t('mes_prev') }}">‹</a><button type="button" class="on mesweb-lbl" id="mesweb-lbl" data-off="{{ off }}" data-lang="{{ lang }}">{{ mes_lbl }}</button><a href="{{ url_for('resumen', m=off+1) }}#mes" title="{{ t('mes_next') }}">›</a></span>
+      <div id="mesweb-menu" hidden></div>
       <span class="spacer"></span><span class="small"><span class="pill ok">{{ t('pill_pagado', x=money(mes_pag)) }}</span> <span class="pill warn">{{ t('pill_queda', x=money(mes_tot-mes_pag)) }}</span></span></div>
     <div class="bar" style="margin-bottom:10px"><i style="width:{{ '%.1f'|format(mes_pag/mes_tot*100 if mes_tot else 0) }}%"></i></div>
     <div class="tbl-wrap"><table>
@@ -79,4 +80,36 @@
     {% else %}<p class="muted">{{ t('sin_prestamos') }}</p>{% endif %}
   </div>
 </section>
+<style>
+.mesweb-lbl{background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:2px 6px;border-radius:8px}
+.mesweb-lbl::after{content:' ▾';opacity:.55;font-size:.85em}
+.mesweb-lbl:hover{background:var(--line)}
+#mesweb-menu{position:absolute;z-index:30;left:50%;transform:translateX(-50%);top:46px;max-height:280px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.45);padding:6px;min-width:170px;-webkit-overflow-scrolling:touch}
+#mesweb-menu a{display:block;text-decoration:none;color:var(--text);padding:9px 12px;border-radius:8px;white-space:nowrap}
+#mesweb-menu a:hover{background:var(--line)}
+#mesweb-menu a.sel{background:var(--acc,#2a6);color:#fff;font-weight:700}
+</style>
+<script>
+(function(){
+  var lbl=document.getElementById('mesweb-lbl'), menu=document.getElementById('mesweb-menu');
+  if(!lbl||!menu) return;
+  var off=parseInt(lbl.dataset.off,10)||0, lang=lbl.dataset.lang||'es';
+  function build(){
+    var now=new Date(), h='';
+    for(var o=3;o>=-23;o--){
+      var d=new Date(now.getFullYear(), now.getMonth()+o, 1);
+      var t=d.toLocaleDateString(lang,{month:'long',year:'numeric'});
+      t=t.charAt(0).toUpperCase()+t.slice(1);
+      h+='<a href="?m='+o+'#mes" class="'+(o===off?'sel':'')+'">'+t+'</a>';
+    }
+    menu.innerHTML=h;
+  }
+  lbl.addEventListener('click',function(e){
+    e.stopPropagation();
+    if(menu.hidden){ build(); menu.hidden=false; var s=menu.querySelector('.sel'); if(s)s.scrollIntoView({block:'center'}); }
+    else menu.hidden=true;
+  });
+  document.addEventListener('click',function(e){ if(!e.target.closest('#mesweb-menu')&&e.target!==lbl) menu.hidden=true; });
+})();
+</script>
 {% endblock %}

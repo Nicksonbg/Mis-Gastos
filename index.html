@@ -66,6 +66,13 @@ tfoot td{font-weight:650;border-bottom:0}
 .btn.danger{background:none;color:var(--bad);border:1px solid var(--line)}
 .btn.sm{padding:4px 9px;font-size:13px}
 .icon{background:none;border:0;cursor:pointer;color:var(--muted);padding:4px 6px;border-radius:6px;font-size:14px}
+.mes-lbl-btn{background:none;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer;padding:2px 4px;border-radius:8px}
+.mes-lbl-btn:hover{background:var(--line)}
+.mes-lbl-btn::after{content:' ▾';opacity:.55;font-size:.85em}
+#mes-menu{position:absolute;z-index:30;left:50%;transform:translateX(-50%);top:46px;max-height:280px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.45);padding:6px;min-width:170px;-webkit-overflow-scrolling:touch}
+#mes-menu .mes-opt{display:block;width:100%;text-align:left;background:none;border:0;color:var(--text);font:inherit;padding:9px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
+#mes-menu .mes-opt:hover{background:var(--line)}
+#mes-menu .mes-opt.sel{background:var(--acc,#2a6);color:#fff;font-weight:700}
 .icon:hover{background:var(--bg);color:var(--text)}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .spacer{flex:1}
@@ -374,10 +381,11 @@ header .sync{display:inline;font-weight:500;letter-spacing:0}
         <span class="spacer"></span><span class="small muted" id="hist-tot"></span></div>
       <div id="hist-body"></div>
     </div>
-    <div class="card" style="margin-top:16px" id="mes-card">
+    <div class="card" style="margin-top:16px;position:relative" id="mes-card">
       <div class="row" style="margin-bottom:10px"><h2 style="margin:0" data-i="h_mes"></h2>
-        <button class="icon" id="mes-prev" data-it="mes_prev">◀</button><b id="mes-lbl" style="min-width:120px;text-align:center"></b><button class="icon" id="mes-next" data-it="mes_next">▶</button>
+        <button class="icon" id="mes-prev" data-it="mes_prev">◀</button><button id="mes-lbl" class="mes-lbl-btn" style="min-width:120px;text-align:center"></button><button class="icon" id="mes-next" data-it="mes_next">▶</button>
         <span class="spacer"></span><span class="small" id="mes-resumen"></span></div>
+      <div id="mes-menu" hidden></div>
       <div class="bar" style="margin-bottom:10px"><i id="mes-bar"></i></div>
       <div class="tbl-wrap"><table>
         <thead><tr><th style="width:60px" data-i="th_pagado"></th><th data-i="th_concepto"></th><th data-i="th_dia_pago"></th><th class="n" data-i="th_importe"></th><th class="hide-sm" data-i="th_estado"></th></tr></thead>
@@ -894,6 +902,21 @@ function renderMes(){
 }
 $('#mes-prev').onclick=()=>{mesOff--;renderMes()};
 $('#mes-next').onclick=()=>{mesOff++;renderMes()};
+function buildMesMenu(){
+  const nombres=t('meses').split('|');const now=new Date();let h='';
+  for(let off=3;off>=-23;off--){const d=new Date(now.getFullYear(),now.getMonth()+off,1);
+    h+=`<button type="button" class="mes-opt${off===mesOff?' sel':''}" data-moff="${off}">${nombres[d.getMonth()]} ${d.getFullYear()}</button>`;}
+  return h;
+}
+function toggleMesMenu(show){
+  const m=$('#mes-menu');if(!m)return;
+  if(show===undefined)show=m.hasAttribute('hidden');
+  if(show){m.innerHTML=buildMesMenu();m.hidden=false;const s=m.querySelector('.sel');if(s)s.scrollIntoView({block:'center'});}
+  else m.hidden=true;
+}
+$('#mes-lbl').onclick=e=>{e.stopPropagation();toggleMesMenu()};
+$('#mes-menu').addEventListener('click',e=>{const b=e.target.closest('[data-moff]');if(!b)return;mesOff=+b.dataset.moff;toggleMesMenu(false);renderMes()});
+document.addEventListener('click',e=>{if(!e.target.closest('#mes-menu')&&e.target.id!=='mes-lbl')toggleMesMenu(false)});
 let histY=new Date().getFullYear();
 function renderHist(){const n=new Date(),ny=n.getFullYear(),nm=n.getMonth()+1,nombres=t('meses').split('|');
   $('#hist-lbl').textContent=histY;
@@ -1286,7 +1309,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='82';$('#ver').textContent='v'+APP_V;
+const APP_V='83';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 /* ---------- Avisos de pagos (notificaciones push) ---------- */
 const PUSH_API='https://personal-balance-web-778378922815.europe-west1.run.app/api/push/';
