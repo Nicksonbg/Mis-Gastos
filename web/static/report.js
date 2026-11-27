@@ -75,19 +75,21 @@
   }
 
   // Captura SOLO lo visible (viewport) y difumina las cifras. Devuelve dataURL o null.
+  // Nunca se queda colgada: tope de tiempo + el botón se restaura pase lo que pase.
   function capture() {
     var W = window.innerWidth, H = window.innerHeight, SX = window.scrollX || 0, SY = window.scrollY || 0;
     var rects = digitRects();
     var btn = document.getElementById("pb-rep-btn"); var prev = btn ? btn.style.display : "";
     if (btn) btn.style.display = "none";
-    return loadShot().then(function (ms) {
+    function restore() { if (btn) btn.style.display = prev; }
+    // font:false evita que la librería descargue e incruste las Google Fonts (eso se colgaba).
+    var work = loadShot().then(function (ms) {
       return ms.domToCanvas(document.body, {
-        width: W, height: H, scale: 2,
+        width: W, height: H, scale: 2, font: false,
         style: { transform: "translate(" + (-SX) + "px," + (-SY) + "px)", transformOrigin: "top left" },
         backgroundColor: getComputedStyle(document.body).backgroundColor || "#000"
       });
     }).then(function (canvas) {
-      if (btn) btn.style.display = prev;
       var scale = canvas.width / W;
       var ctx = canvas.getContext("2d"); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true;
       var copy = document.createElement("canvas"); copy.width = canvas.width; copy.height = canvas.height;
@@ -107,7 +109,12 @@
         blurRegion(ctx, ctx.canvas, tmp, tctx, bx, by, bw, bh, Math.max(2, th - 1));
       });
       return canvas.toDataURL("image/jpeg", 0.85);
-    }).catch(function () { if (btn) btn.style.display = prev; return null; });
+    });
+    var timed = new Promise(function (res) { setTimeout(function () { res("__timeout__"); }, 10000); });
+    return Promise.race([work, timed]).then(function (r) {
+      restore();
+      return (typeof r === "string" && r.indexOf("data:") === 0) ? r : null;
+    }).catch(function () { restore(); return null; });
   }
 
   var dlg, ov, foto = null;
