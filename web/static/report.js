@@ -110,6 +110,9 @@
       var copy = document.createElement("canvas"); copy.width = canvas.width; copy.height = canvas.height;
       copy.getContext("2d").drawImage(canvas, 0, 0);
       var tmp = document.createElement("canvas"), tctx = tmp.getContext("2d");
+      // ¿Se puede usar blur gaussiano? (escritorio, iOS 18.4+). Si sí, lo usamos para
+      // suavizar el reescalado y que no se vean bloques.
+      var useFilter = (function () { try { ctx.filter = "blur(2px)"; var ok = ctx.filter === "blur(2px)"; ctx.filter = "none"; return ok; } catch (e) { return false; } })();
       rects.forEach(function (rc) {
         var pad = 5;
         var bx = Math.max(0, Math.round((rc.left - pad) * scale));
@@ -117,11 +120,18 @@
         var bw = Math.round(Math.min((rc.width + pad * 2) * scale, canvas.width - bx));
         var bh = Math.round(Math.min((rc.height + pad * 2) * scale, canvas.height - by));
         if (bw < 2 || bh < 2) return;
-        // Tope absoluto de ~6 px: hasta las cifras grandes quedan ilegibles, pero con
-        // aspecto de borroso suave (no bloque negro). Dos pasadas para rematar.
-        var th = Math.max(2, Math.min(Math.round(bh * 0.18), 6));
-        blurRegion(ctx, copy, tmp, tctx, bx, by, bw, bh, th);
-        blurRegion(ctx, ctx.canvas, tmp, tctx, bx, by, bw, bh, Math.max(2, th - 1));
+        // 1) Reducir la zona a muy pocos píxeles: destruye por completo la legibilidad.
+        var th = Math.max(3, Math.min(Math.round(bh * 0.12), 6)), tw = Math.max(3, Math.round(bw * (th / bh)));
+        tmp.width = tw; tmp.height = th; tctx.imageSmoothingEnabled = true; tctx.clearRect(0, 0, tw, th);
+        tctx.drawImage(copy, bx, by, bw, bh, 0, 0, tw, th);
+        // 2) Volver a ampliar con suavizado (y blur gaussiano si se puede): queda suave,
+        //    sin bloques, pero ilegible porque el detalle ya se perdió al reducir.
+        ctx.save();
+        ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.clip();
+        ctx.imageSmoothingEnabled = true;
+        if (useFilter) ctx.filter = "blur(" + Math.max(3, Math.round(bh * 0.13)) + "px)";
+        ctx.drawImage(tmp, 0, 0, tw, th, bx, by, bw, bh);
+        ctx.restore();
       });
       return canvas.toDataURL("image/jpeg", 0.92);
     });
@@ -143,7 +153,8 @@
       "#pb-rep-dlg{border:none;border-radius:16px;padding:18px;max-width:460px;width:92vw;background:var(--card,#1b1b1f);color:var(--text,#fff)}" +
       "#pb-rep-dlg::backdrop{background:rgba(0,0,0,.5)}" +
       "#pb-rep-ov{display:none;position:fixed;inset:0;z-index:100;background:rgba(8,10,14,.98);overflow:auto;padding:16px;text-align:center;-webkit-overflow-scrolling:touch}" +
-      "#pb-rep-ov img{display:block;margin:12px auto;max-width:none;height:auto;background:#fff;border-radius:6px;box-shadow:0 0 0 2px rgba(255,255,255,.2)}" +
+      "#pb-rep-ov img{display:block;margin:12px auto;max-width:100%;height:auto;background:#fff;border-radius:6px;box-shadow:0 0 0 2px rgba(255,255,255,.2);cursor:zoom-in}" +
+      "#pb-rep-ov img.zoomed{max-width:none;margin:12px 0;cursor:zoom-out}" +
       "#pb-rep-ovx{position:fixed;top:12px;right:14px;z-index:101;background:#fff;color:#000;border:none;border-radius:999px;width:42px;height:42px;font-size:20px;line-height:42px;cursor:pointer}";
     document.head.appendChild(st);
 
@@ -167,8 +178,15 @@
     ov = document.createElement("div"); ov.id = "pb-rep-ov";
     ov.innerHTML = '<button type="button" id="pb-rep-ovx" aria-label="Cerrar">✕</button><img alt="">';
     document.body.appendChild(ov);
-    function cerrarOv() { ov.style.display = "none"; }
+    var ovImg = ov.querySelector("img");
+    function cerrarOv() { ov.style.display = "none"; ovImg.classList.remove("zoomed"); ovImg.style.width = ""; }
     ov.addEventListener("click", function (e) { if (e.target === ov || e.target.id === "pb-rep-ovx") cerrarOv(); });
+    ovImg.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (ovImg.classList.toggle("zoomed")) ovImg.style.width = Math.max(320, Math.round(ovImg.naturalWidth / 2)) + "px";
+      else ovImg.style.width = "";
+    });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && ov.style.display === "block") cerrarOv(); });
 
     btn.addEventListener("click", open);
     dlg.querySelector("#pb-rep-x").addEventListener("click", function () { dlg.close(); });
@@ -218,9 +236,8 @@
       '<button type="button" class="btn ghost sm" id="pb-rep-rm" style="margin-top:6px">' + TX.remove + '</button>';
     cap.querySelector("#pb-rep-img").addEventListener("click", function () {
       var oi = ov.querySelector("img");
-      function fit() { oi.style.width = Math.max(320, Math.round(oi.naturalWidth / 2)) + "px"; }
-      oi.onload = fit; oi.src = dataURL; if (oi.complete && oi.naturalWidth) fit();
-      ov.scrollTop = 0; ov.style.display = "block";
+      oi.classList.remove("zoomed"); oi.style.width = "";
+      oi.src = dataURL; ov.scrollTop = 0; ov.scrollLeft = 0; ov.style.display = "block";
     });
     cap.querySelector("#pb-rep-rm").addEventListener("click", function () {
       foto = null; cap.innerHTML = ""; setShotBtn(TX.shot, false);
