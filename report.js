@@ -31,13 +31,18 @@
     });
   }
 
-  // Rectángulos (coords de viewport) de todo texto con cifras que esté VISIBLE en pantalla.
+  // Rectángulos (coords de viewport) de SOLO las cantidades de dinero visibles:
+  // importes con decimales de coma (34,19) o con miles de punto (1.287). Así no se
+  // difuminan fechas, "18 meses", "2026", porcentajes ni la UI: solo tus importes.
+  var MONEY = /\d[\d.]*,\d{2}|\d{1,3}(?:\.\d{3})+/g;
   function digitRects() {
     var W = window.innerWidth, H = window.innerHeight, rects = [];
+    function inView(rc) { return rc.width > 0 && rc.height > 0 && rc.bottom > 0 && rc.top < H && rc.right > 0 && rc.left < W; }
     try {
       var walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
         acceptNode: function (n) {
-          if (!/\d/.test(n.nodeValue || "")) return NodeFilter.FILTER_REJECT;
+          MONEY.lastIndex = 0;
+          if (!MONEY.test(n.nodeValue || "")) return NodeFilter.FILTER_REJECT;
           var p = n.parentElement; if (!p) return NodeFilter.FILTER_REJECT;
           if (p.closest("#pb-rep-dlg,#pb-rep-btn")) return NodeFilter.FILTER_REJECT;
           var st = getComputedStyle(p);
@@ -47,18 +52,20 @@
       });
       var node;
       while ((node = walk.nextNode())) {
-        var r = document.createRange(); r.selectNodeContents(node);
-        var list = r.getClientRects();
-        for (var i = 0; i < list.length; i++) {
-          var rc = list[i];
-          if (rc.width <= 0 || rc.height <= 0) continue;
-          if (rc.bottom < 0 || rc.top > H || rc.right < 0 || rc.left > W) continue; // fuera de pantalla
-          rects.push(rc);
+        var v = node.nodeValue || "", m; MONEY.lastIndex = 0;
+        while ((m = MONEY.exec(v))) {
+          try {
+            var r = document.createRange();
+            r.setStart(node, m.index); r.setEnd(node, m.index + m[0].length);
+            var list = r.getClientRects();
+            for (var i = 0; i < list.length; i++) { if (inView(list[i])) rects.push(list[i]); }
+          } catch (e) { }
         }
       }
       document.body.querySelectorAll("input,textarea").forEach(function (el) {
         if (el.closest("#pb-rep-dlg")) return;
-        if (/\d/.test(el.value || "")) { var rc = el.getBoundingClientRect(); if (rc.width > 0 && rc.height > 0 && rc.bottom > 0 && rc.top < H) rects.push(rc); }
+        MONEY.lastIndex = 0;
+        if (MONEY.test(el.value || "")) { var rc = el.getBoundingClientRect(); if (inView(rc)) rects.push(rc); }
       });
     } catch (e) { }
     return rects;
@@ -114,7 +121,7 @@
       // suavizar el reescalado y que no se vean bloques.
       var useFilter = (function () { try { ctx.filter = "blur(2px)"; var ok = ctx.filter === "blur(2px)"; ctx.filter = "none"; return ok; } catch (e) { return false; } })();
       rects.forEach(function (rc) {
-        var pad = 5;
+        var pad = 3;
         var bx = Math.max(0, Math.round((rc.left - pad) * scale));
         var by = Math.max(0, Math.round((rc.top - pad) * scale));
         var bw = Math.round(Math.min((rc.width + pad * 2) * scale, canvas.width - bx));
