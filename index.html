@@ -403,8 +403,8 @@ header .sync{display:inline;font-weight:500;letter-spacing:0}
 
   <!-- GASTOS -->
   <section id="tab-gastos" class="hidden">
-    <div class="utabs" id="g-seg"><button type="button" class="on" data-gp="fijos" data-i="g_t_fijos"></button><button type="button" data-gp="dia" data-i="g_t_dia"></button><button type="button" data-gp="pres" data-i="g_t_pres"></button></div>
-    <div class="card" id="gp-fijos">
+    <div class="utabs" id="g-seg"><button type="button" class="on" data-gp="dia" data-i="g_t_dia"></button><button type="button" data-gp="fijos" data-i="g_t_fijos"></button><button type="button" data-gp="pres" data-i="g_t_pres"></button></div>
+    <div class="card hidden" id="gp-fijos">
       <div class="row" style="margin-bottom:10px"><h2 style="margin:0" data-i="h_fijos"></h2><span class="spacer"></span><button class="btn" id="add-gasto" data-i="add_gasto"></button></div>
       <div class="tbl-wrap"><table>
         <thead><tr><th data-i="th_concepto"></th><th class="hide-sm" data-i="th_categoria"></th><th class="n hide-sm" data-i="th_dia_cobro"></th><th class="n" data-i="th_importe"></th><th class="n hide-sm" data-i="th_pct"></th><th class="hide-sm" data-i="th_hasta"></th><th></th></tr></thead>
@@ -414,7 +414,7 @@ header .sync{display:inline;font-weight:500;letter-spacing:0}
       </table></div>
       <p class="muted small"><span data-i="gastos_nota"></span> <span data-i="gastos_nota_meses"></span></p>
     </div>
-    <div class="card hidden" id="gp-dia">
+    <div class="card" id="gp-dia">
       <div class="row" style="margin-bottom:10px"><h2 style="margin:0" data-i="g_t_dia"></h2>
         <button class="icon" id="dia-prev" data-it="mes_prev">◀</button><b id="dia-lbl" style="min-width:110px;text-align:center"></b><button class="icon" id="dia-next" data-it="mes_next">▶</button>
         <button class="btn ghost hidden" id="pend-badge" type="button" style="color:var(--warn);border-color:var(--warn)"></button><span class="spacer"></span><button class="btn ghost" id="scan-mov" data-i="scan_btn"></button><button class="btn" id="add-mov" data-i="add_mov"></button></div>
@@ -1311,7 +1311,7 @@ invPane(['cartera','watch','conectar'].includes(store.get('mis-gastos-invtab'))?
 (function(){const nav=$('#nav'),hdr=nav.parentNode,av=$('#avatar'),mq=matchMedia('(max-width:600px)');
   const place=()=>{if(mq.matches){if(nav.parentNode!==document.body)document.body.appendChild(nav)}else if(nav.parentNode!==hdr)hdr.appendChild(nav)};
   place();mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place)})();
-const APP_V='95';$('#ver').textContent='v'+APP_V;
+const APP_V='96';$('#ver').textContent='v'+APP_V;
 $('#a-pass-eye').onclick=e=>{const i=$('#a-pass'),b=e.currentTarget,on=i.type==='password';i.type=on?'text':'password';b.classList.toggle('on',on);b.dataset.it=on?'hide_pass':'show_pass';b.title=b.ariaLabel=t(b.dataset.it);i.focus()};
 /* ---------- Avisos de pagos (notificaciones push) ---------- */
 const PUSH_API='https://personal-balance-web-778378922815.europe-west1.run.app/api/push/';

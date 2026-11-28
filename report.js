@@ -36,7 +36,8 @@
   // difuminan fechas, "18 meses", "2026", porcentajes ni la UI: solo tus importes.
   var MONEY = /\d[\d.]*,\d{2}|\d{1,3}(?:\.\d{3})+/g;
   function digitRects() {
-    var W = window.innerWidth, H = window.innerHeight, rects = [];
+    var de = document.documentElement;
+    var W = de.clientWidth || window.innerWidth, H = de.clientHeight || window.innerHeight, rects = [];
     function inView(rc) { return rc.width > 0 && rc.height > 0 && rc.bottom > 0 && rc.top < H && rc.right > 0 && rc.left < W; }
     try {
       var walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
@@ -84,7 +85,12 @@
   // Captura SOLO lo visible (viewport) y difumina las cifras. Devuelve dataURL o null.
   // Nunca se queda colgada: tope de tiempo + el botón se restaura pase lo que pase.
   function capture() {
-    var W = window.innerWidth, H = window.innerHeight, SX = window.scrollX || 0, SY = window.scrollY || 0;
+    // clientWidth/Height (sin barras de desplazamiento) para que la escala del canvas
+    // coincida EXACTA con las coordenadas de los números (si no, el difuminado se
+    // desplaza, más cuanto más a la derecha — típico en Windows con scrollbar).
+    var de = document.documentElement;
+    var W = de.clientWidth || window.innerWidth, H = de.clientHeight || window.innerHeight;
+    var SX = window.scrollX || 0, SY = window.scrollY || 0;
     var rects = digitRects();
     var btn = document.getElementById("pb-rep-btn"); var prev = btn ? btn.style.display : "";
     if (btn) btn.style.display = "none";
@@ -127,39 +133,41 @@
         c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
         c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
       }
+      var cctx = copy.getContext("2d");
       rects.forEach(function (rc) {
-        var pad = 4;
-        var bx = Math.max(0, Math.round((rc.left - pad) * scale));
-        var by = Math.max(0, Math.round((rc.top - pad) * scale));
-        var bw = Math.round(Math.min((rc.width + pad * 2) * scale, canvas.width - bx));
-        var bh = Math.round(Math.min((rc.height + pad * 2) * scale, canvas.height - by));
+        // Margen proporcional al tamaño de letra. Un poco más a la derecha porque la medida
+        // del texto a veces deja fuera la última cifra; así el importe queda cubierto entero.
+        var padL = Math.max(5, Math.round(rc.height * 0.32));
+        var padR = Math.max(10, Math.round(rc.height * 0.65));
+        var padT = Math.max(3, Math.round(rc.height * 0.30));
+        var padB = Math.max(4, Math.round(rc.height * 0.42)); // más abajo: la medida del texto deja fuera la parte inferior de las cifras
+        var bx = Math.max(0, Math.round((rc.left - padL) * scale));
+        var by = Math.max(0, Math.round((rc.top - padT) * scale));
+        var bw = Math.round(Math.min((rc.width + padL + padR) * scale, canvas.width - bx));
+        var bh = Math.round(Math.min((rc.height + padT + padB) * scale, canvas.height - by));
         if (bw < 2 || bh < 2) return;
-        var rr = Math.min(bh * 0.4, 13); // radio de las esquinas
-        // Reducir la zona a un bloque diminuto: destruye el detalle. Hacemos el ancho
-        // también pequeño (proporción suave) para que al ampliar NO queden estrías.
-        var th = Math.max(3, Math.min(Math.round(bh * 0.1), 4));
-        var tw = Math.max(th, Math.round(th * Math.min(bw / bh, 3))); // bloque diminuto, como mucho 3:1
+        var rr = Math.min(bh * 0.34, 12); // esquinas redondeadas
+        // Tinte tipo cristal esmerilado: color de la tarjeta ACLARADO, para que el parche se vea
+        // como una barra translúcida (intencionada) y no como un hueco donde asoman las cifras.
+        var tint = "rgba(120,128,140,.52)";
+        try {
+          var px = cctx.getImageData(Math.max(0, bx - 2), Math.min(by + (bh >> 1), canvas.height - 1), 1, 1).data;
+          tint = "rgba(" + Math.min(255, px[0] + 64) + "," + Math.min(255, px[1] + 64) + "," + Math.min(255, px[2] + 64) + ",.52)";
+        } catch (e) {}
+        // 1) Reducir a un bloque DIMINUTO (máx 5 px de ancho): destruye por completo las cifras.
+        var th = 3, tw = Math.max(2, Math.min(Math.round(bw * th / bh), 5));
         tmp.width = tw; tmp.height = th; tctx.imageSmoothingEnabled = true; tctx.clearRect(0, 0, tw, th);
         tctx.drawImage(copy, bx, by, bw, bh, 0, 0, tw, th);
-        if (useFilter) {
-          // Parche: reampliar (opaco, cubre del todo) + un blur suave para alisar + máscara
-          //   redondeada con el borde difuminado → mancha redonda, limpia y suave.
-          var mg = 7, pw = bw + 2 * mg, ph = bh + 2 * mg;
-          var pcn = document.createElement("canvas"); pcn.width = pw; pcn.height = ph;
-          var pcx = pcn.getContext("2d"); pcx.imageSmoothingEnabled = true;
-          pcx.filter = "blur(" + Math.max(2, Math.round(bh * 0.1)) + "px)";
-          pcx.drawImage(tmp, 0, 0, tw, th, mg, mg, bw, bh);
-          pcx.filter = "none";
-          pcx.globalCompositeOperation = "destination-in";
-          pcx.filter = "blur(" + Math.max(2, Math.round(bh * 0.1)) + "px)";
-          pcx.fillStyle = "#000"; rrPath(pcx, mg, mg, bw, bh, rr); pcx.fill();
-          pcx.filter = "none";
-          ctx.drawImage(pcn, bx - mg, by - mg);
-        } else {
-          ctx.save(); rrPath(ctx, bx, by, bw, bh, rr); ctx.clip();
-          ctx.imageSmoothingEnabled = true; ctx.drawImage(tmp, 0, 0, tw, th, bx, by, bw, bh);
-          ctx.restore();
-        }
+        // 2) Parche OPACO del tamaño de la caja: reescalado suave + tinte del color de la tarjeta.
+        //    Opaco = nunca asoma la cifra; el tinte lo vuelve uniforme (efecto esmerilado).
+        var pcn = document.createElement("canvas"); pcn.width = bw; pcn.height = bh;
+        var pcx = pcn.getContext("2d"); pcx.imageSmoothingEnabled = true;
+        if (useFilter) pcx.filter = "blur(" + Math.max(2, Math.round(bh * 0.10)) + "px)";
+        pcx.drawImage(tmp, 0, 0, tw, th, 0, 0, bw, bh);
+        pcx.filter = "none";
+        pcx.fillStyle = tint; pcx.fillRect(0, 0, bw, bh);
+        // 3) Pegar con esquinas redondeadas NÍTIDAS (sin bordes transparentes que dejen ver la cifra).
+        ctx.save(); rrPath(ctx, bx, by, bw, bh, rr); ctx.clip(); ctx.drawImage(pcn, bx, by); ctx.restore();
       });
       return canvas.toDataURL("image/jpeg", 0.92);
     });
