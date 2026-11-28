@@ -120,8 +120,15 @@
       // ¿Se puede usar blur gaussiano? (escritorio, iOS 18.4+). Si sí, lo usamos para
       // suavizar el reescalado y que no se vean bloques.
       var useFilter = (function () { try { ctx.filter = "blur(2px)"; var ok = ctx.filter === "blur(2px)"; ctx.filter = "none"; return ok; } catch (e) { return false; } })();
+      function rrPath(c, x, y, w, h, r) {
+        r = Math.min(r, w / 2, h / 2);
+        if (c.roundRect) { c.beginPath(); c.roundRect(x, y, w, h, r); return; }
+        c.beginPath();
+        c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+        c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+      }
       rects.forEach(function (rc) {
-        var pad = 3;
+        var pad = 2;
         var bx = Math.max(0, Math.round((rc.left - pad) * scale));
         var by = Math.max(0, Math.round((rc.top - pad) * scale));
         var bw = Math.round(Math.min((rc.width + pad * 2) * scale, canvas.width - bx));
@@ -131,14 +138,20 @@
         var th = Math.max(3, Math.min(Math.round(bh * 0.12), 6)), tw = Math.max(3, Math.round(bw * (th / bh)));
         tmp.width = tw; tmp.height = th; tctx.imageSmoothingEnabled = true; tctx.clearRect(0, 0, tw, th);
         tctx.drawImage(copy, bx, by, bw, bh, 0, 0, tw, th);
-        // 2) Volver a ampliar con suavizado (y blur gaussiano si se puede): queda suave,
-        //    sin bloques, pero ilegible porque el detalle ya se perdió al reducir.
-        ctx.save();
-        ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.clip();
-        ctx.imageSmoothingEnabled = true;
-        if (useFilter) ctx.filter = "blur(" + Math.max(3, Math.round(bh * 0.13)) + "px)";
-        ctx.drawImage(tmp, 0, 0, tw, th, bx, by, bw, bh);
-        ctx.restore();
+        // 2) Parche aparte: contenido borroso + MÁSCARA redondeada con borde difuminado.
+        //    Así el parche no es un cuadrado de bordes duros, sino una mancha redonda suave.
+        var mg = useFilter ? 10 : 2, pw = bw + 2 * mg, ph = bh + 2 * mg;
+        var pcn = document.createElement("canvas"); pcn.width = pw; pcn.height = ph;
+        var pcx = pcn.getContext("2d"); pcx.imageSmoothingEnabled = true;
+        if (useFilter) pcx.filter = "blur(" + Math.max(3, Math.round(bh * 0.13)) + "px)";
+        pcx.drawImage(tmp, 0, 0, tw, th, 0, 0, pw, ph);
+        pcx.filter = "none";
+        pcx.globalCompositeOperation = "destination-in";
+        if (useFilter) pcx.filter = "blur(" + Math.max(2, Math.round(bh * 0.14)) + "px)"; // difumina el borde de la máscara
+        pcx.fillStyle = "#000";
+        rrPath(pcx, mg, mg, bw, bh, Math.min(bh * 0.5, 18)); pcx.fill();
+        pcx.filter = "none";
+        ctx.drawImage(pcn, bx - mg, by - mg);
       });
       return canvas.toDataURL("image/jpeg", 0.92);
     });
