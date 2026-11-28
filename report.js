@@ -128,30 +128,38 @@
         c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
       }
       rects.forEach(function (rc) {
-        var pad = 2;
+        var pad = 4;
         var bx = Math.max(0, Math.round((rc.left - pad) * scale));
         var by = Math.max(0, Math.round((rc.top - pad) * scale));
         var bw = Math.round(Math.min((rc.width + pad * 2) * scale, canvas.width - bx));
         var bh = Math.round(Math.min((rc.height + pad * 2) * scale, canvas.height - by));
         if (bw < 2 || bh < 2) return;
-        // 1) Reducir la zona a muy pocos píxeles: destruye por completo la legibilidad.
-        var th = Math.max(3, Math.min(Math.round(bh * 0.12), 6)), tw = Math.max(3, Math.round(bw * (th / bh)));
+        var rr = Math.min(bh * 0.4, 13); // radio de las esquinas
+        // Reducir la zona a un bloque diminuto: destruye el detalle. Hacemos el ancho
+        // también pequeño (proporción suave) para que al ampliar NO queden estrías.
+        var th = Math.max(3, Math.min(Math.round(bh * 0.1), 4));
+        var tw = Math.max(th, Math.round(th * Math.min(bw / bh, 3))); // bloque diminuto, como mucho 3:1
         tmp.width = tw; tmp.height = th; tctx.imageSmoothingEnabled = true; tctx.clearRect(0, 0, tw, th);
         tctx.drawImage(copy, bx, by, bw, bh, 0, 0, tw, th);
-        // 2) Parche aparte: contenido borroso + MÁSCARA redondeada con borde difuminado.
-        //    Así el parche no es un cuadrado de bordes duros, sino una mancha redonda suave.
-        var mg = useFilter ? 10 : 2, pw = bw + 2 * mg, ph = bh + 2 * mg;
-        var pcn = document.createElement("canvas"); pcn.width = pw; pcn.height = ph;
-        var pcx = pcn.getContext("2d"); pcx.imageSmoothingEnabled = true;
-        if (useFilter) pcx.filter = "blur(" + Math.max(3, Math.round(bh * 0.13)) + "px)";
-        pcx.drawImage(tmp, 0, 0, tw, th, 0, 0, pw, ph);
-        pcx.filter = "none";
-        pcx.globalCompositeOperation = "destination-in";
-        if (useFilter) pcx.filter = "blur(" + Math.max(2, Math.round(bh * 0.14)) + "px)"; // difumina el borde de la máscara
-        pcx.fillStyle = "#000";
-        rrPath(pcx, mg, mg, bw, bh, Math.min(bh * 0.5, 18)); pcx.fill();
-        pcx.filter = "none";
-        ctx.drawImage(pcn, bx - mg, by - mg);
+        if (useFilter) {
+          // Parche: reampliar (opaco, cubre del todo) + un blur suave para alisar + máscara
+          //   redondeada con el borde difuminado → mancha redonda, limpia y suave.
+          var mg = 7, pw = bw + 2 * mg, ph = bh + 2 * mg;
+          var pcn = document.createElement("canvas"); pcn.width = pw; pcn.height = ph;
+          var pcx = pcn.getContext("2d"); pcx.imageSmoothingEnabled = true;
+          pcx.filter = "blur(" + Math.max(2, Math.round(bh * 0.1)) + "px)";
+          pcx.drawImage(tmp, 0, 0, tw, th, mg, mg, bw, bh);
+          pcx.filter = "none";
+          pcx.globalCompositeOperation = "destination-in";
+          pcx.filter = "blur(" + Math.max(2, Math.round(bh * 0.1)) + "px)";
+          pcx.fillStyle = "#000"; rrPath(pcx, mg, mg, bw, bh, rr); pcx.fill();
+          pcx.filter = "none";
+          ctx.drawImage(pcn, bx - mg, by - mg);
+        } else {
+          ctx.save(); rrPath(ctx, bx, by, bw, bh, rr); ctx.clip();
+          ctx.imageSmoothingEnabled = true; ctx.drawImage(tmp, 0, 0, tw, th, bx, by, bw, bh);
+          ctx.restore();
+        }
       });
       return canvas.toDataURL("image/jpeg", 0.92);
     });
